@@ -37,7 +37,7 @@ def session():
             SupportProgramModel(id="BASIC_SUPPORT_2026", name="Temel", year=2026, active=True),
             SourceModel(
                 source_id="SYNTHETIC-LEGAL-DOCUMENT", title="TEST fixture only",
-                url="https://example.invalid/test-only", authority="TEST_ONLY",
+                url="https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf", authority="OFFICIAL_GAZETTE",
                 content_type="PDF", active=True,
             ),
         ])
