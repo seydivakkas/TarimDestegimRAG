@@ -13,7 +13,10 @@ from tarim_destek_rag.database.models import (
 
 
 def seed_2026_support_data(session: Session) -> None:
-    """Türkiye 2026 Bitkisel Üretim Destekleri mevzuat verisini veritabanına yükler."""
+    """2026 destek tutarlarını yürürlükteki 367 TL/da katsayısı ile tohumlar.
+
+    Not: Havza/parsel koşulları örnek kapsamlıdır; ülke geneli onay anlamına gelmez.
+    """
 
     # 1. Ana Kaynak
     rg_source = SourceModel(
@@ -26,6 +29,18 @@ def seed_2026_support_data(session: Session) -> None:
         priority=0,
     )
     session.merge(rg_source)
+    # 08.09.2026 tarihli değişiklik: katsayı 310 TL/da -> 367 TL/da.
+    # Katsayı kategorileri: BÜGEM 2026 birim fiyat tablosu; değişiklik: Bakanlık duyurusu.
+    amendment_source = SourceModel(
+        source_id="TOB-2026-09-08",
+        url="https://www.tarimorman.gov.tr/Haber/7258/Bitkisel-Ve-Hayvansal-Uretimde-Destek-Tutarlari-Artirildi",
+        authority="MINISTRY",
+        title="2026 üretim yılı destek katsayısı değişikliği (08.09.2026; 367 TL/da)",
+        content_type="HTML",
+        active=True,
+        priority=0,
+    )
+    session.merge(amendment_source)
     session.flush()
 
     # 2. Destekleme Programları
@@ -77,109 +92,109 @@ def seed_2026_support_data(session: Session) -> None:
             program_id="BASIC_SUPPORT_2026",
             crop_name="BUĞDAY",
             category="TAHIL",
-            unit_amount=Decimal("465.00"),
+            unit_amount=Decimal("477.10"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
             crop_name="ARPA",
             category="TAHIL",
-            unit_amount=Decimal("465.00"),
+            unit_amount=Decimal("477.10"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
             crop_name="MISIR",
             category="TAHIL",
-            unit_amount=Decimal("380.00"),
+            unit_amount=Decimal("477.10"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
             crop_name="AYÇİÇEĞİ",
             category="YAĞLI TOHUM",
-            unit_amount=Decimal("410.00"),
+            unit_amount=Decimal("550.50"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
             crop_name="PAMUK",
             category="ENDÜSTRİ",
-            unit_amount=Decimal("550.00"),
+            unit_amount=Decimal("825.75"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
             crop_name="FINDIK",
             category="MEYVE",
-            unit_amount=Decimal("170.00"),
+            unit_amount=Decimal("550.50"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         # Planlı Üretim İlave Destek Birim Fiyatları
         SupportAmountModel(
             program_id="PLANNED_PRODUCTION_2026",
             crop_name="BUĞDAY",
             category="STRATEJİK",
-            unit_amount=Decimal("465.00"),
+            unit_amount=Decimal("477.10"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         SupportAmountModel(
             program_id="PLANNED_PRODUCTION_2026",
             crop_name="ARPA",
             category="STRATEJİK",
-            unit_amount=Decimal("465.00"),
+            unit_amount=Decimal("477.10"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         SupportAmountModel(
             program_id="PLANNED_PRODUCTION_2026",
             crop_name="AYÇİÇEĞİ",
             category="STRATEJİK",
-            unit_amount=Decimal("410.00"),
+            unit_amount=Decimal("550.50"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         # Sertifikalı Tohum
         SupportAmountModel(
             program_id="CERTIFIED_SEED_2026",
             crop_name="BUĞDAY",
             category="TOHUM",
-            unit_amount=Decimal("120.00"),
+            unit_amount=Decimal("205.52"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         SupportAmountModel(
             program_id="CERTIFIED_SEED_2026",
             crop_name="ARPA",
             category="TOHUM",
-            unit_amount=Decimal("120.00"),
+            unit_amount=Decimal("205.52"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         # Sertifikalı Fidan
         SupportAmountModel(
             program_id="CERTIFIED_SAPLING_2026",
             crop_name="FINDIK",
             category="FİDAN",
-            unit_amount=Decimal("400.00"),
+            unit_amount=Decimal("1835.00"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
         # Su Kısıtı İlave Destek
         SupportAmountModel(
             program_id="WATER_RESTRICTION_2026",
             crop_name="MERCİMEK",
             category="SU KISITI",
-            unit_amount=Decimal("250.00"),
+            unit_amount=Decimal("293.60"),
             unit="TRY/da",
-            source_id="RG-2026-BITKISEL",
+            source_id="TOB-2026-09-08",
         ),
     ]
     for amt in amounts:
