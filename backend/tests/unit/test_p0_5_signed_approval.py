@@ -144,7 +144,7 @@ def test_key_rotation_invalidates_historic_approval(session, monkeypatch):
 
 def test_signed_revocation_cannot_be_reversed_by_status_toggle(session, monkeypatch):
     rate = add_rate(session)
-    keys = sign_subject(session, rate, monkeypatch)
+    sign_subject(session, rate, monkeypatch)
     assert lookup(session) is not None
     principal, signer = keys["APPROVER"]
     reason = "Document clause superseded; controlled test revocation"
