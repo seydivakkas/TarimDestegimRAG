@@ -25,8 +25,10 @@ jobs:
         run: python -m pip install ruff
       - name: Apply safe, deterministic Ruff rules only
         run: |
-          ruff check --fix backend/src backend/tests
-          ruff check backend/src backend/tests
+          # Ruff safe fixes are persisted even when unrelated manual
+          # violations remain; mandatory CI lint stays strict and unmodified.
+          ruff check --fix backend/src backend/tests || true
+          ruff check backend/src backend/tests || true
       - name: Commit only code-format/import corrections to this PR branch
         run: |
           if ! git diff --quiet -- backend/src backend/tests; then
