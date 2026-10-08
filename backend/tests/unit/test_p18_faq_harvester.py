@@ -102,6 +102,10 @@ def test_agricultural_faq_harvester():
         harvester = AgriculturalFAQHarvester(session)
         seed_count = harvester.seed_initial_knowledge()
         assert seed_count >= len(CURATED_AGRICULTURAL_FAQS)
+        # Örnek veri kaydı resmî kaynakta bağımsız teyit edilmeden doğrulanmış sayılamaz.
+        seeded_record = FAQRepository(session).get_by_id(CURATED_AGRICULTURAL_FAQS[0]["id"])
+        assert seeded_record is not None
+        assert seeded_record.verified is False
 
         # Chunk üretimi
         chunks = harvester.export_as_document_chunks()
