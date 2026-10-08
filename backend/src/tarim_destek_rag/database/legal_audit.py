@@ -14,7 +14,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import event, select
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
@@ -206,3 +206,13 @@ def production_audit_valid(session: Session, subject) -> bool:
         if not _ensure_exact_locked_version(s3, receipt, canonical=expected):
             return False
     return True
+
+
+@event.listens_for(LegalAuditReceiptModel, "before_update")
+def _deny_receipt_mutation(_mapper, _connection, _row):
+    raise ValueError("Immutable S3 audit receipts cannot be modified via the ORM")
+
+
+@event.listens_for(LegalAuditReceiptModel, "before_delete")
+def _deny_receipt_deletion(_mapper, _connection, _row):
+    raise ValueError("Immutable S3 audit receipts cannot be removed via the ORM")
