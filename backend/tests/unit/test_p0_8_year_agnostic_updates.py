@@ -17,7 +17,7 @@ from tarim_destek_rag.updates.discovery import (
     read_portals, scan_official_sources,
 )
 from tarim_destek_rag.updates.pdf_evidence import (
-    UnverifiableEvidence, highlighted_pdf_copy, locate_pdf_quote,
+    UnverifiableEvidence, highlighted_pdf_copy, locate_pdf_quote, evidence_deeplink,
 )
 
 
@@ -144,6 +144,9 @@ def test_pdf_exact_quote_highlights_right_page_and_keeps_original(test_pdf):
     assert proof.page_1_indexed == 1
     assert proof.exact_quote == sentence
     assert proof.normalized_quads
+    link = evidence_deeplink(proof)
+    assert link.startswith(f"/evidence/highlight/{sha}?page=1&quote=")
+    assert "%20" in link
     highlighted = highlighted_pdf_copy(pdf_bytes, proof)
     assert hashlib.sha256(pdf_bytes).hexdigest() == sha
     with pymupdf.open(stream=highlighted, filetype="pdf") as marked:
