@@ -12,6 +12,7 @@ from tarim_destek_rag.database.models import (
     SourceModel,
     SourceVersionModel,
     SupportAmountModel,
+    VerifiedSupportRateModel,
     SupportProgramModel,
     WaterRestrictionModel,
 )
@@ -33,6 +34,7 @@ __all__ = [
     "SourceVersionModel",
     "SupportProgramModel",
     "SupportAmountModel",
+    "VerifiedSupportRateModel",
     "BasinCropRuleModel",
     "ApplicationWindowModel",
     "WaterRestrictionModel",
