@@ -43,4 +43,4 @@ jobs:
         env:
           PYTHONPATH: backend/src
           DATABASE_URL: "sqlite:///:memory:"
-        run: python -m pytest backend/tests/unit/test_legal_components_2026.py backend/tests/unit/test_decision_2026_matrix.py backend/tests/unit/test_p0_2_verified_rates.py -q
+        run: python -m pytest backend/tests/unit/test_legal_components_2026.py backend/tests/unit/test_decision_2026_matrix.py backend/tests/unit/test_p0_2_verified_rates.py backend/tests/unit/test_p4_p5_db_and_normalization.py backend/tests/unit/test_p7_p8_p9_rules_calculator.py backend/tests/unit/test_p10_benchmark.py backend/tests/unit/test_issue2_issue3_legislative_decision_engine.py -q
