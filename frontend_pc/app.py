@@ -1134,8 +1134,8 @@ def build_ui() -> gr.Blocks:
                 portal ve rehberlerden soru-cevap veri setini çeker, SQLite veritabanına işler ve arama vektör indeksine (Hybrid BM25 + FAISS) canlı entegre eder.
                 """)
                 with gr.Row():
-                    btn_harvest_faqs = gr.Button("🔄 İnternet & Resmî Portallardan Soru-Cevapları Senkronize Et", variant="primary")
-                harvest_status_box = gr.Markdown("⏳ **Senkronizasyon Durumu:** Sistem hazır. Butona basarak güncel tarımsal çözümleri içe aktarabilirsiniz.")
+                    btn_harvest_faqs = gr.Button("Yerleşik SSS Verisini Yenile (Yönetici)", variant="secondary", interactive=False)
+                harvest_status_box = gr.Markdown("**Bilgi:** Web üzerinden canlı SSS taraması henüz uygulanmadı. Yerleşik örnek veriyi yeniden yükleyen yönetici API'si varsayılan olarak kapalıdır. Bu ekran yeni mevzuatı otomatik olarak güncellemez.")
 
                 def on_harvest_click() -> str:
                     res = api_client.harvest_faqs()
