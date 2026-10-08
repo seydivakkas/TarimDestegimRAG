@@ -1,15 +1,13 @@
 """TarımDestekRAG PC Gradio Arayüzü.
 
 Türkiye 2026 Bitkisel Üretim Destekleri Deterministik Karar ve Açıklama Asistanı.
-Master Plan doğrultusunda 9 sekmeli zengin kullanıcı arayüzü sunar:
+Tek değerlendirme akışıyla 6 sekmeli kullanıcı arayüzü sunar:
 1. Profil & Parsel Girişi (Çiftçi ve Parsel Bilgileri + Canlı Hak Ediş Özeti)
-2. Desteklerim (Uygunluk Rozetleri ve Tahmini Tutar Kartları)
-3. Destek Detay (Hesaplama Tablosu, Başvuru Takvimi ve Gerekli Belgeler)
-4. Neden? (Gerekçe, Eksik Belgeler ve Resmî Gazete Atıfları)
-5. Soru-Cevap Asistanı (Sıfır LLM Semantik Mevzuat Arama)
-6. Mevzuat & Kazıyıcı Paneli (Takip Edilen Resmî Kaynaklar ve Sürümleme)
-7. Doğrulama & Benchmark (100 Resmî Test Vakası)
-8. Admin Paneli & Sistem Mimarisi (Zero-LLM ve Lisans Bildirimi)
+2. Desteklerim (Uygunluk, detaylı tutarlar, neden ve kaynaklar tek ekranda)
+3. Soru-Cevap Asistanı (Semantik arama ve SSS)
+4. Mevzuat Kaynakları (Kaynakların takibi ve yerel SSS indeksleme)
+5. Benchmark (Beklenen vakalar; son çalıştırma sonuçları ayrı)
+6. Admin & Sistem Bilgisi (Teknik açıklama ve lisans)
 """
 
 from __future__ import annotations
@@ -856,7 +854,7 @@ def build_ui() -> gr.Blocks:
                     preset_1 = gr.Button("🌾 1. Konya Buğday (Genç, Tohum)", size="sm", variant="secondary")
                     preset_2 = gr.Button("🌰 2. Samsun Fındık (Fidan, Bahçe)", size="sm", variant="secondary")
                     preset_3 = gr.Button("🌾 3. Konya Arpa (Standart)", size="sm", variant="secondary")
-                    preset_4 = gr.Button("💧 4. Konya Mercimek (Su Kısıtı)", size="sm", variant="secondary")
+                    preset_4 = gr.Button("💧 4. Konya Mercimek (Sulu Tarım)", size="sm", variant="secondary")
                     preset_5 = gr.Button("❌ 5. ÇKS Kaydı Yok (Ret)", size="sm", variant="secondary")
                     preset_6 = gr.Button("❓ 6. Bilmiyorum / Eksik Bilgi", size="sm", variant="secondary")
 
@@ -888,94 +886,94 @@ def build_ui() -> gr.Blocks:
                 file_report = gr.File(label="İndirilebilir Ön Değerlendirme Raporu", visible=False)
                 out_disclaimer = gr.HTML("")
 
-            # ================= SEKME 4: DESTEK DETAY TABLOSU =================
-            with gr.TabItem("🔍 Destek Detay & Hesaplama", id="tab_details"):
-                gr.Markdown("### 📊 2026 Destekleme Kalemleri Detay Tablosu")
-                out_table = gr.DataFrame(
-                    headers=[
-                        "Destek Programı",
-                        "Durum",
-                        "Birim Fiyat (TL/da)",
-                        "Alan (da)",
-                        "Tahmini Tutar",
-                        "Hesaplama Formülü",
-                        "Başvuru Dönemi",
-                        "Dayanak",
-                    ],
-                    datatype=["str", "str", "str", "str", "str", "str", "str", "str"],
-                    interactive=False,
-                )
-
-                gr.Markdown("### 📅 2026 Resmî Başvuru Takvimi & Açık Destek Pencereleri")
-                gr.DataFrame(value=get_application_windows_table(), interactive=False)
-
-                gr.Markdown("""
-                ### 📁 Başvuru İçin Gerekli Belgeler Kontrol Listesi
-                - ✅ **Çiftçi Kayıt Sistemi (ÇKS) Belgesi:** Güncel 2026 üretim yılı için İlçe Tarım Müdürlüğünden veya e-Devlet kapısından onaylı.
-                - ✅ **Sertifikalı Tohum / Fidan Faturası:** Bakanlık yetkili tohum/fidan bayisinden alınmış kaşeli orijinal fatura ve etiket kopyası.
-                - ✅ **Tapu / Kira / Muvafakatname:** Parselin mülkiyet veya intifa hakkını tevsik eden belge.
-                - ✅ **Başvuru Dilekçesi & Taahhütname:** İlgili destekleme programı için standart form.
-                """)
-
-            # ================= SEKME 5: NEDEN? GEREKÇE & ATIF =================
-            with gr.TabItem("📜 Neden? (Gerekçe & Atıflar)", id="tab_reasons"):
-                gr.HTML("""
-                <div class="legal-reader-container" style="margin-top: 4px; margin-bottom: 16px; border-left: 6px solid #047857;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <h4 style="margin: 0; color: #064e3b; font-size: 1.15rem;">
-                            ⚖️ %100 Belgeye Dayanan Şeffaf Karar & Renkli İşaretleme Mimarisi
-                        </h4>
-                        <span class="doc-badge-tag doc-badge-pass">Sıfır LLM &middot; %100 Doğrulanabilir</span>
-                    </div>
-                    <p style="margin: 8px 0 12px 0; font-size: 0.92rem; color: #334155; line-height: 1.55;">
-                        Bu sistemde üreticiye sunulan her karar, dekar başı hesaplama ve hak ediş gerekçesi doğrudan
-                        <b>Resmî Gazete</b> ve <b>BÜGEM</b> mevzuatındaki orijinal metinle delillendirilir. İlgili kanun maddesindeki
-                        şartlar ve ret gerekçeleri sistem tarafından <b>renk kodlarıyla işaretlenmiştir</b>.
-                    </p>
-                    <div class="legal-legend-bar" style="margin-bottom: 0;">
-                        <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil Vurgu:</b> Sağlanan Şartlar & Hak Kazanma Hükmü</span>
-                        <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı Vurgu:</b> Ret Gerekçesi & Yasal Yasaklar</span>
-                        <span class="legend-item"><span class="legend-dot dot-gold"></span> 🟡 <b>Kehribar Vurgu:</b> Birim Destek Tutarları & Katsayılar</span>
-                        <span class="legend-item"><span class="legend-dot dot-ref"></span> 🔵 <b>Mavi Vurgu:</b> Resmî Gazete / Madde Numarası Dayanağı</span>
-                    </div>
-                </div>
-                """)
-
-                out_reasons = gr.Markdown(
-                    "Hesaplama yapıldığında kural motorunun işletim gerekçeleri, sağlanan/sağlanamayan koşullar ve Resmî Gazete yasal madde atıfları burada listelenecektir."
-                )
-
-                with gr.Accordion("📖 Resmî Mevzuat Metni ve Belge Önizleme Paneli (Doğrudan Resmî Gazete & BÜGEM)", open=True):
-                    gr.Markdown("Aşağıdaki listeden incelemek istediğiniz maddeyi seçiniz. Resmî belgedeki şartlar, hak kazanma hükümleri ve ret gerekçeleri **renkli olarak işaretlenmiştir**:")
-                    article_selector = gr.Dropdown(
-                        choices=[
-                            "MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
-                            "MADDE 2 - Tarım Havzaları Planlı Üretim Desteği",
-                            "MADDE 3 - Sertifikalı Tohum Kullanım Desteği",
-                            "MADDE 4 - Yeraltı Su Kısıtı Olan Havzalar Desteği",
-                            "MADDE 5 - Kadın ve Genç Çiftçi İlave Desteği",
-                            "MADDE 6 - Sertifikalı Fidan ve Kapama Bahçe Şartı",
-                            "EK TABLO - Ürün Bazlı Birim Fiyat Kataloğu",
+                # ================= SEKME 4: DESTEK DETAY TABLOSU =================
+                with gr.Accordion("🔍 Hesaplama Ayrıntıları ve Başvuru Belgeleri", open=False):
+                    gr.Markdown("### 📊 2026 Destekleme Kalemleri Detay Tablosu")
+                    out_table = gr.DataFrame(
+                        headers=[
+                            "Destek Programı",
+                            "Durum",
+                            "Birim Fiyat (TL/da)",
+                            "Alan (da)",
+                            "Tahmini Tutar",
+                            "Hesaplama Formülü",
+                            "Başvuru Dönemi",
+                            "Dayanak",
                         ],
-                        value="MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
-                        label="İncelenecek Resmî Mevzuat Maddesi",
+                        datatype=["str", "str", "str", "str", "str", "str", "str", "str"],
+                        interactive=False,
                     )
 
-                    article_display = gr.HTML(
-                        value=render_document_viewer_html("MADDE 1")
+                    gr.Markdown("### 📅 Destek Başvuru Takvimi (Kaynak Doğrulamasına Tabi)")
+                    gr.DataFrame(value=get_application_windows_table(), interactive=False)
+
+                    gr.Markdown("""
+                    ### 📁 Başvuru İçin Gerekli Belgeler Kontrol Listesi
+                    - ✅ **Çiftçi Kayıt Sistemi (ÇKS) Belgesi:** Güncel 2026 üretim yılı için İlçe Tarım Müdürlüğünden veya e-Devlet kapısından onaylı.
+                    - ✅ **Sertifikalı Tohum / Fidan Faturası:** Bakanlık yetkili tohum/fidan bayisinden alınmış kaşeli orijinal fatura ve etiket kopyası.
+                    - ✅ **Tapu / Kira / Muvafakatname:** Parselin mülkiyet veya intifa hakkını tevsik eden belge.
+                    - ✅ **Başvuru Dilekçesi & Taahhütname:** İlgili destekleme programı için standart form.
+                    """)
+
+                # ================= SEKME 5: NEDEN? GEREKÇE & ATIF =================
+                with gr.Accordion("📜 Karar Gerekçeleri ve Kaynak Referansları", open=False):
+                    gr.HTML("""
+                    <div class="legal-reader-container" style="margin-top: 4px; margin-bottom: 16px; border-left: 6px solid #047857;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin: 0; color: #064e3b; font-size: 1.15rem;">
+                                ⚖️ Karar Gerekçeleri ve Kaynak Referansları
+                            </h4>
+                            <span class="doc-badge-tag doc-badge-pass">Deterministik kural &middot; Kanıt denetimine tabi</span>
+                        </div>
+                        <p style="margin: 8px 0 12px 0; font-size: 0.92rem; color: #334155; line-height: 1.55;">
+                            Karar açıklamaları kurallardan oluşturulan ön değerlendirmedir.
+                            Resmî kaynak bağlantılarının bulunması, atıf pasajlarının tamamen doğrulandığı anlamına gelmez.
+                            Kesin hak sahipliği yetkili kurumun kayıtlarıyla belirlenir.
+                        </p>
+                        <div class="legal-legend-bar" style="margin-bottom: 0;">
+                            <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil Vurgu:</b> Sağlanan Şartlar & Hak Kazanma Hükmü</span>
+                            <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı Vurgu:</b> Ret Gerekçesi & Yasal Yasaklar</span>
+                            <span class="legend-item"><span class="legend-dot dot-gold"></span> 🟡 <b>Kehribar Vurgu:</b> Birim Destek Tutarları & Katsayılar</span>
+                            <span class="legend-item"><span class="legend-dot dot-ref"></span> 🔵 <b>Mavi Vurgu:</b> Resmî Gazete / Madde Numarası Dayanağı</span>
+                        </div>
+                    </div>
+                    """)
+
+                    out_reasons = gr.Markdown(
+                        "Hesaplama yapıldığında kural motorunun işletim gerekçeleri, sağlanan/sağlanamayan koşullar ve Resmî Gazete yasal madde atıfları burada listelenecektir."
                     )
 
-                    def update_article_view(choice: str) -> str:
-                        return render_document_viewer_html(choice)
+                    with gr.Accordion("📖 Kaynak Bağlantıları ve Tematik Özetler", open=True):
+                        gr.Markdown("Aşağıdaki seçenekler **mevzuatın birebir alıntısı değildir**. Resmî kaynağa gidip maddeyi doğrulayınız:")
+                        article_selector = gr.Dropdown(
+                            choices=[
+                                "MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
+                                "MADDE 2 - Tarım Havzaları Planlı Üretim Desteği",
+                                "MADDE 3 - Sertifikalı Tohum Kullanım Desteği",
+                                "MADDE 4 - Yeraltı Su Kısıtı Olan Havzalar Desteği",
+                                "MADDE 5 - Kadın ve Genç Çiftçi İlave Desteği",
+                                "MADDE 6 - Sertifikalı Fidan ve Kapama Bahçe Şartı",
+                                "EK TABLO - Ürün Bazlı Birim Fiyat Kataloğu",
+                            ],
+                            value="MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
+                            label="İncelenecek Resmî Mevzuat Maddesi",
+                        )
 
-                    article_selector.change(update_article_view, inputs=[article_selector], outputs=[article_display])
+                        article_display = gr.HTML(
+                            value=render_document_viewer_html("MADDE 1")
+                        )
+
+                        def update_article_view(choice: str) -> str:
+                            return render_document_viewer_html(choice)
+
+                        article_selector.change(update_article_view, inputs=[article_selector], outputs=[article_display])
 
             # ================= SEKME 6: CHATBOT (SORU-CEVAP) =================
             with gr.TabItem("💬 Soru-Cevap Asistanı", id="tab_chat"):
                 gr.Markdown("""
-                ### 🌾 2026 Tarımsal Destek Mevzuat ve Hak Ediş Asistanı (Sıfır LLM - Doğrulanmış Kararlar)
+                ### 🌾 2026 Tarımsal Destek Mevzuat ve Hak Ediş Asistanı
                 Sorunuzu doğrudan doğal dille yazın. Sistem yürürlükteki 2026 Resmî Gazete destekleme mevzuatı,
-                5488 sayılı Tarım Kanunu, ÇKS yönetmeliği ve 16 ürünlük dekar başı birim fiyat kataloğundan doğrulanmış kesin yanıtlar üretir.
+                5488 sayılı Tarım Kanunu, ÇKS yönetmeliği ve ürün destek kataloğundan bilgilendirme yanıtları üretir; resmî kurum doğrulaması yerine geçmez.
                 """)
                 chatbot = gr.Chatbot(height=420, label="Mevzuat & Soru-Cevap Sohbeti")
                 with gr.Row():
@@ -1009,8 +1007,8 @@ def build_ui() -> gr.Blocks:
                     q14 = gr.Button("🛡️ TARSİM Sigortası & Don İhbar Süresi", size="sm")
                     q15 = gr.Button("☀️ Güneş Enerjisi (GES) & Sulama Hibesi", size="sm")
 
-                with gr.Accordion("📚 2026 Resmî Çiftçi Sıkça Sorulan Sorular (SSS) Kütüphanesi & Rehberi", open=True):
-                    gr.Markdown("Aşağıdaki resmi SSS tablosundan merak ettiğiniz konuyu seçip doğrudan asistana sorabilir veya arama yapabilirsiniz:")
+                with gr.Accordion("📚 Tarımsal Sıkça Sorulan Sorular (SSS) Kütüphanesi", open=True):
+                    gr.Markdown("SSS kayıtları kaynak doğrulamasını tamamlamamış olabilir. Sorular arasında arama yapabilir ve asistana yönlendirebilirsiniz:")
                     faq_banner_md = gr.Markdown(get_faq_banner_text())
                     with gr.Row():
                         faq_cat_dropdown = gr.Dropdown(
@@ -1088,7 +1086,7 @@ def build_ui() -> gr.Blocks:
 
             # ================= SEKME 7: SCRAPER PANELI =================
             with gr.TabItem("🌐 Mevzuat & Kazıyıcı Paneli", id="tab_scraper"):
-                gr.Markdown("### 📡 Takip Edilen Resmî Mevzuat Kaynakları")
+                gr.Markdown("### 📡 Kayıtlı Mevzuat Kaynakları")
                 sources_df = gr.DataFrame(value=get_sources_table(), interactive=False)
                 with gr.Row():
                     btn_refresh_sources = gr.Button("🔄 Kaynakları Yenile", size="sm")
@@ -1096,16 +1094,15 @@ def build_ui() -> gr.Blocks:
 
                 gr.Markdown("""
                 #### 🔄 Otomatik Değişiklik Algılama & Hash Sistemi
-                - Her resmî kaynak URL'si düzenli aralıklarla kontrol edilir.
-                - İçerik SHA-256 kanonik hash'i alınarak sürüm tablosuna kaydedilir (`source_versions`).
-                - Mevzuat değiştiğinde sistem uyarı üretir ve değişiklik logu tutar.
+                - Resmî belgeyi kontrollü biçimde indirmek için P0 kanıt CLI'si kullanılır.
+                - SHA-256, belge kopyası ve atıf pasajı eşleşmesi kaydedilir; düzenli otomatik izleme henüz tamamlanmamıştır.
+                - Güncellik için resmî duyurular ve sonraki değişiklikler ayrıca değerlendirilmelidir.
                 """)
 
                 gr.Markdown("---")
                 gr.Markdown("### 🌾 Tarımsal Soru-Cevap Bilgi Tabanı & Web Harvester (Tüm Tarımsal Konular)")
                 gr.Markdown("""
-                Tarım ve Orman Bakanlığı, BÜGEM, TAGEM Zirai Mücadele, TARSİM Sigortası, TKDK IPARD ve Ziraat Odaları gibi resmî kurumsal
-                portal ve rehberlerden soru-cevap veri setini çeker, SQLite veritabanına işler ve arama vektör indeksine (Hybrid BM25 + FAISS) canlı entegre eder.
+                Bu bölüm yerel küratörlü SSS verilerini SQLite ve hibrit arama indeksine yeniden aktarır. Gerçek zamanlı web taraması yapmaz.
                 """)
                 with gr.Row():
                     btn_harvest_faqs = gr.Button("🔄 Yerel SSS Kayıtlarını Yeniden İndeksle (Web Tarama Değil)", variant="primary")
@@ -1136,12 +1133,12 @@ def build_ui() -> gr.Blocks:
             with gr.TabItem("⚙️ Admin & Sistem Mimarisi", id="tab_admin"):
                 gr.Markdown("""
                 ### 🏛️ TarımDestekRAG Sistem Mimarisi & Geleneksel RAG'lardan Temel Farklar
-                - **Sıfır LLM (Zero-LLM Güvencesi):** Hak ediş ve karar aşamalarında asla dış üretici model (OpenAI, Gemini vb.) kullanılmaz; kararlar `%100` deterministik Python kural motoru (`rules_impl.py`) tarafından yürütülür. Halüsinasyon riski **%0**'dır.
+                - **Deterministik karar mantığı:** Uygunluk kararları Python kural motorunda üretilir; bu yaklaşım tek başına mevzuat veya veri doğruluğu garantisi vermez.
                 - **Hassas Finansal Matematik:** Tüm parasal destek hesaplamaları Python `decimal.Decimal` ile kuruş hassasiyetinde yapılır. Kayan nokta yuvarlama hatası bulunmaz.
-                - **%100 Doğrulanabilir Resmî Kaynak Provenansı:** Yalnızca Resmî Gazete, BÜGEM ve DSİ'nin yasal metinleri baz alınır. Her kaynak URL'si SHA-256 kanonik hash kontrolüyle izlenir.
+                - **Kaynak doğrulama:** Resmî PDF/HTML kaynaklarda hash ve pasaj kontrolü yapılabilir; doğrulanmamış özetler kanıt olarak sunulmaz.
                 - **Belge İçi Renkli İşaretleme Sistemi:** Hak kazanma hükümleri 🟢 yeşil, ret ve yasak hükümleri 🔴 kırmızı, birim tutarlar 🟡 kehribar ve yasal merciler 🔵 mavi ile işaretlenerek kullanıcıya mutlak şeffaflık sunulur.
-                - **Hibrit Arama Motoru:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` + `FAISS` ve `BM25Plus` ile Reciprocal Rank Fusion birleşimi (MRR=1.0000).
-                - **Çok Platformlu Hazırlık:** Arka uç FastAPI bağımsız REST API olarak çalışır; Web, PC ve Flutter mobil uygulaması aynı çekirdeği paylaşır.
+                - **Hibrit arama:** FAISS + BM25 + RRF; MRR ancak güncel benchmark çalıştırmasından sonra raporlanır.
+                - **İstemciler:** FastAPI ve Gradio PC paneli mevcuttur; Flutter istemcisinin kaynakları tamamlanmamıştır.
 
                 ---
                 ### 📜 Telif Hakkı ve Lisans Bildirimi
@@ -1218,7 +1215,7 @@ def build_ui() -> gr.Blocks:
         preset_4.click(
             lambda: (
                 "KONYA", "KARATAY", "✅ Evet (ÇKS Kaydım Aktif)", "Genç Çiftçi (< 41 Yaş)", "Erkek",
-                "MERCİMEK", 20.0, "Kuru Tarım", "❌ Hayır (Sertifikasız Tohum)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "MERCİMEK", 20.0, "Sulu Tarım", "❌ Hayır (Sertifikasız Tohum)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
             ),
             outputs=inputs_list,
         ).then(evaluate_farmer_parcel, inputs=inputs_list, outputs=calc_outputs)
