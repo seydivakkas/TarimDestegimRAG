@@ -46,7 +46,7 @@ def test_db_seeding_and_repositories():
 
         amt = support_repo.get_amount("BASIC_SUPPORT_2026", "BUĞDAY")
         assert amt is not None
-        assert amt.unit_amount == Decimal("465.00")
+        assert amt.unit_amount == Decimal("477.10")
 
         window = support_repo.get_window("BASIC_SUPPORT_2026", 2026)
         assert window is not None
