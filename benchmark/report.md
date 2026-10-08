@@ -1,54 +1,19 @@
-# TarımDestekRAG — Benchmark v1 Değerlendirme Raporu
+# TarımDestekRAG — Benchmark Durumu (P0 2026 Güncellemesi)
 
-**Rapor Tarihi:** 2026-10-06
-**Test Edilen Vaka Sayısı:** 100 (100% Tamamlandı)
-**Lisans:** Özel Lisans — Tüm Hakları Saklıdır (c) 2026 Seydi Eryılmaz (@seydivakkas)
+**Durum: Henüz bu sürümde yeniden çalıştırılmadı.**
 
----
+Bu dosyadaki önceki **%100 karar, %100 atıf, %100 güncellik, %0 desteksiz iddia** ve gecikme değerleri mevcut P0 sürümünü temsil etmediği için kaldırılmıştır. Değişen katsayılar ve beklenen test çıktıları için yeni bir koşu gerekir.
 
-## 1. Karar ve Hesaplama Metrikleri (Decision & Calculation)
+Gerçek ortamda:
 
-| Metrik | Hedef | Ölçülen Sonuç | Durum |
-|---|---|---|---|
-| **Uygunluk Karar Doğruluğu (Eligibility Accuracy)** | %100 | **%100.00** | ✅ PASS |
-| **Kural Kapsamı (Rule Coverage)** | %100 | **%100.00** | ✅ PASS |
-| **Tutar Hesaplama Doğruluğu (Decimal Exact Match)** | %100 | **%100.00** | ✅ PASS |
+```bash
+uv sync --extra dev
+uv run pytest backend/tests -q
+uv run python -m tarim_destek_rag.evaluation.benchmark_runner_v1
+```
 
-> *Tüm tutar hesaplamaları Python `decimal.Decimal` hassasiyetinde kuruşu kuruşuna doğrulanmıştır.*
+Koşucu bu dosyayı yalnızca yürütüldüğünde gerçek raporla değiştirecektir. Atıf pasaj doğrulaması ve kaynak sürüm güncelliği henüz uygulanmadığı için atıf/güncellik başarı garantisi verilmez.
 
----
-
-## 2. Arama ve Bilgi Getirme Metrikleri (Retrieval Engine)
-
-| Yöntem | Hit@1 | Hit@3 | Hit@5 | MRR | Gecikme |
-|---|---|---|---|---|---|
-| **BM25 Sözcüksel (Lexical)** | %87.50 | %100.00 | %100.00 | 0.9375 | 0.35 ms |
-| **Dense (FAISS Vector)** | %100.00 | %100.00 | %100.00 | 1.0000 | 15.20 ms |
-| **Hibrit (BM25 + FAISS + RRF)** | **%100.00** | **%100.00** | **%100.00** | **1.0000** | **45.35 ms** |
-
----
-
-## 3. RAG Açıklama ve Atıf Doğrulama (Citation & Guardrails)
-
-| Metrik | Hedef | Ölçülen Sonuç | Açıklama |
-|---|---|---|---|
-| **Atıf Doğruluğu (Citation Accuracy)** | >= %98 | **%100.00** | Resmî Gazete madde numarası ve link doğrulaması |
-| **Desteksiz İddia Oranı (Unsupported Claim Rate)** | %0.00 | **%0.00** | Zero-LLM deterministik şablon kural koruması |
-| **Mevzuat Tazeliği (Freshness Accuracy)** | %100 | **%100.00** | Mülga ve yürürlükteki mevzuat ayrımı |
-
----
-
-## 4. Sistem Gecikme Profili (Latency Benchmark)
-
-| Bileşen | Ortalama Süre (ms) |
-|---|---|
-| **Rule Engine Değerlendirmesi** | 4.46 ms |
-| **Hibrit Arama (RRF Retrieval)** | 45.35 ms |
-| **Deterministik Açıklama Üretimi** | 0.03 ms |
-| **Uçtan Uca (End-to-End Latency)** | **5.17 ms** |
-
----
-
-## 5. Sonuç
-
-TarımDestekRAG sistemi, Master Plan TD-P17 standartlarında tanımlanan tüm başarı kapılarını **%100 doğruluk ve sıfır halüsinasyon** garantisiyle geçmiştir.
+2026 rakamları için kaynaklar:
+- [BÜGEM 2026 birim fiyat katsayı cetveli](https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/2026%20Y%C4%B1l%C4%B1%20Destekleme%20Birim%20Fiyatlar%C4%B1.pdf)
+- [Bakanlık 8 Eylül 2026 katsayı güncellemesi](https://www.tarimorman.gov.tr/Haber/7258/Bitkisel-Ve-Hayvansal-Uretimde-Destek-Tutarlari-Artirildi)
