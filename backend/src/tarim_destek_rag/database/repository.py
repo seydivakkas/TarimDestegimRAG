@@ -124,6 +124,10 @@ class SupportRepository:
                 VerifiedSupportRateModel.source_version_id == SourceVersionModel.id,
             )
             .join(SourceModel, SourceVersionModel.source_id == SourceModel.source_id)
+            .join(
+                SupportProgramModel,
+                VerifiedSupportRateModel.program_id == SupportProgramModel.id,
+            )
             .where(
                 VerifiedSupportRateModel.program_id == program_id,
                 VerifiedSupportRateModel.crop_name == crop_name,
@@ -137,6 +141,8 @@ class SupportRepository:
                     VerifiedSupportRateModel.effective_to >= evaluation_date,
                 ),
                 SourceModel.active.is_(True),
+                SupportProgramModel.active.is_(True),
+                SupportProgramModel.year == production_year,
                 SourceVersionModel.superseded.is_(False),
                 or_(
                     and_(
