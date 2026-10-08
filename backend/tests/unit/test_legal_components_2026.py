@@ -70,6 +70,13 @@ def test_scope_and_2027_exclusions():
     assert doc["production_year"] == 2026
     assert doc["base_coefficient"] == "367.00"
     assert doc["source_version"]["content_hash"] is None
+    assert doc["validation_gate"]["primary_pdf_byte_hash_verified"] is True
+    observed = {
+        x["id"]: x["sha256_of_fetched_pdf_bytes"] for x in doc["citations"]
+        if "sha256_of_fetched_pdf_bytes" in x
+    }
+    assert len(observed) == 3
+    assert doc["source_version"]["primary_pdf_sha256_observed"] == observed["RG-2026-11781"]
     assert doc["validation_gate"]["approval"] is False
     assert all(x["review_status"] == "DRAFT" for x in doc["components"])
     assert len(doc["components"]) == 56
@@ -160,6 +167,8 @@ def test_wrong_year_future_price_and_tampered_catalog_rejected(tmp_path):
         lambda d: d["components"][0].update(production_year=2027),
         lambda d: d["validation_gate"].update(approval=True),
         lambda d: d["source_version"].update(content_hash="0"*64),
+        lambda d: d["source_version"].update(primary_pdf_sha256_observed="f"*64),
+        lambda d: d["validation_gate"].update(primary_pdf_byte_hash_verified=False),
         lambda d: d["components"].append(dict(d["components"][0])),
     ):
         datum = json.loads(json.dumps(original))
