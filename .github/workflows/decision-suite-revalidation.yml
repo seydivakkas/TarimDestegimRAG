@@ -8,6 +8,12 @@ on:
       - "backend/src/tarim_destek_rag/auto_updater/**"
       - "backend/src/tarim_destek_rag/rules/dynamic_engine.py"
       - "backend/tests/unit/test_p0_8b_layout_dynamic.py"
+      - "backend/tests/unit/test_p0_8c_legal_diff.py"
+      - "backend/tests/unit/test_p0_8c_signed_release.py"
+      - "backend/src/tarim_destek_rag/auto_updater/legal_diff.py"
+      - "backend/src/tarim_destek_rag/auto_updater/legal_diff_repository.py"
+      - "backend/src/tarim_destek_rag/auto_updater/release.py"
+      - "scripts/build_legal_diff_report.py"
       - "backend/tests/integration/test_p0_8b_grounding_api.py"
       - "deployment/sql/p0_8b_create_grounding_and_dynamic_drafts.sql"
       - "backend/src/tarim_destek_rag/api/**"
@@ -67,6 +73,8 @@ jobs:
             backend/tests/unit/test_p0_6_2026_water_scope.py \
             backend/tests/unit/test_p0_8_year_agnostic_updates.py \
             backend/tests/unit/test_p0_8b_layout_dynamic.py \
+            backend/tests/unit/test_p0_8c_legal_diff.py \
+            backend/tests/unit/test_p0_8c_signed_release.py \
             backend/tests/integration/test_p0_8b_grounding_api.py \
             backend/tests/unit/test_official_basin_catalog_2026.py \
             backend/tests/unit/test_decision_2026_matrix.py \
