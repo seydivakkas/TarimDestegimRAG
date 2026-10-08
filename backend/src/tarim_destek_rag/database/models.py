@@ -448,6 +448,7 @@ class SourceDocumentModel(Base):
 
     __table_args__ = (
         CheckConstraint("production_year BETWEEN 2020 AND 2100", name="ck_source_doc_year"),
+        UniqueConstraint("source_id", "production_year", "document_sha256", name="uq_source_year_pdf_hash"),
         CheckConstraint("review_status IN ('DRAFT','REVIEW','REJECTED')", name="ck_source_doc_review_only"),
     )
 
