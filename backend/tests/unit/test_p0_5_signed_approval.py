@@ -240,3 +240,15 @@ def test_inactive_source_denied_even_with_two_signatures(session, monkeypatch):
     source.active = False
     session.commit()
     assert lookup(session) is None
+
+
+def test_global_activation_switch_defaults_off_even_with_two_valid_signatures(
+    session, monkeypatch
+):
+    rate = add_rate(session)
+    sign_subject(session, rate, monkeypatch)
+    assert lookup(session) is not None  # Only inside ephemeral test activation.
+    monkeypatch.delenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED", raising=False)
+    assert lookup(session) is None
+    monkeypatch.setenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED", "TRUE")
+    assert lookup(session) is None

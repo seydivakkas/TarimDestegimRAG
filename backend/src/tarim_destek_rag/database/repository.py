@@ -16,6 +16,7 @@ from tarim_destek_rag.database.models import (
     ApplicationWindowModel,
     BasinCropRuleModel,
     ReviewedBasinSnapshotModel,
+    ReviewedWaterRestrictionScopeModel,
     SourceModel,
     SourceVersionModel,
     SupportAmountModel,
@@ -348,11 +349,80 @@ class BasinRepository:
         return rule is not None
 
 
+@dataclass(frozen=True)
+class WaterScopeAssessment:
+    outcome: str  # RESTRICTED, NOT_RESTRICTED, UNKNOWN
+    reason: str
+    source_version_id: int | None = None
+
+
 class WaterRestrictionRepository:
     """Yeraltı su kısıtı veri erişim katmanı."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
+
+    def assess_2026(self, province: str, district: str, year: int) -> WaterScopeAssessment:
+        """Only complete dual-signed 2024/39 + 2025/42 national scope may decide.
+
+        In particular, old demo water_restrictions rows and the 945 crop-plan
+        district star flags have NO authority over water support eligibility.
+        """
+        if year != 2026:
+            return WaterScopeAssessment("UNKNOWN", "2026 dışındaki üretim yılı incelenmedi.")
+        from tarim_destek_rag.normalization.water_2026 import (
+            PRIMARY_ID, AMENDMENT_ID, PINNED_DISTRICTS,
+            PRIMARY_SHA256, AMENDMENT_SHA256,
+        )
+
+        candidates = list(self.session.scalars(select(
+            ReviewedWaterRestrictionScopeModel
+        ).where(
+            ReviewedWaterRestrictionScopeModel.production_year == year,
+            ReviewedWaterRestrictionScopeModel.review_status == "VERIFIED",
+            ReviewedWaterRestrictionScopeModel.coverage_complete.is_(True),
+        )).all())
+        if len(candidates) != 1:
+            return WaterScopeAssessment(
+                "UNKNOWN", "Tam, benzersiz ve onaylı 2026 su kısıtı kapsamı bulunamadı."
+            )
+        scope = candidates[0]
+        base = scope.source_version
+        amend = scope.amendment_source_version
+        if (
+            not scope.reviewed_by or not scope.reviewed_at or not scope.review_reference
+            or base is None or amend is None
+            or base.source_id != PRIMARY_ID or amend.source_id != AMENDMENT_ID
+            or base.content_hash != PRIMARY_SHA256
+            or amend.content_hash != AMENDMENT_SHA256
+            or not base.effective_from or not amend.effective_from
+            or base.effective_from > "2026-12-31"
+            or amend.effective_from > "2026-01-01"
+            or (base.effective_to and base.effective_to < "2026-01-01")
+            or (amend.effective_to and amend.effective_to < "2026-12-31")
+            or not two_person_approved(self.session, scope)
+        ):
+            return WaterScopeAssessment(
+                "UNKNOWN", "Kaynak sürümleri veya çift imzalı 2026 onayı eksik."
+            )
+        try:
+            keys = json.loads(scope.district_keys_json)
+        except (TypeError, ValueError):
+            keys = None
+        if not isinstance(keys, list) or set(keys) != PINNED_DISTRICTS or len(keys) != 52:
+            return WaterScopeAssessment("UNKNOWN", "Ulusal 52 ilçe hukukî kümesi uyuşmuyor.")
+        def tr_upper(value: str) -> str:
+            return value.strip().replace("i", "İ").replace("ı", "I").upper()
+        key = f"{tr_upper(province)}/{tr_upper(district)}"
+        if key in keys:
+            return WaterScopeAssessment(
+                "RESTRICTED", "2024/39 m.6/3(a) 2026 onaylı su kısıtı ilçesi.",
+                scope.source_version_id,
+            )
+        return WaterScopeAssessment(
+            "NOT_RESTRICTED", "Onaylı 2026 tam su kısıtı ilçe listesinde yer almıyor.",
+            scope.source_version_id,
+        )
 
     def get_restriction(
         self, province: str, district: str, year: int = 2026

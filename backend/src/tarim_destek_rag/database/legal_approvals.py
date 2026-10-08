@@ -30,10 +30,10 @@ from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
     LegalApprovalAttestationModel, LegalApprovalRevocationModel, ReviewedBasinSnapshotModel,
-    VerifiedSupportRateModel,
+    VerifiedSupportRateModel, ReviewedWaterRestrictionScopeModel,
 )
 
-Subject = VerifiedSupportRateModel | ReviewedBasinSnapshotModel
+Subject = VerifiedSupportRateModel | ReviewedBasinSnapshotModel | ReviewedWaterRestrictionScopeModel
 
 CONTEXT = "TarimDestegimRAG/P0-5/legal-attestation/v1"
 TRUST_ENV = "TARIM_RAG_LEGAL_TRUSTED_KEYS_JSON"
@@ -47,11 +47,13 @@ def _normalize(value):
     return value
 
 
-def _subject_kind(subject: Subject) -> Literal["RATE", "BASIN"]:
+def _subject_kind(subject: Subject) -> Literal["RATE", "BASIN", "WATER"]:
     if isinstance(subject, VerifiedSupportRateModel):
         return "RATE"
     if isinstance(subject, ReviewedBasinSnapshotModel):
         return "BASIN"
+    if isinstance(subject, ReviewedWaterRestrictionScopeModel):
+        return "WATER"
     raise TypeError("Unexpected legal approval subject")
 
 
@@ -89,7 +91,7 @@ def subject_payload(subject: Subject) -> dict:
             "approved_at": subject.approved_at,
             "review_reference": subject.review_reference,
         }
-    else:
+    elif isinstance(subject, ReviewedBasinSnapshotModel):
         fields = {
             "province": subject.province,
             "district": subject.district,
@@ -103,6 +105,32 @@ def subject_payload(subject: Subject) -> dict:
             "reviewed_at": subject.reviewed_at,
             "review_reference": subject.review_reference,
         }
+    else:
+        amended = subject.amendment_source_version
+        amended_source = amended.source if amended is not None else None
+        if amended is None or amended_source is None:
+            raise ValueError("Both 2024/39 and 2025/42 source versions required")
+        provenance["2026_amendment"] = {
+            "source_id": amended.source_id,
+            "source_url": amended_source.url,
+            "source_authority": amended_source.authority,
+            "source_active": amended_source.active,
+            "source_superseded": amended.superseded,
+            "source_sha256": amended.content_hash,
+            "source_effective_from": amended.effective_from,
+            "source_effective_to": amended.effective_to,
+            "document_version": amended.version,
+        }
+        fields = {
+            "production_year": subject.production_year,
+            "district_keys": json.loads(subject.district_keys_json),
+            "coverage_complete": subject.coverage_complete,
+            "review_status": subject.review_status,
+            "reviewed_by": subject.reviewed_by,
+            "reviewed_at": subject.reviewed_at,
+            "review_reference": subject.review_reference,
+        }
+
     return {
         "context": CONTEXT,
         "kind": _subject_kind(subject),
@@ -201,6 +229,10 @@ def _validate_signature(
 
 def two_person_approved(session: Session, subject: Subject) -> bool:
     """Independent signed reviewer+approver evidence, freshly checked every read."""
+    # Production-wide release gate defaults OFF even with two valid signatures.
+    # A deployment operator must explicitly authorize live legal activation.
+    if os.getenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED") != "true":
+        return False
     keys = _trusted_public_keys()
     if len(keys) < 2:
         return False
@@ -210,6 +242,23 @@ def two_person_approved(session: Session, subject: Subject) -> bool:
     source = version.source if version is not None else None
     if version is None or source is None or not source.active or version.superseded:
         return False
+    if isinstance(subject, ReviewedWaterRestrictionScopeModel):
+        amended = subject.amendment_source_version
+        amended_source = amended.source if amended is not None else None
+        if (
+            amended is None or amended_source is None or not amended_source.active
+            or amended.superseded or not re.fullmatch(
+                r"[0-9a-fA-F]{64}", amended.content_hash or ""
+            )
+        ):
+            return False
+        amended_url = urlsplit(amended_source.url)
+        if (
+            amended_url.scheme != "https"
+            or amended_url.hostname not in ("resmigazete.gov.tr", "www.resmigazete.gov.tr")
+            or amended_source.authority != "OFFICIAL_GAZETTE"
+        ):
+            return False
     parsed = urlsplit(source.url)
     host = (parsed.hostname or "").lower()
     if (

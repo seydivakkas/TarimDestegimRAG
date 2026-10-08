@@ -98,9 +98,9 @@ def test_approved_complete_district_can_prove_both_membership_and_nonmembership(
 
 
 @pytest.mark.parametrize("drip,expected,missing", [
-    (None, EligibilityStatusEnum.REVIEW, "drip_irrigation"),
-    (False, EligibilityStatusEnum.NOT_ELIGIBLE, None),
-    (True, EligibilityStatusEnum.REVIEW, "verified_support_rate"),
+    (None, EligibilityStatusEnum.REVIEW, "verified_water_scope"),
+    (False, EligibilityStatusEnum.REVIEW, "verified_water_scope"),
+    (True, EligibilityStatusEnum.REVIEW, "verified_water_scope"),
 ])
 def test_starred_grain_maize_condition_cannot_auto_grant_payment(
     session, drip, expected, missing, monkeypatch
@@ -111,10 +111,11 @@ def test_starred_grain_maize_condition_cannot_auto_grant_payment(
     assert result.status == expected
     if missing:
         assert missing in result.missing_fields
-    if drip is True:
-        assert not result.failed_checks
-    if drip is False:
-        assert any("damla sulama" in failure for failure in result.failed_checks)
+    # 2025/42 repealed the 2026 drip exception; no drip value can
+    # establish maize entitlement without signed 2026 water designation.
+    assert not result.failed_checks
+    assert "drip_irrigation" not in result.missing_fields
+    assert "verified_support_rate" in result.missing_fields
 
 
 def test_source_superseded_or_invalid_snapshot_fails_closed(session, monkeypatch):
