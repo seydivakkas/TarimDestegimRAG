@@ -172,3 +172,33 @@ class ApiClient:
             return response.json()
         except Exception as exc:
             return {"status": "ERROR", "message": f"Resmî kaynak taraması başarısız: {exc}"}
+
+
+    def get_grounding_evidence(self, sentence_id: int, year: int) -> dict[str, Any]:
+        """Read authenticated-by-source, but unapproved, exact PDF citation details."""
+        try:
+            response = self._request(
+                "GET", f"/api/v1/grounding/evidence/{sentence_id}",
+                params={"year": year},
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def get_grounding_page_bytes(
+        self, sentence_id: int, page: int, year: int,
+    ) -> bytes | None:
+        """Fetch visible yellow-marked actual page; no user-supplied coordinates."""
+        try:
+            response = self._request(
+                "GET",
+                f"/api/v1/grounding/image/{sentence_id}/page/{page}",
+                params={"year": year, "fmt": "png"},
+            )
+            response.raise_for_status()
+            if response.headers.get("content-type", "").split(";")[0] != "image/png":
+                return None
+            return response.content
+        except Exception:
+            return None

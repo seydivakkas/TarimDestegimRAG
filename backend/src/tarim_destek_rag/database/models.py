@@ -421,3 +421,101 @@ class AgriculturalFAQModel(Base):
     verified: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
 
+
+
+# P0-8B: additive provenance staging; none of the following tables is a
+# source for the current farmer payment engine until an independently reviewed
+# release is explicitly bridged to VerifiedSupportRateModel.
+class SourceDocumentModel(Base):
+    """Original PDF byte-hash and publication provenance, not legal approval."""
+
+    __tablename__ = "source_documents"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("sources.source_id"), nullable=False
+    )
+    source_version_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=True
+    )
+    production_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    document_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    original_url: Mapped[str] = mapped_column(String(1024), nullable=False)
+    archive_relative_path: Mapped[str] = mapped_column(String(256), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(32), nullable=False, default="application/pdf")
+    discovered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="DRAFT")
+
+    __table_args__ = (
+        CheckConstraint("production_year BETWEEN 2020 AND 2100", name="ck_source_doc_year"),
+        UniqueConstraint("source_id", "production_year", "document_sha256", name="uq_source_year_pdf_hash"),
+        CheckConstraint("review_status IN ('DRAFT','REVIEW','REJECTED')", name="ck_source_doc_review_only"),
+    )
+
+
+class SentenceBoundingBoxModel(Base):
+    """Exact text location on the original immutable PDF, not inferred law."""
+
+    __tablename__ = "sentence_bounding_boxes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    document_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_documents.id"), nullable=False
+    )
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    exact_text: Mapped[str] = mapped_column(Text, nullable=False)
+    article_no: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    paragraph_no: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    clause_no: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    bounding_boxes_json: Mapped[str] = mapped_column(Text, nullable=False)
+    normalized_quads_json: Mapped[str] = mapped_column(Text, nullable=False)
+    text_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="DRAFT")
+
+    __table_args__ = (
+        CheckConstraint("page_number > 0", name="ck_sentence_bbox_page"),
+        CheckConstraint("review_status IN ('DRAFT','REVIEW','REJECTED')", name="ck_sentence_bbox_review_only"),
+        UniqueConstraint(
+            "document_id", "page_number", "text_sha256",
+            name="uq_document_page_exact_sentence",
+        ),
+    )
+
+
+class DynamicRateModel(Base):
+    """Year-independent extracted candidate; NEVER directly payment-authoritative.
+
+    A separately governed release must validate legal effect, source binding,
+    geographical coverage, other eligibility conditions and signatures.
+    """
+
+    __tablename__ = "dynamic_rate_candidates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    program_key: Mapped[str] = mapped_column(String(96), nullable=False)
+    crop_code: Mapped[str] = mapped_column(String(96), nullable=False)
+    production_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    province: Mapped[str] = mapped_column(String(64), nullable=False, default="*")
+    district: Mapped[str] = mapped_column(String(64), nullable=False, default="*")
+    base_coefficient: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    category_multiplier: Mapped[Decimal] = mapped_column(Numeric(12, 4), nullable=False)
+    proposed_unit_amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    unit: Mapped[str] = mapped_column(String(16), nullable=False, default="TRY/da")
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source_sentence_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("sentence_bounding_boxes.id"), nullable=False
+    )
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="DRAFT")
+
+    __table_args__ = (
+        CheckConstraint("production_year BETWEEN 2020 AND 2100", name="ck_dynamic_rate_year"),
+        CheckConstraint("base_coefficient > 0 AND category_multiplier > 0", name="ck_dynamic_rate_positive"),
+        CheckConstraint("proposed_unit_amount > 0", name="ck_dynamic_rate_amount_positive"),
+        CheckConstraint("review_status IN ('DRAFT','REVIEW','REJECTED')", name="ck_dynamic_rate_never_payment"),
+        UniqueConstraint(
+            "program_key", "crop_code", "production_year",
+            "province", "district", "source_sentence_id",
+            name="uq_year_dynamic_candidate_sentence",
+        ),
+    )

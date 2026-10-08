@@ -446,3 +446,84 @@ def show_exact_pdf_evidence(
             "X-Original-Source-SHA256": sha256,
         },
     )
+
+
+# P0-8B: evidence IDs resolve ONLY server-side registered official source
+# documents. No arbitrary page URL, client-provided quad or guessed quote.
+@app.get("/api/v1/grounding/evidence/{sentence_id}", tags=["PDF Hukuki Kanıt"])
+def get_grounding_evidence(
+    sentence_id: int,
+    year: int,
+    session: Session = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Return original official PDF page, true quote and rectangles; DRAFT only."""
+    from tarim_destek_rag.auto_updater.grounding_repository import load_grounded_sentence
+
+    try:
+        record, document, grounded, _ = load_grounded_sentence(
+            session,
+            archive_root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
+            evidence_id=sentence_id, year=year,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {
+        "status": "DRAFT_NEEDS_HUMAN_LEGAL_REVIEW",
+        "source_id": document.source_id,
+        "source_url": document.original_url,
+        "production_year": document.production_year,
+        "original_pdf_sha256": grounded.document_sha256,
+        "sentence_id": record.id,
+        "article": record.article_no,
+        "paragraph": record.paragraph_no,
+        "clause": record.clause_no,
+        "page_number": grounded.page_number,
+        "exact_quote": grounded.exact_quote,
+        "bounding_boxes": grounded.to_dict()["bounding_boxes"],
+        "normalized_quads": grounded.normalized_quads,
+        "highlighted_image_url": (
+            f"/api/v1/grounding/image/{record.id}/page/{grounded.page_number}?year={year}"
+        ),
+        "legal_approval": False,
+        "payable_amount": None,
+    }
+
+
+@app.get("/api/v1/grounding/image/{sentence_id}/page/{page_number}", tags=["PDF Hukuki Kanıt"])
+def render_grounding_page(
+    sentence_id: int,
+    page_number: int,
+    year: int,
+    fmt: str = "png",
+    session: Session = Depends(get_db_session),
+) -> Response:
+    """Draw true sentence highlight on exact original PDF page as PNG/WebP."""
+    from tarim_destek_rag.auto_updater.grounding_repository import load_grounded_sentence
+    from tarim_destek_rag.auto_updater.pdf_grounding import PDFGroundingEngine
+    from tarim_destek_rag.updates.pdf_evidence import UnverifiableEvidence
+
+    try:
+        row, document, grounded, original = load_grounded_sentence(
+            session,
+            archive_root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
+            evidence_id=sentence_id, year=year,
+        )
+        if grounded.page_number != page_number:
+            raise ValueError("Requested PDF page does not match verified sentence")
+        content, mime = PDFGroundingEngine.render_highlighted_page(
+            original, grounded, image_format=fmt,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, FileNotFoundError, UnverifiableEvidence) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return Response(
+        content=content, media_type=mime,
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Original-Source-SHA256": grounded.document_sha256,
+            "X-Legal-Evidence": "DRAFT_EXACT_TEXT_NOT_APPROVED",
+        },
+    )
