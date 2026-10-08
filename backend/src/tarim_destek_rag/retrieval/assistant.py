@@ -224,7 +224,6 @@ class AssistantEngine:
         planli = info["planli_uretim_tl"]
         tohum = info["sertifikali_tohum_tl"]
         su_kisiti = info["su_kisiti_tl"]
-        genc = info["kadin_genc_ilave_tl"]
         toplam = info["toplam_standart_tl"]
         aciklama = info.get("aciklama", "")
 
