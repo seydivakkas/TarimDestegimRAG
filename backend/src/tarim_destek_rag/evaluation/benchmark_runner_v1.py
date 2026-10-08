@@ -124,7 +124,10 @@ class BenchmarkV1Runner:
             assert target_res is not None
 
             # Hesaplama
-            amt_record = self.support_repo.get_amount(case.support_id, parcel.crop)
+            amt_record = self.support_repo.get_amount(
+                case.support_id, parcel.crop, production_year=parcel.production_year,
+                province=farmer.province, district=farmer.district,
+            )
             unit_amt = amt_record.unit_amount if amt_record else None
             calc_res = SupportCalculator.calculate(target_res, parcel.area_da, unit_amt)
 
