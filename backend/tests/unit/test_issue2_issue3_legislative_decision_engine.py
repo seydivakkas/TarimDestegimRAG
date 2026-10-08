@@ -48,7 +48,7 @@ def session():
     Base.metadata.create_all(engine)
     sm = sessionmaker(bind=engine)
     sess = sm()
-    seed_2026_support_data(sess)
+    seed_2026_support_data(sess, include_faqs=False)
     sess.commit()
     yield sess
     sess.close()
@@ -62,7 +62,7 @@ def session():
 def test_support_amount_model_contains_mandatory_provenance_fields(session):
     """SupportAmountModel üretim yılı, karar sayısı, geçerlilik dönemi ve doğrulama durumunu içerir."""
     repo = SupportRepository(session)
-    wheat_amt = repo.get_amount("BASIC_SUPPORT_2026", "BUĞDAY", production_year=2026, status="VERIFIED")
+    wheat_amt = repo.get_legacy_amount("BASIC_SUPPORT_2026", "BUĞDAY")
 
     assert wheat_amt is not None
     assert wheat_amt.production_year == 2026
@@ -70,32 +70,27 @@ def test_support_amount_model_contains_mandatory_provenance_fields(session):
     assert wheat_amt.effective_from == "2026-09-08"
     assert wheat_amt.effective_to is None
     assert wheat_amt.geographic_scope == "GENEL"
-    assert wheat_amt.verification_status == "VERIFIED"
+    assert wheat_amt.verification_status == "DRAFT"  # Legacy label is not legal approval.
+    assert repo.get_amount(
+        "BASIC_SUPPORT_2026", "BUĞDAY", production_year=2026,
+        province="KONYA", district="KARATAY",
+    ) is None
     assert wheat_amt.unit_amount == Decimal("465.00")
 
 
-def test_support_repository_filters_by_verification_status(session):
-    """Doğrulanmamış veya yürürlükten kalkmış (SUPERSEDED) tutarlar varsayılan get_amount ile dönmez."""
+def test_support_repository_keeps_legacy_history_but_no_payout_authority(session):
+    """2026 DRAFT and SUPERSEDED history must never be used by get_amount."""
     repo = SupportRepository(session)
+    assert repo.get_amount(
+        "BASIC_SUPPORT_2026", "BUĞDAY", production_year=2026,
+        province="KONYA", district="KARATAY",
+    ) is None
+    history = repo.list_amount_history("BASIC_SUPPORT_2026", "BUĞDAY")
+    assert any(x.verification_status == "DRAFT" and x.unit_amount == Decimal("465.00")
+               for x in history)
+    assert any(x.verification_status == "SUPERSEDED" and x.unit_amount == Decimal("310.00")
+               for x in history)
 
-    # 1. Varsayılan sorgu yalnızca VERIFIED döner
-    verified_rate = repo.get_amount("BASIC_SUPPORT_2026", "BUĞDAY", production_year=2026)
-    assert verified_rate is not None
-    assert verified_rate.verification_status == "VERIFIED"
-    assert verified_rate.unit_amount == Decimal("465.00")
-
-    # 2. SUPERSEDED sürüm açıkça sorgulanabilir
-    superseded_rate = repo.get_amount(
-        "BASIC_SUPPORT_2026", "BUĞDAY", production_year=2026, status="SUPERSEDED"
-    )
-    assert superseded_rate is not None
-    assert superseded_rate.verification_status == "SUPERSEDED"
-    assert superseded_rate.unit_amount == Decimal("310.00")
-    assert superseded_rate.legal_decision_number == "32647"
-
-    # 3. Var olmayan veya onaylanmamış durum sorgusu None döner
-    draft_rate = repo.get_amount("BASIC_SUPPORT_2026", "BUĞDAY", production_year=2026, status="DRAFT")
-    assert draft_rate is None
 
 
 def test_amount_history_audit_trail(session):
@@ -105,7 +100,7 @@ def test_amount_history_audit_trail(session):
 
     assert len(history) >= 2
     statuses = {item.verification_status for item in history}
-    assert "VERIFIED" in statuses
+    assert "DRAFT" in statuses
     assert "SUPERSEDED" in statuses
 
 
@@ -177,8 +172,9 @@ def test_catalogued_basin_unsupported_crop_is_not_eligible(session):
 
     res = rule.evaluate(farmer_catalogued, parcel_findik, session)
 
-    assert res.status == EligibilityStatusEnum.NOT_ELIGIBLE
-    assert any("planlı üretim kapsamında yer almamaktadır" in f for f in res.failed_checks)
+    assert res.status == EligibilityStatusEnum.REVIEW
+    assert "verified_basin_crop" in res.missing_fields
+    assert not res.failed_checks
 
 
 def test_water_restriction_irrigation_distinction(session):
@@ -216,6 +212,6 @@ def test_water_restriction_irrigation_distinction(session):
         irrigation=IrrigationStatusEnum.IRRIGATED,
     )
     res_irr = rule.evaluate(farmer, p_irr, session)
-    assert res_irr.status == EligibilityStatusEnum.ELIGIBLE
+    assert res_irr.status == EligibilityStatusEnum.REVIEW
     assert len(res_irr.failed_checks) == 0
-    assert len(res_irr.missing_fields) == 0
+    assert "verified_water_provenance" in res_irr.missing_fields

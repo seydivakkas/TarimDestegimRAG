@@ -24,7 +24,7 @@ def get_test_db_session():
     engine = create_engine("sqlite:///:memory:", echo=False)
     Base.metadata.create_all(bind=engine)
     session = Session(engine)
-    seed_2026_support_data(session)
+    seed_2026_support_data(session, include_faqs=False)
     return session
 
 
@@ -36,9 +36,9 @@ def test_basic_support_eligible():
 
     rule = BasicSupportRule()
     res = rule.evaluate(farmer, parcel, session)
-    assert res.status == EligibilityStatusEnum.ELIGIBLE
+    assert res.status == EligibilityStatusEnum.REVIEW
     assert len(res.failed_checks) == 0
-    assert "BUĞDAY" in res.passed_checks[3]
+    assert "verified_support_rate" in res.missing_fields
 
 
 def test_basic_support_missing_cks():
@@ -64,8 +64,8 @@ def test_planned_production_rules():
     res_wheat = rule.evaluate(farmer, parcel_wheat, session)
     res_cotton = rule.evaluate(farmer, parcel_cotton, session)
 
-    assert res_wheat.status == EligibilityStatusEnum.ELIGIBLE
-    assert res_cotton.status == EligibilityStatusEnum.NOT_ELIGIBLE
+    assert res_wheat.status == EligibilityStatusEnum.REVIEW
+    assert res_cotton.status == EligibilityStatusEnum.REVIEW
 
 
 def test_certified_seed_missing_evidence():
@@ -102,8 +102,8 @@ def test_water_restriction_rule():
     res_konya = rule.evaluate(farmer_konya, parcel_lentil, session)
     res_bursa = rule.evaluate(farmer_bursa, parcel_lentil, session)
 
-    assert res_konya.status == EligibilityStatusEnum.ELIGIBLE
-    assert res_bursa.status == EligibilityStatusEnum.NOT_ELIGIBLE
+    assert res_konya.status == EligibilityStatusEnum.REVIEW
+    assert res_bursa.status == EligibilityStatusEnum.REVIEW
 
 
 def test_calculator_precision():
@@ -112,14 +112,21 @@ def test_calculator_precision():
     farmer = FarmerProfile(province="KONYA", district="KARATAY", cks_status=True)
     parcel = Parcel(crop="BUĞDAY", area_da=Decimal("12.4"), production_year=2026)
 
-    rule = BasicSupportRule()
-    rule_res = rule.evaluate(farmer, parcel, session)
+    from tarim_destek_rag.rules.base import RuleResult
+    from tarim_destek_rag.normalization.legal_components_2026 import load_component_catalog
 
-    calc_res = SupportCalculator.calculate(rule_res, parcel.area_da, Decimal("465.00"))
+    # Arithmetic unit test ONLY: synthetic eligibility, NOT a farmer entitlement.
+    rule_res = RuleResult(
+        rule_id="SYNTHETIC_DECIMAL", support_id="BASIC_SUPPORT_2026",
+        support_name="Synthetic test", status=EligibilityStatusEnum.ELIGIBLE,
+    )
+    rate = next(x for x in load_component_catalog()["components"]
+                if x["program_id"] == "BASIC_SUPPORT_2026" and x["crop_name"] == "BUĞDAY")
+    calc_res = SupportCalculator.calculate(rule_res, parcel.area_da, Decimal(rate["unit_amount"]))
 
     assert calc_res.status == EligibilityStatusEnum.ELIGIBLE
-    assert calc_res.estimated_amount == Decimal("5766.00")
-    assert calc_res.formula == "12.4 da * 465.00 TL/da = 5766.00 TL"
+    assert calc_res.estimated_amount == Decimal("5916.04")
+    assert calc_res.formula == "12.4 da * 477.10 TL/da = 5916.04 TL"
     assert calc_res.disclaimer == DISCLAIMER_TEXT
 
 
@@ -139,6 +146,6 @@ def test_orchestrator_evaluate_all():
     assert len(results) == 5
     # Temel ve Planlı üretim ve tohum uygun olmalı
     res_map = {r.support_id: r.status for r in results}
-    assert res_map["BASIC_SUPPORT_2026"] == EligibilityStatusEnum.ELIGIBLE
-    assert res_map["PLANNED_PRODUCTION_2026"] == EligibilityStatusEnum.ELIGIBLE
-    assert res_map["CERTIFIED_SEED_2026"] == EligibilityStatusEnum.ELIGIBLE
+    assert res_map["BASIC_SUPPORT_2026"] == EligibilityStatusEnum.REVIEW
+    assert res_map["PLANNED_PRODUCTION_2026"] == EligibilityStatusEnum.REVIEW
+    assert res_map["CERTIFIED_SEED_2026"] == EligibilityStatusEnum.REVIEW
