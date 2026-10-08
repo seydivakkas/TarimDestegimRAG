@@ -36,22 +36,28 @@ def test_regression_known_eligibility_and_amounts():
         basic_res = next(r for r in results if r.support_id == "BASIC_SUPPORT_2026")
         planned_res = next(r for r in results if r.support_id == "PLANNED_PRODUCTION_2026")
 
-        assert basic_res.status == EligibilityStatusEnum.ELIGIBLE
-        assert planned_res.status == EligibilityStatusEnum.ELIGIBLE
+        assert basic_res.status == EligibilityStatusEnum.REVIEW
+        assert planned_res.status == EligibilityStatusEnum.REVIEW
 
-        # Tutar hesabı kontrolü: 12.4 da * 465.00 = 5766.00 TL
-        amt_rec = support_repo.get_amount("BASIC_SUPPORT_2026", "BUĞDAY")
-        calc = SupportCalculator.calculate(basic_res, parcel.area_da, amt_rec.unit_amount)
-        assert calc.estimated_amount == Decimal("5766.00")
+        # Legacy prices remain inspectable but cannot enter a verified calculation.
+        old = support_repo.get_legacy_amount("BASIC_SUPPORT_2026", "BUĞDAY")
+        assert old.unit_amount == Decimal("465.00")
+        assert support_repo.get_amount(
+            "BASIC_SUPPORT_2026", "BUĞDAY",
+            production_year=2026, province="KONYA", district="KARATAY",
+        ) is None
+        calc = SupportCalculator.calculate(basic_res, parcel.area_da, None)
+        assert calc.estimated_amount is None
 
         # 2. Samsun/Çarşamba Fındık (10.0 da * 170.00 = 1700.00 TL)
         f_samsun = FarmerProfile(province="SAMSUN", district="ÇARŞAMBA", cks_status=True)
         p_findik = Parcel(crop="FINDIK", area_da=Decimal("10.0"), production_year=2026)
         res_samsun = orchestrator.evaluate_all(f_samsun, p_findik, session)
         basic_findik = next(r for r in res_samsun if r.support_id == "BASIC_SUPPORT_2026")
-        amt_findik = support_repo.get_amount("BASIC_SUPPORT_2026", "FINDIK")
-        calc_findik = SupportCalculator.calculate(basic_findik, p_findik.area_da, amt_findik.unit_amount)
-        assert calc_findik.estimated_amount == Decimal("1700.00")
+        amt_findik = support_repo.get_legacy_amount("BASIC_SUPPORT_2026", "FINDIK")
+        assert amt_findik.unit_amount == Decimal("170.00")
+        calc_findik = SupportCalculator.calculate(basic_findik, p_findik.area_da, None)
+        assert calc_findik.estimated_amount is None
     finally:
         session.close()
 
