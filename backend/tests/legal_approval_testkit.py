@@ -29,6 +29,7 @@ def trust_pair(monkeypatch):
             "role": role, "public_key_b64": base64.b64encode(public).decode("ascii"),
         }
     monkeypatch.setenv(TRUST_ENV, json.dumps(config))
+    monkeypatch.setenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED", "true")
     return signers
 
 
