@@ -11,7 +11,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from tarim_destek_rag.database.connection import SessionLocal, init_db
+from tarim_destek_rag.database.legal_runtime import legal_session
 from tarim_destek_rag.database.legal_audit import (
     archive_signed_event, production_profile,
 )
@@ -44,8 +44,7 @@ def main() -> int:
                         help="Write atomically; otherwise validate and rollback")
     args = parser.parse_args()
 
-    init_db()
-    with SessionLocal() as session:
+    with legal_session("reader" if args.action == "inspect" else "writer") as session:
         subject = _get_subject(session, args.kind, args.id)
         if args.action == "inspect":
             print(json.dumps({
