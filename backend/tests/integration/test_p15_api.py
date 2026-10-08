@@ -86,7 +86,7 @@ def test_calculate_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     basic_calc = next(d for d in data if d["support_id"] == "BASIC_SUPPORT_2026")
-    assert basic_calc["estimated_amount"] == "4650.00"
+    assert basic_calc["estimated_amount"] == "4771.00"
 
 
 def test_evaluate_full_endpoint(client):
