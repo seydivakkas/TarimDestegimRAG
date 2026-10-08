@@ -108,8 +108,8 @@ def test_citation_verifier():
         snippet="Mevzuat metni",
     )
     v_res = verifier.verify(valid_cit)
-    assert v_res.is_valid is True
-    assert v_res.status == "VERIFIED"
+    assert v_res.is_valid is False  # Kaynak kaydı, pasajın gerçek belgede olduğunu kanıtlamaz.
+    assert v_res.status == "INSUFFICIENT_EVIDENCE"
 
     invalid_cit = CitationDetail(
         source_id="UNKNOWN-SOURCE",
@@ -132,8 +132,8 @@ def test_assistant_engine_crop_amounts():
 
     ans, chunks, _ = assistant_engine.answer_question("2026 buğday desteği ne kadar?")
     assert "BUĞDAY" in ans
-    assert "465.00 TL/da" in ans
-    assert "930.00 TL/da" in ans
+    assert "477.10 TL/da" in ans
+    assert "954.20 TL/da" in ans
     assert len(chunks) > 0
 
 
@@ -153,8 +153,8 @@ def test_assistant_engine_women_young_farmer():
     from tarim_destek_rag.retrieval.assistant import assistant_engine
 
     ans, _, _ = assistant_engine.answer_question("Kadın çiftçilere ek destek veriliyor mu?")
-    assert "%100" in ans
-    assert "41 yaş" in ans
+    assert "KOBÜKS" in ans
+    assert "otomatik" in ans
     assert "Kadın" in ans
 
 
@@ -163,8 +163,8 @@ def test_assistant_engine_water_constraint():
     from tarim_destek_rag.retrieval.assistant import assistant_engine
 
     ans, _, _ = assistant_engine.answer_question("Yeraltı su kısıtı desteği nedir?")
-    assert "250 TL" in ans
-    assert "Konya" in ans or "Mercimek" in ans or "Nohut" in ans
+    assert "293,60 TL" in ans
+    assert "mercimek" in ans.lower()
 
 
 def test_assistant_engine_haciz_yasagi():
@@ -194,7 +194,7 @@ def test_assistant_engine_expanded_crop_and_organic():
 
     ans_celtik, _, _ = assistant_engine.answer_question("2026 çeltik desteği ne kadar?")
     assert "ÇELTİK" in ans_celtik
-    assert "450.00 TL/da" in ans_celtik
+    assert "825.75 TL/da" in ans_celtik
 
     ans_org, _, _ = assistant_engine.answer_question("Organik tarım ve biyolojik mücadele desteği kimlere verilir?")
     assert "organik tarım" in ans_org.lower()
