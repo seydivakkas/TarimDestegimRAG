@@ -50,11 +50,16 @@ class BasicSupportRule(BaseRule):
 
         # 4. Ürün Birim Fiyatı Kontrolü
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
+        amount_record = support_repo.get_amount(
+            self.support_id, parcel.crop,
+            production_year=parcel.production_year,
+            province=farmer.province, district=farmer.district,
+        )
         if amount_record:
             passed.append(f"{parcel.crop} ürünü için temel destek tanımı mevcut.")
         else:
-            failed.append(f"{parcel.crop} ürünü için 2026 temel destek birim fiyatı bulunamadı.")
+            missing.append("verified_support_rate")
+            trace.append("Kaynağı ve onayı doğrulanmış birim fiyat bulunamadı.")
 
         if failed:
             status = EligibilityStatusEnum.NOT_ELIGIBLE
@@ -71,9 +76,13 @@ class BasicSupportRule(BaseRule):
             passed_checks=passed,
             failed_checks=failed,
             missing_fields=missing,
-            source_ids=[self.default_source_id],
+            source_ids=([amount_record.source_version.source_id] if amount_record else []),
             trace=trace,
-            metadata={"unit_amount": float(amount_record.unit_amount) if amount_record else None},
+            metadata={
+                "unit_amount": str(amount_record.unit_amount) if amount_record else None,
+                "verified_rate_version_id": amount_record.id if amount_record else None,
+                "verification_required": amount_record is None,
+            },
         )
 
 
@@ -120,17 +129,24 @@ class PlannedProductionRule(BaseRule):
                     f"{parcel.crop} ürünü, {loc} havzasında desteklenen öncelikli ürünlerdendir."
                 )
             else:
-                failed.append(
-                    f"{parcel.crop} ürünü, {loc} havzasında planlı üretim kapsamında yer almamaktadır."
-                )
+                missing.append("verified_basin_crop")
+                trace.append("Ürün-havza kaydı yokluğu doğrulanmış ret anlamına gelmez.")
+
+        # Mevcut ilçe havza seed kayıtları resmî kapsam sertifikası değildir.
+        missing.append("verified_basin_provenance")
 
         # 3. Birim Tutar Kontrolü
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
+        amount_record = support_repo.get_amount(
+            self.support_id, parcel.crop,
+            production_year=parcel.production_year,
+            province=farmer.province, district=farmer.district,
+        )
         if amount_record:
             passed.append(f"{parcel.crop} için planlı üretim birim desteği tanımlı.")
         else:
-            failed.append(f"{parcel.crop} için planlı üretim destek tutarı bulunamadı.")
+            missing.append("verified_support_rate")
+            trace.append("Planlı üretim için mevzuat sürümü onaylı birim fiyat bulunamadı.")
 
         if failed:
             status = EligibilityStatusEnum.NOT_ELIGIBLE
@@ -147,9 +163,13 @@ class PlannedProductionRule(BaseRule):
             passed_checks=passed,
             failed_checks=failed,
             missing_fields=missing,
-            source_ids=[self.default_source_id],
+            source_ids=([amount_record.source_version.source_id] if amount_record else []),
             trace=trace,
-            metadata={"unit_amount": float(amount_record.unit_amount) if amount_record else None},
+            metadata={
+                "unit_amount": str(amount_record.unit_amount) if amount_record else None,
+                "verified_rate_version_id": amount_record.id if amount_record else None,
+                "verification_required": amount_record is None,
+            },
         )
 
 
@@ -174,9 +194,14 @@ class CertifiedSeedRule(BaseRule):
             passed.append("ÇKS kaydı aktif.")
 
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
+        amount_record = support_repo.get_amount(
+            self.support_id, parcel.crop,
+            production_year=parcel.production_year,
+            province=farmer.province, district=farmer.district,
+        )
         if not amount_record:
-            failed.append(f"{parcel.crop} için sertifikalı tohum desteği bulunmuyor.")
+            missing.append("verified_support_rate")
+            trace.append("Sertifikalı tohum için onaylı tutar bulunamadı.")
         else:
             passed.append(f"{parcel.crop} için tohum desteği programı mevcut.")
 
@@ -204,9 +229,13 @@ class CertifiedSeedRule(BaseRule):
             passed_checks=passed,
             failed_checks=failed,
             missing_fields=missing,
-            source_ids=[self.default_source_id],
+            source_ids=([amount_record.source_version.source_id] if amount_record else []),
             trace=trace,
-            metadata={"unit_amount": float(amount_record.unit_amount) if amount_record else None},
+            metadata={
+                "unit_amount": str(amount_record.unit_amount) if amount_record else None,
+                "verified_rate_version_id": amount_record.id if amount_record else None,
+                "verification_required": amount_record is None,
+            },
         )
 
 
@@ -231,9 +260,14 @@ class CertifiedSaplingRule(BaseRule):
             passed.append("ÇKS kaydı aktif.")
 
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
+        amount_record = support_repo.get_amount(
+            self.support_id, parcel.crop,
+            production_year=parcel.production_year,
+            province=farmer.province, district=farmer.district,
+        )
         if not amount_record:
-            failed.append(f"{parcel.crop} için sertifikalı fidan desteği bulunmuyor.")
+            missing.append("verified_support_rate")
+            trace.append("Sertifikalı fidan için onaylı tutar bulunamadı.")
         else:
             passed.append(f"{parcel.crop} için fidan desteği programı mevcut.")
 
@@ -276,9 +310,13 @@ class CertifiedSaplingRule(BaseRule):
             passed_checks=passed,
             failed_checks=failed,
             missing_fields=missing,
-            source_ids=[self.default_source_id],
+            source_ids=([amount_record.source_version.source_id] if amount_record else []),
             trace=trace,
-            metadata={"unit_amount": float(amount_record.unit_amount) if amount_record else None},
+            metadata={
+                "unit_amount": str(amount_record.unit_amount) if amount_record else None,
+                "verified_rate_version_id": amount_record.id if amount_record else None,
+                "verification_required": amount_record is None,
+            },
         )
 
 
@@ -309,23 +347,28 @@ class WaterRestrictionRule(BaseRule):
 
         loc = f"{farmer.province}/{farmer.district}"
         if not restriction:
-            failed.append(
-                f"{loc} bölgesi yeraltı su kısıtı ilan edilmiş havzalar arasında yer almamaktadır."
-            )
+            missing.append("verified_water_restriction")
+            trace.append("Su kısıtı kaydı yokluğu resmî ret anlamına gelmez.")
         else:
             passed.append(f"{loc} yeraltı su kısıtı bölgesindedir.")
 
+        # Örnek coğrafi seed verisi resmî kararı ispatlamaz.
+        missing.append("verified_water_provenance")
+
         # Su kısıtında desteklenen münavebe ürünü mü?
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
+        amount_record = support_repo.get_amount(
+            self.support_id, parcel.crop,
+            production_year=parcel.production_year,
+            province=farmer.province, district=farmer.district,
+        )
         if amount_record:
             passed.append(
                 f"{parcel.crop} ürünü su kısıtı bölgesinde münavebe ürünü olarak desteklenir."
             )
         else:
-            failed.append(
-                f"{parcel.crop} ürünü su kısıtı bölgesinde ilave destekleme kapsamında değildir."
-            )
+            missing.append("verified_support_rate")
+            trace.append("Su kısıtı için onaylı bileşen tutarı bulunamadı.")
 
         # 4. Sulama Durumu Kontrolü (Sulu tarım arazisi şartı)
         if parcel.irrigation == IrrigationStatusEnum.UNKNOWN:
@@ -353,7 +396,11 @@ class WaterRestrictionRule(BaseRule):
             passed_checks=passed,
             failed_checks=failed,
             missing_fields=missing,
-            source_ids=[self.default_source_id],
+            source_ids=([amount_record.source_version.source_id] if amount_record else []),
             trace=trace,
-            metadata={"unit_amount": float(amount_record.unit_amount) if amount_record else None},
+            metadata={
+                "unit_amount": str(amount_record.unit_amount) if amount_record else None,
+                "verified_rate_version_id": amount_record.id if amount_record else None,
+                "verification_required": amount_record is None,
+            },
         )
