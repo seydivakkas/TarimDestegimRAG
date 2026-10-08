@@ -84,7 +84,7 @@ def authenticate_legal_officer(id_token: str, expected_role: str) -> LegalOffice
         public = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(candidates[0]))
         claims = jwt.decode(
             id_token, key=public, algorithms=["RS256"],
-            issuer=issuer, audience=audience, leeway=15,
+            issuer=issuer, audience=audience, leeway=0,
             options={"require": ["iss", "aud", "sub", "iat", "exp", "auth_time", "acr"]},
         )
         if claims["acr"] not in mfa_acr:
