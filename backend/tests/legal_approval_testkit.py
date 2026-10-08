@@ -12,6 +12,7 @@ from tarim_destek_rag.database.legal_approvals import (
 )
 from tarim_destek_rag.database.models import (
     ReviewedBasinSnapshotModel, VerifiedSupportRateModel,
+    ReviewedWaterRestrictionScopeModel,
 )
 
 
@@ -33,7 +34,9 @@ def trust_pair(monkeypatch):
 
 def detached_envelope(subject, role, signers):
     principal, key = signers[role]
-    kind = "RATE" if isinstance(subject, VerifiedSupportRateModel) else "BASIN"
+    kind = ("RATE" if isinstance(subject, VerifiedSupportRateModel)
+            else "WATER" if isinstance(subject, ReviewedWaterRestrictionScopeModel)
+            else "BASIN")
     digest = subject_digest(subject)
     sha = subject.source_version.content_hash
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
