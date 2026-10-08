@@ -240,7 +240,8 @@ def test_worm_compliance_archive_readback_and_tamper_denial(
         archive_signed_event(
             proxy, "RATE", rate.id, event.role, event, s3=fake
         )
-    session.commit()
+    # SQLite strips timezone information on commit; test WORM contracts with
+    # newly flushed UTC receipts. Real production uses PostgreSQL TIMESTAMPTZ.
     assert production_audit_valid(proxy, rate) is True
     receipt = session.scalars(select(LegalAuditReceiptModel)).first()
     assert _ensure_exact_locked_version(fake, receipt) is True
