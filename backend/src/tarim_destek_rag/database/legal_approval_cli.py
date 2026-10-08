@@ -12,6 +12,9 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.connection import SessionLocal, init_db
+from tarim_destek_rag.database.legal_audit import (
+    archive_signed_event, production_profile,
+)
 from tarim_destek_rag.database.legal_approvals import (
     register_detached_approval, register_detached_revocation,
     subject_digest, subject_payload, two_person_approved,
@@ -63,12 +66,28 @@ def main() -> int:
                 envelopes = document.get("attestations")
                 if not isinstance(envelopes, list) or len(envelopes) != 2:
                     raise ValueError("Exactly two independent detached signatures required")
+                signed = []
                 for envelope in envelopes:
-                    register_detached_approval(session, subject, envelope)
-                if not two_person_approved(session, subject):
-                    raise ValueError("The two-party legal approval gate still rejects this record")
+                    signed.append(register_detached_approval(session, subject, envelope))
+                if len({x.principal_id for x in signed}) != 2 or (
+                    {x.role for x in signed} != {"REVIEWER", "APPROVER"}
+                ):
+                    raise ValueError("Two distinct reviewed and approved identities required")
+                if args.commit and production_profile():
+                    for entry in signed:
+                        archive_signed_event(
+                            session, args.kind, subject.id, entry.role, entry
+                        )
+                if args.commit and not two_person_approved(session, subject):
+                    raise ValueError("Production approval still fails signed/WORM gate")
             else:
-                register_detached_revocation(session, subject, document["revocation"])
+                revoked = register_detached_revocation(
+                    session, subject, document["revocation"]
+                )
+                if args.commit and production_profile():
+                    archive_signed_event(
+                        session, args.kind, subject.id, "REVOCATION", revoked
+                    )
                 if two_person_approved(session, subject):
                     raise ValueError("Revocation did not close the entitlement gate")
             if args.commit:
