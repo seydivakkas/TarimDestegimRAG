@@ -144,7 +144,7 @@ def test_key_rotation_invalidates_historic_approval(session, monkeypatch):
 
 def test_signed_revocation_cannot_be_reversed_by_status_toggle(session, monkeypatch):
     rate = add_rate(session)
-    sign_subject(session, rate, monkeypatch)
+    keys = sign_subject(session, rate, monkeypatch)
     assert lookup(session) is not None
     principal, signer = keys["APPROVER"]
     reason = "Document clause superseded; controlled test revocation"
@@ -189,7 +189,7 @@ def test_untrusted_revocation_signature_cannot_be_registered(session, monkeypatc
 
 def test_append_only_approval_and_revocation_reject_orm_mutations(session, monkeypatch):
     rate = add_rate(session)
-    keys = sign_subject(session, rate, monkeypatch)
+    sign_subject(session, rate, monkeypatch)
     approval = session.scalars(select(LegalApprovalAttestationModel)).first()
     approval.signature_b64 = "tampered"
     with pytest.raises(ValueError, match="cannot be updated"):
