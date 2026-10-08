@@ -65,13 +65,25 @@ def load_component_catalog(path: str | Path = CATALOG) -> dict:
         raise ValueError("Unsupported catalog schema, year, or source approval policy")
     gate = data.get("validation_gate", {})
     if not gate or any(gate.get(k) is not False for k in (
-        "approval", "primary_pdf_byte_hash_verified",
-        "source_excerpt_human_reviewed", "basin_matrix_verified",
+        "approval", "source_excerpt_human_reviewed", "basin_matrix_verified",
     )):
-        raise ValueError("Unverified legal-source gate cannot be bypassed")
+        raise ValueError("Incomplete legal approval cannot be bypassed")
+    if gate.get("primary_pdf_byte_hash_verified") is not True:
+        raise ValueError("Original Gazette PDF byte evidence is missing")
     sources = {s["id"]: s for s in data["citations"]}
     if sources.get("RG-2026-11781", {}).get("url") != OFFICIAL_11781_URL:
         raise ValueError("Wrong gazette decision URL")
+    for source_id in ("RG-2024-8859", "RG-2025-10394", "RG-2026-11781"):
+        observed = sources[source_id].get("sha256_of_fetched_pdf_bytes", "")
+        if not isinstance(observed, str) or len(observed) != 64 or any(
+            c not in "0123456789abcdef" for c in observed
+        ):
+            raise ValueError(f"Original PDF SHA-256 evidence missing: {source_id}")
+    if (
+        data["source_version"].get("primary_pdf_sha256_observed")
+        != sources["RG-2026-11781"]["sha256_of_fetched_pdf_bytes"]
+    ):
+        raise ValueError("11781 source checksum mismatch")
     if not sources.get("RG-2025-10394", {}).get("url", "").startswith(
         "https://www.resmigazete.gov.tr/eskiler/2025/09/"
     ):
