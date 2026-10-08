@@ -25,7 +25,7 @@ class FullEvaluationResponse(BaseModel):
     rules: list[RuleResult]
     calculations: list[CalculationResult]
     explanations: list[ExplanationResult]
-    total_estimated_amount: Decimal
+    total_estimated_amount: Decimal | None
 
 
 class AskQuestionRequest(BaseModel):
