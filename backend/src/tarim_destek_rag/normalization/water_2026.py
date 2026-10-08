@@ -34,6 +34,8 @@ PRIMARY_URL = (
     "Yap%C4%B1lmas%C4%B1na%20Dair%20Tebli%C4%9F%20%28Tebli%C4%9F%20No%202024-39%29.pdf"
 )
 AMENDMENT_URL = "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm"
+PRIMARY_SHA256 = "8b8b0785e2692268a60a0931f54aa36783ca32d80aea12800b66b25ea0d71612"
+AMENDMENT_SHA256 = "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269"
 
 # An independent, code-reviewed whitelist from 2024/39 Article 6(3)(a);
 # merely editing the JSON to add a 53rd district or replace one will fail CI.
@@ -76,6 +78,8 @@ def load_water_catalog(path: Path | str = CATALOG) -> dict:
         or sources[1].get("instrument") != "2025/42"
         or sources[1].get("url") != AMENDMENT_URL
         or sources[1].get("effective_from") != "2026-01-01"
+        or sources[0].get("content_sha256") != PRIMARY_SHA256
+        or sources[1].get("content_sha256") != AMENDMENT_SHA256
         or doc.get("rule_effective_from") != "2026-01-01"
         or doc.get("rule_effective_to") != "2026-12-31"
         or doc.get("constraints", {}).get("coverage_complete") is not False
@@ -132,8 +136,13 @@ def stage_water_scope(
         raise ValueError("Explicit original PDF + amendment Gazette HTML required")
     original = Path(original_pdf_path).read_bytes()
     amendment = Path(amendment_html_path).read_bytes()
-    if not original.startswith(b"%PDF-") or len(original) < 1000:
-        raise ValueError("Missing original published PDF bytes")
+    if (
+        not original.startswith(b"%PDF-")
+        or len(original) < 1000
+        or hashlib.sha256(original).hexdigest() != PRIMARY_SHA256
+        or hashlib.sha256(amendment).hexdigest() != AMENDMENT_SHA256
+    ):
+        raise ValueError("Original legal source PDF/2025 amendment bytes differ from pinned proof")
     from pypdf import PdfReader
 
     page = PdfReader(io.BytesIO(original)).pages[8].extract_text()
