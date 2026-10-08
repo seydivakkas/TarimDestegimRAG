@@ -226,8 +226,13 @@ def read_portals(path: Path) -> list[OfficialPortal]:
     portals = []
     for item in raw.get("portals", []):
         hosts = tuple(item["allowed_hosts"])
-        if not hosts or any(not h.endswith(("tarimorman.gov.tr", "resmigazete.gov.tr")) for h in hosts):
+        if not hosts or any(
+            h not in ("tarimorman.gov.tr", "resmigazete.gov.tr")
+            and not h.endswith((".tarimorman.gov.tr", ".resmigazete.gov.tr"))
+            for h in hosts
+        ):
             raise UnsafeOfficialSource("Portal host must be government-approved")
+        _official_url(item["index_url"], hosts)
         portals.append(OfficialPortal(
             source_id=item["source_id"], index_url=item["index_url"],
             allowed_hosts=hosts,
