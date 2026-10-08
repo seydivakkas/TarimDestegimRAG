@@ -729,7 +729,7 @@ def get_faq_banner_text() -> str:
     if total > 0:
         return (
             f"📚 **Doğrulanmış Tarımsal Çözüm Veritabanı:** Toplam **{total} adet** kayıt "
-            f"({verified} yasal/teknik onaylı, {cats} farklı tarımsal ana disiplin). "
+            f"({verified} doğrulanmış olarak işaretli, {cats} kategori). Bu kayıtların mevzuatla güncelliği ayrıca kontrol edilmelidir. "
             "Aşağıdaki tablodan soru seçebilir veya yukarıdaki sohbet alanına serbestçe yazabilirsiniz."
         )
     return (
@@ -769,7 +769,7 @@ def build_ui() -> gr.Blocks:
                 <div>
                     <h1>🌾 TarımDestekRAG — 2026 Bitkisel Üretim Destekleri</h1>
                     <p>Deterministik Kural Motoru, Doğrudan Resmî Atıflar ve Çiftçi Destek Karar Asistanı</p>
-                    <span class="badge-tag">Sıfır Halüsinasyon (Zero-LLM) &middot; Resmî Gazete 2026/9068 Uyumlu</span>
+                    <span class="badge-tag">Kural Tabanlı Ön Değerlendirme &middot; Mevzuat Doğrulaması Devam Ediyor</span>
                 </div>
                 <div style="text-align: right; font-size: 0.9rem; opacity: 0.9;">
                     <div><b>Sürüm:</b> v1.0.0 (PC Sürümü)</div>
@@ -949,9 +949,9 @@ def build_ui() -> gr.Blocks:
                 <div class="legal-reader-container" style="margin-top: 4px; margin-bottom: 16px; border-left: 6px solid #047857;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <h4 style="margin: 0; color: #064e3b; font-size: 1.15rem;">
-                            ⚖️ %100 Belgeye Dayanan Şeffaf Karar & Renkli İşaretleme Mimarisi
+                            ⚖️ Kural İzleri ve Mevzuat Kaynakları
                         </h4>
-                        <span class="doc-badge-tag doc-badge-pass">Sıfır LLM &middot; %100 Doğrulanabilir</span>
+                        <span class="doc-badge-tag doc-badge-pass">Sıfır LLM &middot; Kaynak Doğrulaması Gereklidir</span>
                     </div>
                     <p style="margin: 8px 0 12px 0; font-size: 0.92rem; color: #334155; line-height: 1.55;">
                         Bu sistemde üreticiye sunulan her karar, dekar başı hesaplama ve hak ediş gerekçesi doğrudan
@@ -1001,7 +1001,7 @@ def build_ui() -> gr.Blocks:
                 gr.Markdown("""
                 ### 🌾 2026 Tarımsal Destek Mevzuat ve Hak Ediş Asistanı (Sıfır LLM - Doğrulanmış Kararlar)
                 Sorunuzu doğrudan doğal dille yazın. Sistem yürürlükteki 2026 Resmî Gazete destekleme mevzuatı,
-                5488 sayılı Tarım Kanunu, ÇKS yönetmeliği ve 16 ürünlük dekar başı birim fiyat kataloğundan doğrulanmış kesin yanıtlar üretir.
+                5488 sayılı Tarım Kanunu, ÇKS yönetmeliği ve mevcut veritabanından kaynaklı ön bilgi sunar; güncel mevzuatla bağımsız teyit edilmelidir.
                 """)
                 chatbot = gr.Chatbot(height=420, label="Mevzuat & Soru-Cevap Sohbeti")
                 with gr.Row():
@@ -1161,9 +1161,9 @@ def build_ui() -> gr.Blocks:
             with gr.TabItem("⚙️ Admin & Sistem Mimarisi", id="tab_admin"):
                 gr.Markdown("""
                 ### 🏛️ TarımDestekRAG Sistem Mimarisi & Geleneksel RAG'lardan Temel Farklar
-                - **Sıfır LLM (Zero-LLM Güvencesi):** Hak ediş ve karar aşamalarında asla dış üretici model (OpenAI, Gemini vb.) kullanılmaz; kararlar `%100` deterministik Python kural motoru (`rules_impl.py`) tarafından yürütülür. Halüsinasyon riski **%0**'dır.
+                - **Sıfır LLM (Zero-LLM Güvencesi):** Hak ediş ve karar aşamalarında asla dış üretici model (OpenAI, Gemini vb.) kullanılmaz; kararlar `%100` deterministik Python kural motoru (`rules_impl.py`) tarafından yürütülür. Deterministik çıktının mevzuatla doğruluğu ayrıca test edilmelidir.
                 - **Hassas Finansal Matematik:** Tüm parasal destek hesaplamaları Python `decimal.Decimal` ile kuruş hassasiyetinde yapılır. Kayan nokta yuvarlama hatası bulunmaz.
-                - **%100 Doğrulanabilir Resmî Kaynak Provenansı:** Yalnızca Resmî Gazete, BÜGEM ve DSİ'nin yasal metinleri baz alınır. Her kaynak URL'si SHA-256 kanonik hash kontrolüyle izlenir.
+                - **Kaynak Provenansı (Geliştirilmekte):** Yalnızca Resmî Gazete, BÜGEM ve DSİ'nin yasal metinleri baz alınır. Her kaynak URL'si SHA-256 kanonik hash kontrolüyle izlenir.
                 - **Belge İçi Renkli İşaretleme Sistemi:** Hak kazanma hükümleri 🟢 yeşil, ret ve yasak hükümleri 🔴 kırmızı, birim tutarlar 🟡 kehribar ve yasal merciler 🔵 mavi ile işaretlenerek kullanıcıya mutlak şeffaflık sunulur.
                 - **Hibrit Arama Motoru:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` + `FAISS` ve `BM25Plus` ile Reciprocal Rank Fusion birleşimi (MRR=1.0000).
                 - **Çok Platformlu Hazırlık:** Arka uç FastAPI bağımsız REST API olarak çalışır; Web, PC ve Flutter mobil uygulaması aynı çekirdeği paylaşır.
