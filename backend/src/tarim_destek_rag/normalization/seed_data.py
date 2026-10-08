@@ -13,7 +13,7 @@ from tarim_destek_rag.database.models import (
 
 
 def seed_2026_support_data(session: Session) -> None:
-    """Türkiye 2026 Bitkisel Üretim Destekleri mevzuat verisini veritabanına yükler."""
+    """Yalnızca geçmiş/demo verisini bir kez ekler; güvenilir fiyat yetkisi vermez."""
 
     # 1. Ana Kaynak
     rg_source = SourceModel(
@@ -188,11 +188,10 @@ def seed_2026_support_data(session: Session) -> None:
             .filter_by(program_id=amt.program_id, crop_name=amt.crop_name)
             .first()
         )
-        if existing_amt:
-            existing_amt.unit_amount = amt.unit_amount
-            existing_amt.category = amt.category
-            existing_amt.source_id = amt.source_id
-        else:
+        # Preserve existing historic rows verbatim. Startup must never overwrite
+        # a previously saved rate with a stale demonstration seed value.
+        # Only verified_support_rates are used for live decisions/calculations.
+        if existing_amt is None:
             session.add(amt)
 
     # 4. Havza-Ürün Planlı Üretim Kuralları (Örnek Karatay/Konya ve Çarşamba/Samsun)
