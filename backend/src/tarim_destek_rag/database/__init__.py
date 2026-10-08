@@ -9,7 +9,7 @@ from tarim_destek_rag.database.connection import (
 from tarim_destek_rag.database.models import (
     ApplicationWindowModel,
     BasinCropRuleModel,
-    ReviewedWaterRestrictionDistrictModel,
+    ReviewedWaterRestrictionScopeModel,
     SourceModel,
     SourceVersionModel,
     SupportAmountModel,
@@ -21,8 +21,8 @@ from tarim_destek_rag.database.repository import (
     BasinRepository,
     SourceRepository,
     SupportRepository,
-    WaterRestrictionAssessment,
     WaterRestrictionRepository,
+    WaterScopeAssessment,
 )
 
 __all__ = [
@@ -40,10 +40,10 @@ __all__ = [
     "BasinCropRuleModel",
     "ApplicationWindowModel",
     "WaterRestrictionModel",
-    "ReviewedWaterRestrictionDistrictModel",
+    "ReviewedWaterRestrictionScopeModel",
     "SourceRepository",
     "SupportRepository",
     "BasinRepository",
     "WaterRestrictionRepository",
-    "WaterRestrictionAssessment",
+    "WaterScopeAssessment",
 ]
