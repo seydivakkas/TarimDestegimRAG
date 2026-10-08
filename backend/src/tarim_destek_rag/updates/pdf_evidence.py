@@ -8,7 +8,7 @@ human inspected. Page numbering is 1-based.
 from __future__ import annotations
 
 import hashlib
-import io
+from urllib.parse import quote as url_quote
 import re
 from dataclasses import asdict, dataclass
 
@@ -113,8 +113,11 @@ def highlighted_pdf_copy(
         return document.tobytes(garbage=4, deflate=True)
 
 
-def evidence_deeplink(sha256: str, page_1_indexed: int) -> str:
-    """Simple viewer link (not proof of actual highlighting on its own)."""
-    if not SHA_PATTERN.fullmatch(sha256) or page_1_indexed < 1:
+def evidence_deeplink(evidence: PdfEvidence) -> str:
+    """Point to the actual content-addressed PDF-highlight API endpoint."""
+    if not SHA_PATTERN.fullmatch(evidence.source_sha256) or evidence.page_1_indexed < 1:
         raise UnverifiableEvidence("Evidence link requires validated PDF SHA and page")
-    return f"/evidence/pdf/{sha256}?page={page_1_indexed}"
+    return (
+        f"/evidence/highlight/{evidence.source_sha256}"
+        f"?page={evidence.page_1_indexed}&quote={url_quote(evidence.exact_quote, safe='')}"
+    )
