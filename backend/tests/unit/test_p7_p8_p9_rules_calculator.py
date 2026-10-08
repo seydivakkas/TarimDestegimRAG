@@ -7,7 +7,7 @@ from tarim_destek_rag.calculator.calculator import (
     SupportCalculator,
 )
 from tarim_destek_rag.database.connection import Base
-from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
+from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator
@@ -89,7 +89,7 @@ def test_water_restriction_rule():
     """Konya Karatay su kısıtı bölgesindedir ve mercimek uygundur."""
     session = get_test_db_session()
     farmer_konya = FarmerProfile(province="KONYA", district="KARATAY", cks_status=True)
-    parcel_lentil = Parcel(crop="MERCİMEK", area_da=Decimal("20.0"), production_year=2026)
+    parcel_lentil = Parcel(crop="MERCİMEK", area_da=Decimal("20.0"), production_year=2026, irrigation=IrrigationStatusEnum.IRRIGATED)
 
     farmer_bursa = FarmerProfile(province="BURSA", district="NİLÜFER", cks_status=True)
 
