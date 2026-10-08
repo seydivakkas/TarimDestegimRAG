@@ -26,8 +26,8 @@ from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from tarim_destek_rag.database.legal_approvals import (
-    TRUST_ENV, _trusted_public_keys, attestation_message, subject_digest,
-    subject_payload,
+    TRUST_ENV, _trusted_public_keys, attestation_message, revocation_message,
+    subject_digest, subject_payload,
 )
 
 SAFE_VAULT_KEY = re.compile(r"^[a-zA-Z0-9_-]{1,96}$")
@@ -192,5 +192,70 @@ def build_vault_signed_envelope(
         "subject_digest": digest,
         "source_sha256": subject.source_version.content_hash,
         "signed_at": timestamp,
+        "signature_b64": base64.b64encode(signature).decode("ascii"),
+    }
+
+
+def build_vault_revocation_envelope(
+    subject,
+    officer: LegalOfficer,
+    *,
+    reason: str,
+    vault_token: str,
+    acknowledged_subject_digest: str,
+    client: httpx.Client | None = None,
+    signed_at: str | None = None,
+) -> dict:
+    """APPROVER-only externally signed revocation, not an unsigned status toggle."""
+    if officer.role != "APPROVER" or not isinstance(reason, str) or not reason.strip():
+        raise ValueError("Revocation requires independent APPROVER and explicit reason")
+    digest = subject_digest(subject)
+    if digest != acknowledged_subject_digest:
+        raise ValueError("Exact canonical subject digest was not acknowledged")
+    if len(vault_token) < 20 or "\n" in vault_token:
+        raise ValueError("Operator Vault credential is missing or malformed")
+    if not SAFE_VAULT_KEY.fullmatch(officer.vault_key):
+        raise ValueError("Unsafe signing key name")
+    configured = _trusted_public_keys().get(officer.principal_id)
+    if configured is None or configured[0] != "APPROVER":
+        raise ValueError("Trusted approver key missing")
+    kind = subject_payload(subject)["kind"]
+    timestamp = signed_at or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    message = revocation_message(
+        kind=kind, record_id=subject.id, digest=digest,
+        source_sha256=subject.source_version.content_hash,
+        principal_id=officer.principal_id, signed_at=timestamp,
+        reason=reason,
+    )
+    created_client = client is None
+    remote = client if client is not None else httpx.Client(
+        timeout=10, follow_redirects=False, trust_env=False,
+    )
+    try:
+        response = remote.post(
+            f"{_vault_url()}/v1/transit/sign/{officer.vault_key}",
+            headers={"X-Vault-Token": vault_token},
+            json={"input": base64.b64encode(message).decode("ascii"), "prehashed": False},
+        )
+        response.raise_for_status()
+        signature_text = response.json()["data"]["signature"]
+        match = re.fullmatch(r"vault:v([1-9][0-9]*):([A-Za-z0-9+/]+={0,2})", signature_text)
+        if not match:
+            raise ValueError("Invalid Vault Transit revocation signature envelope")
+        signature = base64.b64decode(match.group(2), validate=True)
+        if len(signature) != 64:
+            raise ValueError("Invalid Ed25519 revocation signature length")
+        configured[1].verify(signature, message)
+    except (httpx.HTTPError, KeyError, TypeError, json.JSONDecodeError,
+            InvalidSignature, binascii.Error, ValueError) as exc:
+        raise ValueError("Vault revocation signature failed independent verification") from exc
+    finally:
+        if created_client:
+            remote.close()
+    return {
+        "principal_id": officer.principal_id,
+        "reason": reason, "signed_at": timestamp,
+        "subject_digest": digest,
+        "source_sha256": subject.source_version.content_hash,
         "signature_b64": base64.b64encode(signature).decode("ascii"),
     }
