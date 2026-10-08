@@ -917,27 +917,10 @@ def build_ui() -> gr.Blocks:
 
                 # ================= SEKME 5: NEDEN? GEREKÇE & ATIF =================
                 with gr.Accordion("📜 Karar Gerekçeleri ve Kaynak Referansları", open=False):
-                    gr.HTML("""
-                    <div class="legal-reader-container" style="margin-top: 4px; margin-bottom: 16px; border-left: 6px solid #047857;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h4 style="margin: 0; color: #064e3b; font-size: 1.15rem;">
-                                ⚖️ Karar Gerekçeleri ve Kaynak Referansları
-                            </h4>
-                            <span class="doc-badge-tag doc-badge-pass">Deterministik kural &middot; Kanıt denetimine tabi</span>
-                        </div>
-                        <p style="margin: 8px 0 12px 0; font-size: 0.92rem; color: #334155; line-height: 1.55;">
-                            Karar açıklamaları kurallardan oluşturulan ön değerlendirmedir.
-                            Resmî kaynak bağlantılarının bulunması, atıf pasajlarının tamamen doğrulandığı anlamına gelmez.
-                            Kesin hak sahipliği yetkili kurumun kayıtlarıyla belirlenir.
-                        </p>
-                        <div class="legal-legend-bar" style="margin-bottom: 0;">
-                            <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil Vurgu:</b> Sağlanan Şartlar & Hak Kazanma Hükmü</span>
-                            <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı Vurgu:</b> Ret Gerekçesi & Yasal Yasaklar</span>
-                            <span class="legend-item"><span class="legend-dot dot-gold"></span> 🟡 <b>Kehribar Vurgu:</b> Birim Destek Tutarları & Katsayılar</span>
-                            <span class="legend-item"><span class="legend-dot dot-ref"></span> 🔵 <b>Mavi Vurgu:</b> Resmî Gazete / Madde Numarası Dayanağı</span>
-                        </div>
-                    </div>
-                    """)
+                    gr.Markdown(
+                        "Gerekçeler **bağımsız ön değerlendirmedir**. Kaynak bağlantısı doğrulanmış "
+                        "pasaj anlamına gelmez; resmi kurumun geçerli mevzuat ve çiftçi kayıtları esastır."
+                    )
 
                     out_reasons = gr.Markdown(
                         "Hesaplama yapıldığında kural motorunun işletim gerekçeleri, sağlanan/sağlanamayan koşullar ve Resmî Gazete yasal madde atıfları burada listelenecektir."
@@ -1136,7 +1119,7 @@ def build_ui() -> gr.Blocks:
                 - **Deterministik karar mantığı:** Uygunluk kararları Python kural motorunda üretilir; bu yaklaşım tek başına mevzuat veya veri doğruluğu garantisi vermez.
                 - **Hassas Finansal Matematik:** Tüm parasal destek hesaplamaları Python `decimal.Decimal` ile kuruş hassasiyetinde yapılır. Kayan nokta yuvarlama hatası bulunmaz.
                 - **Kaynak doğrulama:** Resmî PDF/HTML kaynaklarda hash ve pasaj kontrolü yapılabilir; doğrulanmamış özetler kanıt olarak sunulmaz.
-                - **Belge İçi Renkli İşaretleme Sistemi:** Hak kazanma hükümleri 🟢 yeşil, ret ve yasak hükümleri 🔴 kırmızı, birim tutarlar 🟡 kehribar ve yasal merciler 🔵 mavi ile işaretlenerek kullanıcıya mutlak şeffaflık sunulur.
+                - **Kanıt Sunumu:** Gerçek PDF/HTML belge-pasaj eşlemesi P0 doğrulama altyapısında yapılır. Bu paneldeki bağlantılar doğrulama sonucu olmadan resmî alıntı sayılmaz.
                 - **Hibrit arama:** FAISS + BM25 + RRF; MRR ancak güncel benchmark çalıştırmasından sonra raporlanır.
                 - **İstemciler:** FastAPI ve Gradio PC paneli mevcuttur; Flutter istemcisinin kaynakları tamamlanmamıştır.
 
