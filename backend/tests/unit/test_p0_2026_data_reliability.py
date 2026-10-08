@@ -101,11 +101,12 @@ def test_registered_source_is_not_accepted_as_passage_proof():
         section="MADDE 1",
         year=2026,
         snippet="Gerçek kaynaktan doğrulanmamış özet",
+        url="https://www.resmigazete.gov.tr",
     )
     result = CitationVerifier(registry).verify(citation)
     assert result.source_exists and result.source_active and result.year_valid
     assert result.is_valid is False
-    assert result.status == "INSUFFICIENT_EVIDENCE"
+    assert result.status == "EVIDENCE_NOT_INDEXED"
 
 
 def test_hybrid_reindex_is_idempotent_without_embedding_download():
