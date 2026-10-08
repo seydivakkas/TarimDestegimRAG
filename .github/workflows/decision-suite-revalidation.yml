@@ -4,6 +4,12 @@ on:
   pull_request:
     paths:
       - "configs/2026_documented_component_rates_draft.json"
+      - "backend/src/tarim_destek_rag/updates/**"
+      - "backend/src/tarim_destek_rag/api/**"
+      - "backend/src/tarim_destek_rag/citations/**"
+      - "frontend_pc/**"
+      - "backend/tests/unit/test_p0_8_year_agnostic_updates.py"
+      - "configs/official_update_portals.json"
       - "backend/src/tarim_destek_rag/normalization/legal_components_2026.py"
       - "backend/tests/unit/test_decision_2026_matrix.py"
       - "backend/tests/unit/test_legal_components_2026.py"
@@ -34,7 +40,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install project dependencies, including RAG/Gradio test modules
-        run: python -m pip install -e ".[dev]"
+        run: python -m pip install -e ".[dev,pdf-evidence]"
       - name: Validate all installed decision tests and integration contracts
         env:
           HF_HUB_OFFLINE: "1"
@@ -54,6 +60,7 @@ jobs:
             backend/tests/unit/test_legal_components_2026.py \
             backend/tests/unit/test_p0_4_basin_review.py \
             backend/tests/unit/test_p0_6_2026_water_scope.py \
+            backend/tests/unit/test_p0_8_year_agnostic_updates.py \
             backend/tests/unit/test_official_basin_catalog_2026.py \
             backend/tests/unit/test_decision_2026_matrix.py \
             backend/tests/regression/test_regression_cases.py \

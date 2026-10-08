@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "coverage_notice": "Seed portal link scanning is discovery only; not exhaustive nationwide legislation coverage or automatic payment authorization.",
+  "portals": [
+    {
+      "source_id": "RG_INDEX",
+      "index_url": "https://www.resmigazete.gov.tr/",
+      "allowed_hosts": [
+        "www.resmigazete.gov.tr",
+        "resmigazete.gov.tr"
+      ],
+      "max_documents": 16
+    },
+    {
+      "source_id": "TOB_HAVZA_PORTAL",
+      "index_url": "https://www.tarimorman.gov.tr/Konular/Bitkisel-Uretim/Tarim-Havzalari",
+      "allowed_hosts": [
+        "www.tarimorman.gov.tr",
+        "tarimorman.gov.tr"
+      ],
+      "max_documents": 16
+    },
+    {
+      "source_id": "TOB_BUGEM_PORTAL",
+      "index_url": "https://www.tarimorman.gov.tr/BUGEM",
+      "allowed_hosts": [
+        "www.tarimorman.gov.tr",
+        "tarimorman.gov.tr"
+      ],
+      "max_documents": 16
+    }
+  ]
+}
