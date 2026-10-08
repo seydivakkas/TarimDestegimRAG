@@ -32,6 +32,9 @@ class LegalClause:
     evidence_id: int
     production_year: int
     source_id: str
+    highlighted_page_url: str | None = None
+    bounding_boxes: list[dict] | None = None
+    normalized_quads: list[list[list[float]]] | None = None
 
     def __post_init__(self) -> None:
         if (
@@ -145,6 +148,7 @@ def compare_clause_sets(
             )) if status != "TEXT_UNCHANGED" else [],
             "repeal_language_detected": bool(new_text and _REPEAL.search(new_text)),
             "repeal_effect_confirmed": False,
+            "same_regulatory_act_independently_confirmed": False,
             "old_tl_mentions": _numbers(old_text or ""),
             "new_tl_mentions": _numbers(new_text or ""),
             "numeric_change_needs_review": (
@@ -161,6 +165,7 @@ def compare_clause_sets(
         "previous_coverage_complete_proven": bool(prior_complete),
         "current_coverage_complete_proven": bool(current_complete),
         "complete_legal_search_proven": False,
+        "legal_continuity_independently_verified": False,
         "legal_status": "REVIEW_REQUIRED",
         "publication_activated": False,
         "summary": counts,
