@@ -144,6 +144,14 @@ class PDFGroundingEngine:
                 annot.set_opacity(0.42)
                 annot.update()
             pixels = page.get_pixmap(dpi=dpi, alpha=False, annots=True)
-            return pixels.tobytes(image_format), (
-                "image/png" if image_format == "png" else "image/webp"
-            )
+            png = pixels.tobytes("png")
+            if image_format == "png":
+                return png, "image/png"
+            # PyMuPDF does not export WebP directly. Pillow converts the
+            # already-highlighted PNG without changing the source PDF.
+            from PIL import Image
+
+            buffer = BytesIO()
+            with Image.open(BytesIO(png)) as visible:
+                visible.save(buffer, format="WEBP", quality=90)
+            return buffer.getvalue(), "image/webp"
