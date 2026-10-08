@@ -233,7 +233,7 @@ def test_bootstrap_does_not_auto_approve_or_overwrite_prior_legacy_amounts():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     with Session(engine) as session:
-        seed_2026_support_data(session)
+        seed_2026_support_data(session, include_faqs=False)
         repo = SupportRepository(session)
         legacy = repo.get_legacy_amount("BASIC_SUPPORT_2026", "BUĞDAY")
         assert legacy is not None
@@ -241,7 +241,7 @@ def test_bootstrap_does_not_auto_approve_or_overwrite_prior_legacy_amounts():
         legacy.unit_amount = Decimal("123.45")
         session.commit()
 
-        seed_2026_support_data(session)
+        seed_2026_support_data(session, include_faqs=False)
         session.expire_all()
         assert repo.get_legacy_amount("BASIC_SUPPORT_2026", "BUĞDAY").unit_amount == Decimal("123.45")
         assert lookup(session) is None
