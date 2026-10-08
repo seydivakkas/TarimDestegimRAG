@@ -294,12 +294,17 @@ def evaluate_release(
     amount = (rate.unit_amount * area_da).quantize(
         Decimal("0.01"), rounding=ROUND_HALF_UP
     )
+    # A legally current RATE is NOT a verified farmer-specific entitlement.
+    # Actual ÇKS/parsel ownership/evidence is a separate trusted input gate.
+    # This endpoint never grants a payout on self-asserted facts; a separate
+    # verified farmer evidence service must be integrated in P0-8D.
     return {
-        "status": "ELIGIBLE",
-        "estimated_amount": str(amount),
+        "status": "REVIEW",
+        "estimated_amount": None,
+        "simulated_amount": str(amount),
         "unit_amount": str(rate.unit_amount),
         "release_id": assessment.release_id,
         "source_evidence_id": entry["evidence_id"],
         "release_manifest_sha256": assessment.manifest_sha256,
-        "reason": "Complete externally signed legal release and proven predicates",
+        "reason": "Legal rate release signed; farmer-specific evidence NOT verified",
     }
