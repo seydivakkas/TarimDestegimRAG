@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
@@ -78,7 +79,7 @@ def _manifest(manifest: dict, year: int) -> dict:
     if any(
         not isinstance(r, dict) or set(r) != {"id", "sha256"}
         or type(r["id"]) is not int or r["id"] <= 0
-        or not isinstance(r["sha256"], str) or len(r["sha256"]) != 64
+        or not isinstance(r["sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", r["sha256"])
         for r in refs
     ) or len(set(r["id"] for r in refs)) != len(refs):
         raise ValueError("Invalid/duplicate source version references")
@@ -86,15 +87,17 @@ def _manifest(manifest: dict, year: int) -> dict:
     for e in entries:
         if not isinstance(e, dict) or set(e) != {
             "program_key", "crop_code", "rate_id", "rate_subject_digest",
-            "candidate_id", "evidence_id", "conditions",
+            "candidate_id", "candidate_sha256", "evidence_id", "conditions",
             "province", "district",
         }:
             raise ValueError("Malformed legal release rule")
         if any(type(e[k]) is not int or e[k] <= 0
                for k in ("rate_id", "candidate_id", "evidence_id")):
             raise ValueError("Each release needs a real rate/candidate/evidence record")
-        if not isinstance(e["rate_subject_digest"], str) or len(e["rate_subject_digest"]) != 64:
+        if not isinstance(e["rate_subject_digest"], str) or not re.fullmatch(r"[0-9a-f]{64}", e["rate_subject_digest"]):
             raise ValueError("Signed rate digest missing")
+        if not isinstance(e["candidate_sha256"], str) or not re.fullmatch(r"[0-9a-f]{64}", e["candidate_sha256"]):
+            raise ValueError("Signed candidate digest missing")
         for k in ("program_key", "crop_code", "province", "district"):
             if not isinstance(e[k], str) or not e[k].strip():
                 raise ValueError("Malformed legal release classification")
@@ -111,6 +114,27 @@ def _manifest(manifest: dict, year: int) -> dict:
     if any(("*", "*") in scopes and len(scopes) > 1 for scopes in group.values()):
         raise ValueError("Overlapping national/local entries must be disambiguated")
     return manifest
+
+
+def candidate_digest(candidate: DynamicRateModel) -> str:
+    """Bind every Decimal, source link, date and status of the DRAFT candidate."""
+    payload = {
+        "id": candidate.id,
+        "program_key": candidate.program_key,
+        "crop_code": candidate.crop_code,
+        "production_year": candidate.production_year,
+        "province": candidate.province,
+        "district": candidate.district,
+        "base_coefficient": format(candidate.base_coefficient, "f"),
+        "category_multiplier": format(candidate.category_multiplier, "f"),
+        "proposed_unit_amount": format(candidate.proposed_unit_amount, "f"),
+        "unit": candidate.unit,
+        "effective_from": candidate.effective_from.isoformat(),
+        "effective_to": candidate.effective_to.isoformat() if candidate.effective_to else None,
+        "source_sentence_id": candidate.source_sentence_id,
+        "review_status": candidate.review_status,
+    }
+    return _hash(payload)
 
 
 def stage_release(
@@ -209,6 +233,7 @@ def _check_release(
                 or candidate.province != entry["province"]
                 or candidate.district != entry["district"]
                 or candidate.source_sentence_id != entry["evidence_id"]
+                or candidate_digest(candidate) != entry["candidate_sha256"]
                 or rate.unit_amount != candidate.proposed_unit_amount
                 or rate.unit != "TRY/da" or candidate.unit != "TRY/da"
                 or rate.effective_from > when
