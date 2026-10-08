@@ -1,0 +1,39 @@
+name: P0-8 Year-Neutral Updates and Exact PDF Evidence
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/tarim_destek_rag/updates/**"
+      - "backend/tests/unit/test_p0_8_year_agnostic_updates.py"
+      - "backend/src/tarim_destek_rag/api/main.py"
+      - "frontend_pc/app.py"
+      - "frontend_pc/api_client.py"
+      - "configs/official_update_portals.json"
+      - ".github/workflows/p0-8-updates-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dynamic-year-citation-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deterministic ingestion and PDF tests
+        run: |
+          python -m pip install "pytest>=8,<10" "beautifulsoup4>=4.12,<5" "PyMuPDF>=1.25,<1.29" "pydantic>=2.9,<3" "pydantic-settings>=2.5,<3" "pyyaml>=6,<7" "sqlalchemy>=2.0.35,<3"
+      - name: Compile all update and visible API/UI code paths
+        run: |
+          python -m compileall -q backend/src/tarim_destek_rag/updates
+          python -m compileall -q scripts/scan_legal_updates.py
+          python -m compileall -q backend/src/tarim_destek_rag/api/main.py frontend_pc
+      - name: Test 2030 update discovery and coordinate-exact PDF highlights
+        env:
+          PYTHONPATH: "backend/src:."
+          DATABASE_URL: "sqlite:///:memory:"
+        run: python -m pytest backend/tests/unit/test_p0_8_year_agnostic_updates.py -q
