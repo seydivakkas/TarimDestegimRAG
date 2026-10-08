@@ -1,8 +1,11 @@
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
@@ -94,6 +97,60 @@ class SupportAmountModel(Base):
     )
 
     program: Mapped["SupportProgramModel"] = relationship(back_populates="amounts")
+
+
+class VerifiedSupportRateModel(Base):
+    """Reviewed legal rate component; legacy support_amounts are never payment authority.
+
+    Each row is a distinct legal/document version and is non-destructively retained.
+    An effective version is only usable if its source document version and approval
+    pass SupportRepository.get_amount's provenance checks.
+    """
+
+    __tablename__ = "verified_support_rates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    program_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("support_programs.id"), nullable=False
+    )
+    crop_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    production_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Explicit national scope uses "*" for both fields, not nullable SQL uniqueness.
+    province: Mapped[str] = mapped_column(String(64), nullable=False, default="*")
+    district: Mapped[str] = mapped_column(String(64), nullable=False, default="*")
+    unit_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    unit: Mapped[str] = mapped_column(String(16), nullable=False, default="TRY/da")
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    legal_clause: Mapped[str] = mapped_column(String(256), nullable=False)
+    review_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="DRAFT"
+    )
+    approved_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    review_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_version: Mapped["SourceVersionModel"] = relationship()
+
+    __table_args__ = (
+        CheckConstraint("unit_amount > 0", name="ck_verified_rate_positive"),
+        CheckConstraint(
+            "review_status IN ('DRAFT','VERIFIED','REVOKED')",
+            name="ck_verified_rate_review_status",
+        ),
+        CheckConstraint(
+            "(province = '*' AND district = '*') OR (province <> '*' AND district <> '*')",
+            name="ck_verified_rate_geo_scope",
+        ),
+        UniqueConstraint(
+            "program_id", "crop_name", "production_year", "province", "district",
+            "source_version_id", name="uq_rate_component_source_version",
+        ),
+    )
 
 
 class BasinCropRuleModel(Base):
