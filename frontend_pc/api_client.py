@@ -147,4 +147,70 @@ class ApiClient:
         except Exception as e:
             return {"status": "ERROR", "message": f"Bağlantı hatası: {e}"}
 
+    def scan_legal_updates(self, production_year: int) -> dict[str, Any]:
+        """One-click discovery; never publish unreviewed legislative changes."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        if not key:
+            return {
+                "status": "ADMIN_NOT_CONFIGURED",
+                "message": "Güncelleme taraması yönetici anahtarı olmadan kapalıdır.",
+            }
+        try:
+            response = self._request(
+                "POST", "/admin/legal-updates/scan",
+                params={"year": int(production_year)},
+                headers={"X-Admin-Key": key}, timeout=120,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": f"Resmî kaynak taraması başarısız: {exc}"}
+
+    def get_grounding_evidence(self, sentence_id: int, year: int) -> dict[str, Any]:
+        """Read authenticated-by-source, but unapproved, exact PDF citation details."""
+        try:
+            response = self._request(
+                "GET", f"/api/v1/grounding/evidence/{sentence_id}",
+                params={"year": year},
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def get_grounding_page_bytes(
+        self, sentence_id: int, page: int, year: int,
+    ) -> bytes | None:
+        """Fetch visible yellow-marked actual page; no user-supplied coordinates."""
+        try:
+            response = self._request(
+                "GET",
+                f"/api/v1/grounding/image/{sentence_id}/page/{page}",
+                params={"year": year, "fmt": "png"},
+            )
+            response.raise_for_status()
+            if response.headers.get("content-type", "").split(";")[0] != "image/png":
+                return None
+            return response.content
+        except Exception:
+            return None
+
+    def get_grounding_by_program(
+        self, program_key: str, year: int, crop_code: str | None = None,
+    ) -> dict[str, Any]:
+        """Fetch exact verified PDF clause by program key and year."""
+        try:
+            params: dict[str, Any] = {"year": year}
+            if crop_code:
+                params["crop_code"] = crop_code
+            response = self._request(
+                "GET", f"/api/v1/grounding/program/{program_key}",
+                params=params,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+
 

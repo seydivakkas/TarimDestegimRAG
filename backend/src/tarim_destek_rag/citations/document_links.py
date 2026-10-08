@@ -440,9 +440,9 @@ def render_document_viewer_html(article_key: str) -> str:
     from html import escape
 
     data = get_article_preview(article_key)
-    title = escape(str(data["title"]))
-    source = escape(str(data["source"]))
-    url = escape(str(data["url"]), quote=True)
+    title = escape(str(data.get("title", "Mevzuat kaynağı")))
+    source = escape(str(data.get("source", "Resmî Gazete")))
+    url = escape(str(data.get("url", "")), quote=True)
     return (
         '<div class="legal-reader-container">'
         '<div class="legal-reader-header">'
@@ -450,8 +450,10 @@ def render_document_viewer_html(article_key: str) -> str:
         f'<span class="legal-source-sub">Kaynak kaydı: {source}</span>'
         '</div>'
         '<p class="legal-reader-paragraph">'
-        'Bu ekrandaki başlık ve kaynak yönlendirmesi resmî belgeden doğrulanmış '
-        'madde alıntısı değildir. Geçerli mevzuat metnini açarak inceleyiniz.'
+        '<strong>Mevzuat cümlesi doğrulanmadı.</strong> '
+        'Önceki örnek önizlemeler resmî PDF metniyle birebir eşleştirilmediğinden, '
+        'doğrulanmış yasal madde alıntısı olarak sunulmaz. '
+        'Geçerli mevzuat metnini açarak inceleyiniz.'
         '</p>'
         f'<a class="legal-source-link" href="{url}" '
         'target="_blank" rel="noopener noreferrer">Resmî kaynağı aç ↗</a>'

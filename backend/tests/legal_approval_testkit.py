@@ -2,7 +2,7 @@
 
 import base64
 import json
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -28,6 +28,8 @@ def trust_pair(monkeypatch):
             "role": role, "public_key_b64": base64.b64encode(public).decode("ascii"),
         }
     monkeypatch.setenv(TRUST_ENV, json.dumps(config))
+    monkeypatch.setenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED", "true")
+    monkeypatch.setenv("TARIM_RAG_LEGAL_SECURITY_PROFILE", "isolated_test")
     return signers
 
 
@@ -36,7 +38,7 @@ def detached_envelope(subject, role, signers):
     kind = _subject_kind(subject)
     digest = subject_digest(subject)
     sha = subject.source_version.content_hash
-    now = datetime.now(UTC).isoformat(timespec="seconds")
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     signature = key.sign(attestation_message(
         kind=kind, record_id=subject.id, digest=digest,
         source_sha256=sha, principal_id=principal, role=role, signed_at=now,

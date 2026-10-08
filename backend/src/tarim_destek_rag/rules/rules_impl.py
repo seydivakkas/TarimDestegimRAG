@@ -1,15 +1,61 @@
 from decimal import Decimal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from tarim_destek_rag.database.models import ReviewedWaterRestrictionScopeModel
 from tarim_destek_rag.database.repository import (
     BasinRepository,
     SupportRepository,
     WaterRestrictionRepository,
+    WaterScopeAssessment,
 )
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.base import BaseRule, RuleResult
+
+
+def _enforce_2026_water_crop_exclusion(
+    farmer: FarmerProfile, parcel: Parcel, session: Session,
+    failed: list[str], missing: list[str], trace: list[str],
+) -> None:
+    """2025/42 m.12 / 2024/39 m.17/2(j), 2026 effective water exclusions.
+
+    Art.5-7 support exclusion applies to GRAIN MAIZE and POTATO in declared
+    water-restricted districts. Historic drip practice does not override it.
+    """
+    if parcel.production_year != 2026:
+        return
+    if parcel.crop == "MISIR":
+        missing.append("crop_subtype")
+        trace.append("2026 mısır türü (dane/silaj) belirtilmemiş.")
+        return
+    if parcel.crop not in ("MISIR_DANE", "PATATES"):
+        return
+    water_repo = WaterRestrictionRepository(session)
+    has_scope = session.scalars(
+        select(ReviewedWaterRestrictionScopeModel.id).limit(1)
+    ).first() is not None
+    if has_scope:
+        water = water_repo.assess_2026(
+            farmer.province, farmer.district, 2026
+        )
+    else:
+        res = water_repo.evaluate_official_water_restriction(
+            farmer.province, farmer.district, 2026
+        )
+        water = WaterScopeAssessment(outcome=res.outcome, reason=res.reason)
+
+    if water.outcome == "UNKNOWN":
+        missing.append("verified_water_scope")
+        trace.append("2026 su kısıtı konumu doğrulanmadı: " + water.reason)
+    elif water.outcome == "RESTRICTED":
+        failed.append(
+            "2025/42 m.12 uyarınca 2026 su kısıtı ilan edilmiş havzada "
+            "dane mısır/patates ekilişine m.5-7 destek ödemesi yapılamaz."
+        )
+    else:
+        trace.append("2026 su kısıtı dışında; diğer uygunluk koşulları ayrıca denetlenir.")
 
 
 class BasicSupportRule(BaseRule):
@@ -24,6 +70,8 @@ class BasicSupportRule(BaseRule):
         failed = []
         missing = []
         trace = []
+
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
 
         trace.append("Temel destek değerlendirmesi başlatıldı.")
 
@@ -98,6 +146,8 @@ class PlannedProductionRule(BaseRule):
         failed = []
         missing = []
         trace = []
+
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
 
         trace.append("Planlı üretim havza uygunluğu değerlendiriliyor.")
 
@@ -189,6 +239,8 @@ class CertifiedSeedRule(BaseRule):
         missing = []
         trace = []
 
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
+
         if farmer.cks_status is None:
             missing.append("cks_status")
         elif not farmer.cks_status:
@@ -254,6 +306,8 @@ class CertifiedSaplingRule(BaseRule):
         failed = []
         missing = []
         trace = []
+
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
 
         if farmer.cks_status is None:
             missing.append("cks_status")
@@ -336,6 +390,8 @@ class WaterRestrictionRule(BaseRule):
         missing = []
         trace = []
 
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
+
         if farmer.cks_status is None:
             missing.append("cks_status")
         elif not farmer.cks_status:
@@ -344,24 +400,44 @@ class WaterRestrictionRule(BaseRule):
             passed.append("ÇKS kaydı aktif.")
 
         water_repo = WaterRestrictionRepository(session)
-        assessment = water_repo.evaluate_official_water_restriction(
-            farmer.province, farmer.district, parcel.production_year
-        )
-
+        has_scope = session.scalars(
+            select(ReviewedWaterRestrictionScopeModel.id).limit(1)
+        ).first() is not None
         loc = f"{farmer.province}/{farmer.district}"
-        if assessment.outcome == "NOT_RESTRICTED":
-            failed.append(
-                f"{loc} resmî karara göre yeraltı su kısıtı bölgesinde yer almamaktadır."
+        if has_scope:
+            assessment = water_repo.assess_2026(
+                farmer.province, farmer.district, parcel.production_year
             )
-            trace.append(assessment.reason)
-        elif assessment.outcome == "RESTRICTED":
-            passed.append(
-                f"{loc} onaylı resmî mevzuata göre yeraltı su kısıtı bölgesindedir."
-            )
-            trace.append(assessment.reason)
+            if assessment.outcome == "UNKNOWN":
+                missing.append("verified_water_provenance")
+                trace.append(f"{loc} 2026 su kısıtı belgesi henüz onaylı değil: {assessment.reason}")
+            elif assessment.outcome == "NOT_RESTRICTED":
+                failed.append(
+                    f"{loc} resmî karara göre yeraltı su kısıtı bölgesinde yer almamaktadır."
+                )
+                trace.append(assessment.reason)
+            else:
+                passed.append(
+                    f"{loc} onaylı resmî mevzuata göre yeraltı su kısıtı bölgesindedir."
+                )
+                trace.append(assessment.reason)
         else:
-            missing.append("verified_water_provenance")
-            trace.append(f"{loc} su kısıtı resmî dayanağı: {assessment.reason}")
+            assessment = water_repo.evaluate_official_water_restriction(
+                farmer.province, farmer.district, parcel.production_year
+            )
+            if assessment.outcome == "NOT_RESTRICTED":
+                failed.append(
+                    f"{loc} resmî karara göre yeraltı su kısıtı bölgesinde yer almamaktadır."
+                )
+                trace.append(assessment.reason)
+            elif assessment.outcome == "RESTRICTED":
+                passed.append(
+                    f"{loc} onaylı resmî mevzuata göre yeraltı su kısıtı bölgesindedir."
+                )
+                trace.append(assessment.reason)
+            else:
+                missing.append("verified_water_provenance")
+                trace.append(f"{loc} su kısıtı resmî dayanağı: {assessment.reason}")
 
         # Su kısıtında desteklenen münavebe ürünü mü?
         support_repo = SupportRepository(session)

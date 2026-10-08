@@ -18,7 +18,7 @@ import hashlib
 import json
 import os
 import re
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal
 from urllib.parse import urlsplit
@@ -31,14 +31,18 @@ from sqlalchemy.orm import Session
 from tarim_destek_rag.database.models import (
     LegalApprovalAttestationModel,
     LegalApprovalRevocationModel,
+    LegalReleaseModel,
     ReviewedBasinSnapshotModel,
     ReviewedWaterRestrictionDistrictModel,
+    ReviewedWaterRestrictionScopeModel,
     VerifiedSupportRateModel,
 )
 
 Subject = (
     VerifiedSupportRateModel
     | ReviewedBasinSnapshotModel
+    | ReviewedWaterRestrictionScopeModel
+    | LegalReleaseModel
     | ReviewedWaterRestrictionDistrictModel
 )
 
@@ -54,13 +58,15 @@ def _normalize(value):
     return value
 
 
-def _subject_kind(subject: Subject) -> Literal["RATE", "BASIN", "WATER"]:
+def _subject_kind(subject: Subject) -> Literal["RATE", "BASIN", "WATER", "RELEASE"]:
     if isinstance(subject, VerifiedSupportRateModel):
         return "RATE"
     if isinstance(subject, ReviewedBasinSnapshotModel):
         return "BASIN"
-    if isinstance(subject, ReviewedWaterRestrictionDistrictModel):
+    if isinstance(subject, (ReviewedWaterRestrictionScopeModel, ReviewedWaterRestrictionDistrictModel)):
         return "WATER"
+    if isinstance(subject, LegalReleaseModel):
+        return "RELEASE"
     raise TypeError("Unexpected legal approval subject")
 
 
@@ -108,6 +114,51 @@ def subject_payload(subject: Subject) -> dict:
             "document_page": subject.document_page,
             "review_status": subject.review_status,
             "coverage_complete": subject.coverage_complete,
+            "reviewed_by": subject.reviewed_by,
+            "reviewed_at": subject.reviewed_at,
+            "review_reference": subject.review_reference,
+        }
+    elif isinstance(subject, LegalReleaseModel):
+        manifest = json.loads(subject.manifest_json)
+        canonical = json.dumps(
+            manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        if hashlib.sha256(canonical).hexdigest() != subject.manifest_sha256:
+            raise ValueError("Signed release manifest does not match content")
+        fields = {
+            "year": subject.production_year,
+            "manifest": manifest,
+            "manifest_sha256": subject.manifest_sha256,
+            "effective_from": subject.effective_from.isoformat(),
+            "effective_to": subject.effective_to.isoformat() if subject.effective_to else None,
+            "coverage_complete": subject.coverage_complete,
+            "review_status": subject.review_status,
+            "reviewed_by": subject.reviewed_by,
+            "reviewed_at": subject.reviewed_at,
+            "review_reference": subject.review_reference,
+        }
+    elif isinstance(subject, ReviewedWaterRestrictionScopeModel):
+        amended = subject.amendment_source_version
+        amended_source = amended.source if amended is not None else None
+        if amended is None or amended_source is None:
+            raise ValueError("Both 2024/39 and 2025/42 source versions required")
+        provenance["2026_amendment"] = {
+            "source_id": amended.source_id,
+            "source_url": amended_source.url,
+            "source_authority": amended_source.authority,
+            "source_active": amended_source.active,
+            "source_superseded": amended.superseded,
+            "source_sha256": amended.content_hash,
+            "source_effective_from": amended.effective_from,
+            "source_effective_to": amended.effective_to,
+            "document_version": amended.version,
+        }
+        fields = {
+            "production_year": subject.production_year,
+            "district_keys": json.loads(subject.district_keys_json),
+            "coverage_complete": subject.coverage_complete,
+            "review_status": subject.review_status,
             "reviewed_by": subject.reviewed_by,
             "reviewed_at": subject.reviewed_at,
             "review_reference": subject.review_reference,
@@ -210,7 +261,7 @@ def _validate_signature(
         return False
     try:
         created = datetime.fromisoformat(signed.signed_at.replace("Z", "+00:00"))
-        if created.tzinfo is None or created.astimezone(UTC) > datetime.now(UTC):
+        if created.tzinfo is None or created.astimezone(timezone.utc) > datetime.now(timezone.utc):
             return False
         signature = base64.b64decode(signed.signature_b64, validate=True)
         configured[1].verify(signature, attestation_message(
@@ -225,6 +276,19 @@ def _validate_signature(
 
 def two_person_approved(session: Session, subject: Subject) -> bool:
     """Independent signed reviewer+approver evidence, freshly checked every read."""
+    # Production-wide release gate defaults OFF even with two valid signatures.
+    # A deployment operator must explicitly authorize live legal activation.
+    if os.getenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED") != "true":
+        return False
+    # Never permit production activation with the old feature flag alone.
+    profile = os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE")
+    if profile != "production" and not (
+        profile == "isolated_test"
+        and os.getenv("PYTEST_CURRENT_TEST")
+        and session.bind is not None
+        and session.bind.dialect.name == "sqlite"
+    ):
+        return False
     keys = _trusted_public_keys()
     if len(keys) < 2:
         return False
@@ -234,6 +298,23 @@ def two_person_approved(session: Session, subject: Subject) -> bool:
     source = version.source if version is not None else None
     if version is None or source is None or not source.active or version.superseded:
         return False
+    if isinstance(subject, ReviewedWaterRestrictionScopeModel):
+        amended = subject.amendment_source_version
+        amended_source = amended.source if amended is not None else None
+        if (
+            amended is None or amended_source is None or not amended_source.active
+            or amended.superseded or not re.fullmatch(
+                r"[0-9a-fA-F]{64}", amended.content_hash or ""
+            )
+        ):
+            return False
+        amended_url = urlsplit(amended_source.url)
+        if (
+            amended_url.scheme != "https"
+            or amended_url.hostname not in ("resmigazete.gov.tr", "www.resmigazete.gov.tr")
+            or amended_source.authority != "OFFICIAL_GAZETTE"
+        ):
+            return False
     parsed = urlsplit(source.url)
     host = (parsed.hostname or "").lower()
     if (
@@ -265,10 +346,13 @@ def two_person_approved(session: Session, subject: Subject) -> bool:
         return False
     if rows[0].principal_id == rows[1].principal_id:
         return False
-    return all(_validate_signature(
+    if not all(_validate_signature(
         row, kind=kind, record_id=subject.id, digest=digest,
         source_sha256=source_hash, keys=keys,
-    ) for row in rows)
+    ) for row in rows):
+        return False
+    from tarim_destek_rag.database.legal_audit import production_audit_valid
+    return production_audit_valid(session, subject)
 
 
 def register_detached_approval(
@@ -361,7 +445,7 @@ def register_detached_revocation(
         raise ValueError("Revocation is duplicate or does not match the current subject")
     try:
         created = datetime.fromisoformat(signed_at.replace("Z", "+00:00"))
-        if created.tzinfo is None or created.astimezone(UTC) > datetime.now(UTC):
+        if created.tzinfo is None or created.astimezone(timezone.utc) > datetime.now(timezone.utc):
             raise ValueError("Revocation timestamp is invalid")
         configured[1].verify(
             base64.b64decode(envelope["signature_b64"], validate=True),

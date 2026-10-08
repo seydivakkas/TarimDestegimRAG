@@ -11,7 +11,10 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from tarim_destek_rag.database.connection import SessionLocal, init_db
+from tarim_destek_rag.database.legal_runtime import legal_session
+from tarim_destek_rag.database.legal_audit import (
+    archive_signed_event, production_profile,
+)
 from tarim_destek_rag.database.legal_approvals import (
     register_detached_approval,
     register_detached_revocation,
@@ -22,6 +25,8 @@ from tarim_destek_rag.database.legal_approvals import (
 from tarim_destek_rag.database.models import (
     ReviewedBasinSnapshotModel,
     ReviewedWaterRestrictionDistrictModel,
+    ReviewedWaterRestrictionScopeModel,
+    LegalReleaseModel,
     VerifiedSupportRateModel,
 )
 
@@ -31,7 +36,12 @@ def _get_subject(session: Session, kind: str, record_id: int):
         table = VerifiedSupportRateModel
     elif kind == "BASIN":
         table = ReviewedBasinSnapshotModel
+    elif kind == "RELEASE":
+        table = LegalReleaseModel
     elif kind == "WATER":
+        obj = session.get(ReviewedWaterRestrictionScopeModel, record_id)
+        if obj is not None:
+            return obj
         table = ReviewedWaterRestrictionDistrictModel
     else:
         raise ValueError(f"Unknown kind: {kind}")
@@ -44,15 +54,14 @@ def _get_subject(session: Session, kind: str, record_id: int):
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("inspect", "apply-attestations", "revoke"))
-    parser.add_argument("--kind", required=True, choices=("RATE", "BASIN", "WATER"))
+    parser.add_argument("--kind", required=True, choices=("RATE", "BASIN", "WATER", "RELEASE"))
     parser.add_argument("--id", required=True, type=int)
     parser.add_argument("--bundle", type=Path, help="Externally signed JSON envelopes")
     parser.add_argument("--commit", action="store_true",
                         help="Write atomically; otherwise validate and rollback")
     args = parser.parse_args()
 
-    init_db()
-    with SessionLocal() as session:
+    with legal_session("reader" if args.action == "inspect" else "writer") as session:
         subject = _get_subject(session, args.kind, args.id)
         if args.action == "inspect":
             print(json.dumps({
@@ -73,12 +82,28 @@ def main() -> int:
                 envelopes = document.get("attestations")
                 if not isinstance(envelopes, list) or len(envelopes) != 2:
                     raise ValueError("Exactly two independent detached signatures required")
+                signed = []
                 for envelope in envelopes:
-                    register_detached_approval(session, subject, envelope)
-                if not two_person_approved(session, subject):
-                    raise ValueError("The two-party legal approval gate still rejects this record")
+                    signed.append(register_detached_approval(session, subject, envelope))
+                if len({x.principal_id for x in signed}) != 2 or (
+                    {x.role for x in signed} != {"REVIEWER", "APPROVER"}
+                ):
+                    raise ValueError("Two distinct reviewed and approved identities required")
+                if args.commit and production_profile():
+                    for entry in signed:
+                        archive_signed_event(
+                            session, args.kind, subject.id, entry.role, entry
+                        )
+                if args.commit and not two_person_approved(session, subject):
+                    raise ValueError("Production approval still fails signed/WORM gate")
             else:
-                register_detached_revocation(session, subject, document["revocation"])
+                revoked = register_detached_revocation(
+                    session, subject, document["revocation"]
+                )
+                if args.commit and production_profile():
+                    archive_signed_event(
+                        session, args.kind, subject.id, "REVOCATION", revoked
+                    )
                 if two_person_approved(session, subject):
                     raise ValueError("Revocation did not close the entitlement gate")
             if args.commit:
