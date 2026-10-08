@@ -1,0 +1,50 @@
+name: P0 Data Reliability
+
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'frontend_pc/**'
+      - 'data/benchmark/**'
+      - 'benchmark/**'
+      - '.github/workflows/p0-validation.yml'
+  workflow_dispatch:
+
+jobs:
+  syntax-and-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python files
+        run: python -m compileall -q backend/src backend/tests frontend_pc
+      - name: Validate benchmark fixtures
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          paths = [Path('benchmark/cases.jsonl'), Path('data/benchmark/cases.jsonl')]
+          contents = [p.read_text(encoding='utf-8') for p in paths]
+          assert contents[0] == contents[1], 'benchmark fixtures diverged'
+          cases = [json.loads(line) for line in contents[0].splitlines() if line.strip()]
+          assert len(cases) == 100
+          assert len({case['case_id'] for case in cases}) == 100
+          assert all(case.get('irrigation') == 'IRRIGATED' for case in cases if case['category'] == 'WATER')
+          PY
+
+  targeted-pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - name: Install project dependencies
+        run: uv sync --extra dev --frozen
+      - name: Run P0 focused tests
+        run: uv run pytest backend/tests/unit/test_p0_2026_data_reliability.py -q
+      - name: Run full regression suite
+        run: uv run pytest backend/tests -q
