@@ -297,25 +297,29 @@ def get_faq_stats(session: Session = Depends(get_db_session)) -> dict[str, Any]:
     if stats["total_count"] == 0:
         return {
             "total_count": len(FARMER_FAQ_LIST),
-            "verified_count": len(FARMER_FAQ_LIST),
-            "category_counts": {c: 1 for c in {f["category"] for f in FARMER_FAQ_LIST}},
+            "verified_count": 0,  # Katalog kayıtları bağımsız resmî pasajla doğrulanmadı.
+            "category_counts": {
+                c: sum(1 for faq in FARMER_FAQ_LIST if faq["category"] == c)
+                for c in {f["category"] for f in FARMER_FAQ_LIST}
+            },
         }
     return stats
 
 
 @app.post("/faqs/harvest", tags=["Chatbot / Semantik Arama"])
 def harvest_faqs(session: Session = Depends(get_db_session)) -> dict[str, Any]:
-    """İnternet ve resmî portallardan tarımsal soru-cevap veri tabanını günceller / senkronize eder."""
+    """Yerel küratörlü SSS verisini ekler; bu uç nokta web taraması yapmaz."""
     harvester = AgriculturalFAQHarvester(session)
-    count = harvester.seed_initial_knowledge()
+    seeded_count = harvester.seed_initial_knowledge()
     new_chunks = harvester.export_as_document_chunks()
     if new_chunks:
         hybrid_retriever.add_chunks(new_chunks)
     return {
         "status": "SUCCESS",
-        "message": f"Tarımsal soru-cevap veritabanı güncellendi ({count} kayıt)",
-        "harvested_count": count,
-        "total_faqs": count,
+        "message": "Yerel SSS kayıtları işlendi. Dış internet kaynağı taranmadı.",
+        "seeded_count": seeded_count,
+        "harvested_count": 0,
+        "total_faqs": len(new_chunks),
         "indexed_chunks": len(new_chunks),
     }
 
