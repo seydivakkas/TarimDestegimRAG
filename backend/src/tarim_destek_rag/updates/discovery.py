@@ -11,12 +11,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import re
 import tempfile
-from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from collections.abc import Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Callable
 from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -202,7 +201,7 @@ def scan_official_sources(
     batch = {
         "schema_version": 1,
         "target_production_year": production_year,
-        "scan_time_utc": datetime.now(timezone.utc).isoformat(),
+        "scan_time_utc": datetime.now(UTC).isoformat(),
         "status": "REVIEW_REQUIRED",
         "publication_activated": False,
         "complete_official_coverage_proven": False,
@@ -212,7 +211,7 @@ def scan_official_sources(
         "errors": failures,
     }
     report_path = output / "batches" / (
-        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%f") + ".json"
+        datetime.now(UTC).strftime("%Y%m%dT%H%M%S%f") + ".json"
     )
     _atomic_write(report_path, (
         json.dumps(batch, ensure_ascii=False, sort_keys=True, indent=2) + "\n"

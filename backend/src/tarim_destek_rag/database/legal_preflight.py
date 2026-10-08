@@ -12,11 +12,17 @@ import os
 from sqlalchemy import text
 
 from tarim_destek_rag.database.legal_audit import (
-    _bucket, _retention, production_profile,
+    _bucket,
+    _retention,
+    production_profile,
 )
 from tarim_destek_rag.database.legal_operator import (
-    OFFICERS_ENV, OIDC_TRUST_ENV, _configured_json, _trusted_public_keys,
-    _vault_url, SAFE_VAULT_KEY,
+    OFFICERS_ENV,
+    OIDC_TRUST_ENV,
+    SAFE_VAULT_KEY,
+    _configured_json,
+    _trusted_public_keys,
+    _vault_url,
 )
 from tarim_destek_rag.database.legal_runtime import legal_session
 

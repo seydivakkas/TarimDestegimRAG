@@ -3,27 +3,36 @@
 Synthetic signatures prove code behavior, not real-government legal approval.
 """
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-
-from backend.tests.legal_approval_testkit import sign_subject
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.models import (
-    ReviewedWaterRestrictionScopeModel, SourceModel, SourceVersionModel,
+    ReviewedWaterRestrictionScopeModel,
+    SourceModel,
+    SourceVersionModel,
 )
 from tarim_destek_rag.database.repository import WaterRestrictionRepository
-from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel, IrrigationStatusEnum
+from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.normalization.water_2026 import (
-    AMENDMENT_ID, AMENDMENT_URL, CATALOG, PINNED_DISTRICTS,
-    PRIMARY_ID, PRIMARY_URL, PRIMARY_SHA256, AMENDMENT_SHA256,
-    load_water_catalog, stage_water_scope,
+    AMENDMENT_ID,
+    AMENDMENT_SHA256,
+    AMENDMENT_URL,
+    CATALOG,
+    PINNED_DISTRICTS,
+    PRIMARY_ID,
+    PRIMARY_SHA256,
+    PRIMARY_URL,
+    load_water_catalog,
+    stage_water_scope,
 )
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator
+
+from backend.tests.legal_approval_testkit import sign_subject
 
 
 @pytest.fixture
@@ -69,7 +78,7 @@ def synthetic_scope(session, *, reviewed=True):
         review_status="VERIFIED" if reviewed else "DRAFT",
         coverage_complete=reviewed,
         reviewed_by="SYNTHETIC_REVIEW" if reviewed else None,
-        reviewed_at=datetime.now(timezone.utc) if reviewed else None,
+        reviewed_at=datetime.now(UTC) if reviewed else None,
         review_reference="SYNTHETIC_NO_LEGAL_AUTHORITY" if reviewed else None,
     )
     session.add(scope)
@@ -110,8 +119,7 @@ def test_source_tampering_is_rejected(tmp_path, tamper):
 
 
 def test_draft_and_seed_cannot_grant_or_deny_water_scope(session, monkeypatch):
-    scope = synthetic_scope(session, reviewed=False)
-    signers = None
+    synthetic_scope(session, reviewed=False)
     assessment = WaterRestrictionRepository(session).assess_2026("KONYA", "KARATAY", 2026)
     assert assessment.outcome == "UNKNOWN"
     assert WaterRestrictionRepository(session).assess_2026(

@@ -7,37 +7,44 @@ is ever invented as a real organizational authority by these tests.
 import base64
 import io
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime
 from types import SimpleNamespace
-from unittest.mock import patch
 
 import httpx
 import jwt
 import pytest
-from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
+from tarim_destek_rag.database.connection import Base
+from tarim_destek_rag.database.legal_approvals import (
+    register_detached_approval,
+    register_detached_revocation,
+    subject_digest,
+    two_person_approved,
+)
+from tarim_destek_rag.database.legal_audit import (
+    _ensure_exact_locked_version,
+    archive_signed_event,
+    production_audit_valid,
+)
+from tarim_destek_rag.database.legal_operator import (
+    OFFICERS_ENV,
+    OIDC_TRUST_ENV,
+    VAULT_ADDR_ENV,
+    authenticate_legal_officer,
+    build_vault_revocation_envelope,
+    build_vault_signed_envelope,
+)
+from tarim_destek_rag.database.models import (
+    LegalApprovalAttestationModel,
+    LegalAuditReceiptModel,
+    SourceModel,
+    SupportProgramModel,
+)
 
 from backend.tests.legal_approval_testkit import sign_subject, trust_pair
 from backend.tests.unit.test_p0_2_verified_rates import add_rate
-from tarim_destek_rag.database.connection import Base
-from tarim_destek_rag.database.legal_audit import (
-    _ensure_exact_locked_version, archive_signed_event, production_audit_valid,
-)
-from tarim_destek_rag.database.legal_approvals import (
-    register_detached_approval, register_detached_revocation,
-    subject_digest, two_person_approved,
-)
-from tarim_destek_rag.database.legal_operator import (
-    OFFICERS_ENV, OIDC_TRUST_ENV, VAULT_ADDR_ENV,
-    authenticate_legal_officer, build_vault_signed_envelope,
-    build_vault_revocation_envelope,
-)
-from tarim_destek_rag.database.models import (
-    LegalApprovalAttestationModel, LegalAuditReceiptModel,
-    SourceModel, SupportProgramModel,
-)
 
 
 @pytest.fixture
@@ -92,7 +99,7 @@ def oidc_fixture(monkeypatch):
 
 def id_token(key, *, sub="issuer-subject-reviewer", acr="urn:example:phishing-resistant-mfa",
              audience="tarim-legal-officer-cli", iat_offset=0, auth_offset=0, exp_offset=300):
-    now = int(datetime.now(timezone.utc).timestamp())
+    now = int(datetime.now(UTC).timestamp())
     return jwt.encode({
         "iss": "https://idp.example.invalid/tenant", "aud": audience,
         "sub": sub, "acr": acr, "iat": now + iat_offset,
@@ -108,7 +115,7 @@ def test_real_signature_protocol_with_pinned_oidc_subject_and_vault_transit(
     assert officer.principal_id == "test-reviewer"
     assert officer.vault_key == "legal-reviewer"
     rate = add_rate(session)
-    from tarim_destek_rag.database.legal_approvals import attestation_message, subject_digest
+    from tarim_destek_rag.database.legal_approvals import subject_digest
     expected = subject_digest(rate)
 
     def vault_post(request):

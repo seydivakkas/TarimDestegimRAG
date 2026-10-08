@@ -647,8 +647,9 @@ def get_grounding_by_program(
     session: Session = Depends(get_db_session),
 ) -> dict[str, Any]:
     from sqlalchemy import select
-    from tarim_destek_rag.database.models import DynamicRateModel
+
     from tarim_destek_rag.auto_updater.grounding_repository import load_grounded_sentence
+    from tarim_destek_rag.database.models import DynamicRateModel
 
     query = select(DynamicRateModel).where(
         DynamicRateModel.program_key == program_key,

@@ -12,9 +12,9 @@ import difflib
 import hashlib
 import json
 import re
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
 from decimal import Decimal, InvalidOperation
-from typing import Iterable
 
 from tarim_destek_rag.updates.pdf_evidence import SHA_PATTERN
 

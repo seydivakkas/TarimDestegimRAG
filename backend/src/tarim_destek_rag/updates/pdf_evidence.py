@@ -8,9 +8,9 @@ human inspected. Page numbering is 1-based.
 from __future__ import annotations
 
 import hashlib
-from urllib.parse import quote as url_quote
 import re
 from dataclasses import asdict, dataclass
+from urllib.parse import quote as url_quote
 
 MAX_PDF_BYTES = 30 * 1024 * 1024
 SHA_PATTERN = re.compile(r"^[0-9a-f]{64}$")

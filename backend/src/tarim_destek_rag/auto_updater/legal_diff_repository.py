@@ -9,8 +9,8 @@ article of a prior decision.
 from __future__ import annotations
 
 from pathlib import Path
-from sqlalchemy.orm import Session
 
+from sqlalchemy.orm import Session
 from tarim_destek_rag.auto_updater.grounding_repository import load_grounded_sentence
 from tarim_destek_rag.auto_updater.legal_diff import LegalClause, compare_clause_sets
 

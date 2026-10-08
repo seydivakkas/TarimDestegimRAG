@@ -6,27 +6,25 @@ No test claims to contain future or approved Turkish legal entitlements.
 from __future__ import annotations
 
 import hashlib
-import json
-from datetime import date
-from pathlib import Path
 
 import pymupdf
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
-
 from tarim_destek_rag.auto_updater.grounding_repository import (
-    load_grounded_sentence, resolve_archived_pdf, stage_evidence,
+    load_grounded_sentence,
+    resolve_archived_pdf,
+    stage_evidence,
 )
 from tarim_destek_rag.auto_updater.pdf_grounding import PDFGroundingEngine
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.models import (
-    DynamicRateModel, SentenceBoundingBoxModel,
-    SourceDocumentModel, SourceModel,
+    SentenceBoundingBoxModel,
+    SourceDocumentModel,
+    SourceModel,
 )
-from tarim_destek_rag.rules.dynamic_engine import DynamicRateCatalog, DynamicRuleEngine
+from tarim_destek_rag.rules.dynamic_engine import DynamicRateCatalog
 from tarim_destek_rag.updates.pdf_evidence import UnverifiableEvidence
-
 
 QUOTE = "Synthetic 2030 example: qualified parcels satisfy this demonstration condition."
 SOURCE = "https://www.resmigazete.gov.tr/eskiler/2030/01/example-regulation.pdf"

@@ -385,8 +385,11 @@ class WaterRestrictionRepository:
         if year != 2026:
             return WaterScopeAssessment("UNKNOWN", "2026 dışındaki üretim yılı incelenmedi.")
         from tarim_destek_rag.normalization.water_2026 import (
-            PRIMARY_ID, AMENDMENT_ID, PINNED_DISTRICTS,
-            PRIMARY_SHA256, AMENDMENT_SHA256,
+            AMENDMENT_ID,
+            AMENDMENT_SHA256,
+            PINNED_DISTRICTS,
+            PRIMARY_ID,
+            PRIMARY_SHA256,
         )
 
         candidates = list(self.session.scalars(select(

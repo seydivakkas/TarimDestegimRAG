@@ -2,7 +2,7 @@
 
 import base64
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -38,7 +38,7 @@ def detached_envelope(subject, role, signers):
     kind = _subject_kind(subject)
     digest = subject_digest(subject)
     sha = subject.source_version.content_hash
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
     signature = key.sign(attestation_message(
         kind=kind, record_id=subject.id, digest=digest,
         source_sha256=sha, principal_id=principal, role=role, signed_at=now,

@@ -12,17 +12,19 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from tarim_destek_rag.auto_updater.grounding_repository import load_grounded_sentence
 from tarim_destek_rag.database.legal_approvals import subject_digest, two_person_approved
 from tarim_destek_rag.database.models import (
-    DynamicRateModel, LegalReleaseModel, SourceVersionModel, VerifiedSupportRateModel,
+    DynamicRateModel,
+    LegalReleaseModel,
+    SourceVersionModel,
+    VerifiedSupportRateModel,
 )
 from tarim_destek_rag.rules.dynamic_engine import DynamicRuleEngine
 

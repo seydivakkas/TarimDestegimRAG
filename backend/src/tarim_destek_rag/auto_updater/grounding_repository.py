@@ -8,15 +8,16 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from tarim_destek_rag.auto_updater.pdf_grounding import PDFGroundingEngine
 from tarim_destek_rag.database.models import (
-    SentenceBoundingBoxModel, SourceDocumentModel, SourceModel,
+    SentenceBoundingBoxModel,
+    SourceDocumentModel,
+    SourceModel,
 )
 
 SHA = re.compile(r"^[0-9a-f]{64}$")
@@ -79,7 +80,7 @@ def stage_evidence(
             document_sha256=sha256,
             original_url=original_url,
             archive_relative_path=f"originals/{sha256}.pdf",
-            discovered_at=datetime.now(timezone.utc),
+            discovered_at=datetime.now(UTC),
             content_type="application/pdf",
             review_status="DRAFT",
         )

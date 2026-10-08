@@ -12,13 +12,14 @@ import json
 import os
 from pathlib import Path
 
-from tarim_destek_rag.database.legal_runtime import legal_session
-from tarim_destek_rag.database.legal_audit import production_profile
 from tarim_destek_rag.database.legal_approval_cli import _get_subject
+from tarim_destek_rag.database.legal_audit import production_profile
 from tarim_destek_rag.database.legal_operator import (
-    authenticate_legal_officer, build_vault_signed_envelope,
+    authenticate_legal_officer,
     build_vault_revocation_envelope,
+    build_vault_signed_envelope,
 )
+from tarim_destek_rag.database.legal_runtime import legal_session
 
 
 def _sensitive_file(path: Path) -> str:

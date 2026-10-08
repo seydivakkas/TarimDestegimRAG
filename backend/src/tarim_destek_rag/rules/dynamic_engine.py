@@ -12,7 +12,7 @@ import json
 import re
 from dataclasses import dataclass
 from datetime import date
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -20,7 +20,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
-    DynamicRateModel, SentenceBoundingBoxModel, SourceDocumentModel,
+    DynamicRateModel,
+    SentenceBoundingBoxModel,
+    SourceDocumentModel,
 )
 
 _ALLOWED_FIELDS = {

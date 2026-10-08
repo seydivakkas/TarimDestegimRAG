@@ -11,14 +11,14 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from sqlalchemy import event, select
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
-    LegalApprovalAttestationModel, LegalApprovalRevocationModel,
+    LegalApprovalAttestationModel,
     LegalAuditReceiptModel,
 )
 
@@ -46,7 +46,7 @@ def _retention() -> datetime:
         raise ValueError("WORM retention days are missing") from exc
     if not (365 <= days <= 36500):
         raise ValueError("WORM retention must be configured between 365 and 36500 days")
-    return datetime.now(timezone.utc) + timedelta(days=days)
+    return datetime.now(UTC) + timedelta(days=days)
 
 
 def _client():
@@ -112,7 +112,7 @@ def _ensure_exact_locked_version(s3, receipt: LegalAuditReceiptModel,
         ):
             return False
         protected_until = obj.get("ObjectLockRetainUntilDate")
-        if protected_until is None or protected_until.astimezone(timezone.utc) < datetime.now(timezone.utc):
+        if protected_until is None or protected_until.astimezone(UTC) < datetime.now(UTC):
             return False
         if not receipt.retain_until or protected_until < receipt.retain_until:
             return False

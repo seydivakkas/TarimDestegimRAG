@@ -7,12 +7,9 @@ Validates:
 4. Clean validation when all rules are mutually consistent.
 """
 
-from decimal import Decimal
 import pytest
-
 from tarim_destek_rag.auto_updater.atomic_publisher import (
     AtomicSnapshotPublisher,
-    PublishConflictError,
 )
 
 

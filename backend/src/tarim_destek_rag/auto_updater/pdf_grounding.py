@@ -14,10 +14,9 @@ from io import BytesIO
 from typing import Any
 
 from tarim_destek_rag.updates.pdf_evidence import (
-    PdfEvidence,
+    SHA_PATTERN,
     UnverifiableEvidence,
     locate_pdf_quote,
-    SHA_PATTERN,
 )
 
 MAX_RENDER_PIXELS = 24_000_000

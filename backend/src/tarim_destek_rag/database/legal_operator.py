@@ -17,17 +17,19 @@ import json
 import os
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urlsplit
 
 import httpx
 import jwt
 from cryptography.exceptions import InvalidSignature
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from tarim_destek_rag.database.legal_approvals import (
-    TRUST_ENV, _trusted_public_keys, attestation_message, revocation_message,
-    subject_digest, subject_payload,
+    _trusted_public_keys,
+    attestation_message,
+    revocation_message,
+    subject_digest,
+    subject_payload,
 )
 
 SAFE_VAULT_KEY = re.compile(r"^[a-zA-Z0-9_-]{1,96}$")
@@ -89,7 +91,7 @@ def authenticate_legal_officer(id_token: str, expected_role: str) -> LegalOffice
         )
         if claims["acr"] not in mfa_acr:
             raise ValueError("Recent MFA assurance policy not met")
-        now = datetime.now(timezone.utc).timestamp()
+        now = datetime.now(UTC).timestamp()
         if (
             not isinstance(claims.get("sub"), str)
             or not isinstance(claims.get("iat"), (int, float))
@@ -153,7 +155,7 @@ def build_vault_signed_envelope(
     if trusted is None or trusted[0] != officer.role:
         raise ValueError("Trusted public key does not match officer identity")
     kind = subject_payload(subject)["kind"]
-    timestamp = signed_at or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    timestamp = signed_at or datetime.now(UTC).isoformat(timespec="seconds")
     message = attestation_message(
         kind=kind, record_id=subject.id, digest=digest,
         source_sha256=subject.source_version.content_hash,
@@ -220,7 +222,7 @@ def build_vault_revocation_envelope(
     if configured is None or configured[0] != "APPROVER":
         raise ValueError("Trusted approver key missing")
     kind = subject_payload(subject)["kind"]
-    timestamp = signed_at or datetime.now(timezone.utc).isoformat(timespec="seconds")
+    timestamp = signed_at or datetime.now(UTC).isoformat(timespec="seconds")
     message = revocation_message(
         kind=kind, record_id=subject.id, digest=digest,
         source_sha256=subject.source_version.content_hash,

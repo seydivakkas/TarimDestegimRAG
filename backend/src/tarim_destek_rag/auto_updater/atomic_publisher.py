@@ -15,18 +15,19 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
-
 from tarim_destek_rag.database.models import (
-    DynamicRateModel, SentenceBoundingBoxModel, SourceDocumentModel,
+    DynamicRateModel,
+    SentenceBoundingBoxModel,
+    SourceDocumentModel,
 )
 from tarim_destek_rag.rules.bitemporal_engine import (
-    BitemporalRuleCatalog, INVARIANT_PROGRAM_KEYS,
+    BitemporalRuleCatalog,
 )
 
 
@@ -72,7 +73,7 @@ class AtomicSnapshotPublisher:
                 snapshot_sha256="",
                 target_production_year=0,
                 rule_count=0,
-                validation_timestamp=datetime.now(timezone.utc).isoformat(),
+                validation_timestamp=datetime.now(UTC).isoformat(),
                 errors=("Boş mevzuat kural paketi yayınlanamaz.",),
             )
 
@@ -84,7 +85,7 @@ class AtomicSnapshotPublisher:
                 snapshot_sha256="",
                 target_production_year=0,
                 rule_count=len(snapshot_rules),
-                validation_timestamp=datetime.now(timezone.utc).isoformat(),
+                validation_timestamp=datetime.now(UTC).isoformat(),
                 errors=("Bir paket yalnızca tek bir üretim yılına ait kuralları içerebilir.",),
             )
         target_year = list(years)[0]
@@ -94,7 +95,7 @@ class AtomicSnapshotPublisher:
                 snapshot_sha256="",
                 target_production_year=0,
                 rule_count=len(snapshot_rules),
-                validation_timestamp=datetime.now(timezone.utc).isoformat(),
+                validation_timestamp=datetime.now(UTC).isoformat(),
                 errors=(f"Geçersiz üretim yılı: {target_year}",),
             )
 
@@ -163,7 +164,7 @@ class AtomicSnapshotPublisher:
             snapshot_sha256=digest,
             target_production_year=target_year,
             rule_count=len(snapshot_rules),
-            validation_timestamp=datetime.now(timezone.utc).isoformat(),
+            validation_timestamp=datetime.now(UTC).isoformat(),
             errors=tuple(errors),
         )
 

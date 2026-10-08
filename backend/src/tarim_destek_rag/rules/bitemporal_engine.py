@@ -17,22 +17,17 @@ Implements P0-8C:
 
 from __future__ import annotations
 
-import json
 import re
-from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
-from pathlib import Path
+from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
-from tarim_destek_rag.database.models import (
-    DynamicRateModel, SentenceBoundingBoxModel, SourceDocumentModel,
-)
 from tarim_destek_rag.rules.dynamic_engine import (
-    DynamicRuleEngine, _decimal, _IDENTIFIER, _SHA,
+    _IDENTIFIER,
+    _SHA,
+    DynamicRuleEngine,
+    _decimal,
 )
 
 _CROP_IDENTIFIER = re.compile(r"^[A-Z0-9_ĞÜŞİÖÇI]{2,96}$", re.UNICODE)

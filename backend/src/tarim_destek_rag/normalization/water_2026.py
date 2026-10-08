@@ -14,14 +14,16 @@ from __future__ import annotations
 import hashlib
 import io
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
-    ReviewedWaterRestrictionScopeModel, SourceModel, SourceVersionModel,
+    ReviewedWaterRestrictionScopeModel,
+    SourceModel,
+    SourceVersionModel,
 )
 
 CATALOG = Path(__file__).resolve().parents[4] / "configs/2026_water_restriction_52_draft.json"
@@ -129,7 +131,7 @@ def stage_water_scope(
     amendment_html_path: Path | str | None = None,
 ) -> int:
     """Dry-run by default; explicit apply creates an inert, dual-source DRAFT."""
-    doc = load_water_catalog(path)
+    load_water_catalog(path)
     if not apply:
         return 52
     if session is None or original_pdf_path is None or amendment_html_path is None:
@@ -177,7 +179,7 @@ def stage_water_scope(
         if version is None:
             version = SourceVersionModel(
                 source_id=key, content_hash=digest, version=0,
-                detected_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                detected_at=datetime.now(UTC).isoformat(timespec="seconds"),
                 effective_from="2026-01-01",
                 effective_to="2026-12-31",
                 superseded=False,

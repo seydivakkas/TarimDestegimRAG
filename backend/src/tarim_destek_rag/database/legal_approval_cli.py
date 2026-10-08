@@ -11,10 +11,6 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from tarim_destek_rag.database.legal_runtime import legal_session
-from tarim_destek_rag.database.legal_audit import (
-    archive_signed_event, production_profile,
-)
 from tarim_destek_rag.database.legal_approvals import (
     register_detached_approval,
     register_detached_revocation,
@@ -22,11 +18,16 @@ from tarim_destek_rag.database.legal_approvals import (
     subject_payload,
     two_person_approved,
 )
+from tarim_destek_rag.database.legal_audit import (
+    archive_signed_event,
+    production_profile,
+)
+from tarim_destek_rag.database.legal_runtime import legal_session
 from tarim_destek_rag.database.models import (
+    LegalReleaseModel,
     ReviewedBasinSnapshotModel,
     ReviewedWaterRestrictionDistrictModel,
     ReviewedWaterRestrictionScopeModel,
-    LegalReleaseModel,
     VerifiedSupportRateModel,
 )
 

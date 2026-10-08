@@ -11,13 +11,18 @@ from pathlib import Path
 
 import pymupdf
 import pytest
-
 from tarim_destek_rag.updates.discovery import (
-    OfficialPortal, UnsafeOfficialSource, _official_url,
-    read_portals, scan_official_sources,
+    OfficialPortal,
+    UnsafeOfficialSource,
+    _official_url,
+    read_portals,
+    scan_official_sources,
 )
 from tarim_destek_rag.updates.pdf_evidence import (
-    UnverifiableEvidence, highlighted_pdf_copy, locate_pdf_quote, evidence_deeplink,
+    UnverifiableEvidence,
+    evidence_deeplink,
+    highlighted_pdf_copy,
+    locate_pdf_quote,
 )
 
 
@@ -36,7 +41,7 @@ def fake_portal():
             return (
                 ('<a href="/test/2030-support.pdf">2030 destek tebliği</a>'
                  '<a href="http://evil.invalid/legislation.pdf">sahte destek</a>'
-                 '<a href="/test/2030-support.pdf">duplicate</a>').encode("utf-8"),
+                 '<a href="/test/2030-support.pdf">duplicate</a>').encode(),
                 "text/html",
             )
         if url == source:

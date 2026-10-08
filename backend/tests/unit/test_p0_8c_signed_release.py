@@ -3,30 +3,39 @@
 No real legal official, KMS/HSM, WORM or production activation exists in CI.
 """
 
-import hashlib
 import base64
-from datetime import date, datetime, timezone
+import hashlib
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pymupdf
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-
-from backend.tests.legal_approval_testkit import detached_envelope, trust_pair
 from tarim_destek_rag.auto_updater.grounding_repository import stage_evidence
 from tarim_destek_rag.auto_updater.release import (
-    candidate_digest, evaluate_release, resolve_active_release, stage_release,
+    candidate_digest,
+    evaluate_release,
+    resolve_active_release,
+    stage_release,
 )
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.legal_approvals import (
-    register_detached_approval, register_detached_revocation,
-    revocation_message, subject_digest, two_person_approved,
+    register_detached_approval,
+    register_detached_revocation,
+    revocation_message,
+    subject_digest,
+    two_person_approved,
 )
 from tarim_destek_rag.database.models import (
-    DynamicRateModel, SourceModel, SourceVersionModel, SupportProgramModel,
+    DynamicRateModel,
+    SourceModel,
+    SourceVersionModel,
+    SupportProgramModel,
     VerifiedSupportRateModel,
 )
+
+from backend.tests.legal_approval_testkit import detached_envelope, trust_pair
 
 SOURCE_URL = "https://www.resmigazete.gov.tr/eskiler/2030/02/20300202-1.pdf"
 CLAUSE = "Synthetic 2030 law proof: a registered parcel has the stated rate."
@@ -75,7 +84,7 @@ def repo_fixture(tmp_path):
             effective_from=date(2030, 1, 1), effective_to=None,
             source_version_id=version.id, legal_clause="Madde 6 / 2",
             review_status="VERIFIED", approved_by="synthetic-legal-owner",
-            approved_at=datetime.now(timezone.utc),
+            approved_at=datetime.now(UTC),
             review_reference="SYNTHETIC-UNIT-TEST",
         )
         session.add(rate)
@@ -137,7 +146,7 @@ def reviewed_release(session, version, manifest):
     release.review_status = "VERIFIED"
     release.coverage_complete = True
     release.reviewed_by = "synthetic-legal-organization"
-    release.reviewed_at = datetime.now(timezone.utc)
+    release.reviewed_at = datetime.now(UTC)
     release.review_reference = "SYNTHETIC-LEGAL-COVERAGE-NOT-REAL"
     session.flush()
     return release
@@ -299,7 +308,7 @@ def test_signed_approver_revocation_disables_active_release(repo_fixture, monkey
         session, year=2030, when=date(2030, 4, 1), archive_root=archive,
     )[0].status == "ACTIVE"
     principal, private = signers["APPROVER"]
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
     digest = subject_digest(release)
     reason = "Synthetic amended law replaced previous 2030 source"
     signature = private.sign(revocation_message(

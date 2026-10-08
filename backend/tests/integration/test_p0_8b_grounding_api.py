@@ -14,7 +14,6 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.pool import StaticPool
-
 from tarim_destek_rag.api.main import app, get_db_session
 from tarim_destek_rag.auto_updater.grounding_repository import stage_evidence
 from tarim_destek_rag.database.connection import Base

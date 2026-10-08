@@ -8,8 +8,9 @@ operator import process must not receive the public API credentials.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterator
 from contextlib import contextmanager
-from typing import Iterator, Literal
+from typing import Literal
 
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
