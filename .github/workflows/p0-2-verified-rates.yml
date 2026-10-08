@@ -9,6 +9,7 @@ on:
       - "backend/src/tarim_destek_rag/api/**"
       - "backend/src/tarim_destek_rag/evaluation/**"
       - "backend/tests/unit/test_p0_2_verified_rates.py"
+      - "backend/tests/unit/test_p0_5_signed_approval.py"
       - ".github/workflows/p0-2-verified-rates.yml"
   push:
     branches: [main]
@@ -32,7 +33,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install minimal deterministic backend dependencies
-        run: python -m pip install "pytest>=8,<10" "sqlalchemy>=2.0.35,<3" "pydantic>=2.9,<3" "pydantic-settings>=2.5,<3" "pyyaml>=6,<7"
+        run: python -m pip install "pytest>=8,<10" "sqlalchemy>=2.0.35,<3" "pydantic>=2.9,<3" "pydantic-settings>=2.5,<3" "pyyaml>=6,<7" "cryptography>=43,<47"
       - name: Compile all touched Python code
         run: |
           python -m compileall -q backend/src/tarim_destek_rag/database
@@ -45,4 +46,4 @@ jobs:
         env:
           PYTHONPATH: backend/src
           DATABASE_URL: "sqlite:///:memory:"
-        run: python -m pytest backend/tests/unit/test_p0_2_verified_rates.py -q
+        run: python -m pytest backend/tests/unit/test_p0_2_verified_rates.py backend/tests/unit/test_p0_5_signed_approval.py -q
