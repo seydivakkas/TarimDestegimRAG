@@ -22,7 +22,7 @@
 
 | Yöntem | Hit@1 | Hit@3 | Hit@5 | MRR | Gecikme |
 |---|---|---|---|---|---|
-| **Hibrit (BM25 + FAISS + RRF)** | **%100.00** | **%100.00** | **%100.00** | **1.0000** | **43.96 ms** |
+| **Hibrit (BM25 + FAISS + RRF)** | **%100.00** | **%100.00** | **%100.00** | **1.0000** | **43.29 ms** |
 
 ---
 
@@ -40,10 +40,10 @@
 
 | Bileşen | Ortalama Süre (ms) |
 |---|---|
-| **Rule Engine Değerlendirmesi** | 4.74 ms |
-| **Hibrit Arama (RRF Retrieval)** | 43.96 ms |
-| **Deterministik Açıklama Üretimi** | 0.03 ms |
-| **Uçtan Uca (End-to-End Latency)** | **5.45 ms** |
+| **Rule Engine Değerlendirmesi** | 5.04 ms |
+| **Hibrit Arama (RRF Retrieval)** | 43.29 ms |
+| **Deterministik Açıklama Üretimi** | 0.02 ms |
+| **Uçtan Uca (End-to-End Latency)** | **5.78 ms** |
 
 ---
 

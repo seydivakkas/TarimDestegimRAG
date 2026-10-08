@@ -176,6 +176,27 @@ class AgriculturalFAQModel(Base):
     source_name: Mapped[str] = mapped_column(String(128), nullable=False)
     source_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     keywords: Mapped[str] = mapped_column(Text, nullable=False)
-    verified: Mapped[bool] = mapped_column(Boolean, default=True)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
 
+    # Issue #4: Provenance, Diff, Moderasyon & Sürüm Alanları
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    effective_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    legal_span: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    moderation_status: Mapped[str] = mapped_column(String(32), default="APPROVED")
+    harvested_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    source_domain: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ModerationAuditLogModel(Base):
+    """SSS ve Mevzuat moderasyon işlem denetim günlüğü."""
+
+    __tablename__ = "moderation_audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)  # HARVEST, APPROVE, REJECT, SUPERSEDE
+    faq_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    performed_by: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[str] = mapped_column(String(32), nullable=False)
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)

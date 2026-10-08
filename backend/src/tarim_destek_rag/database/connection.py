@@ -69,6 +69,25 @@ def init_db(target_engine: Engine | None = None) -> None:
                 conn.execute(text("ALTER TABLE support_amounts ADD COLUMN geographic_scope VARCHAR(64) DEFAULT 'GENEL'"))
             if columns and "verification_status" not in columns:
                 conn.execute(text("ALTER TABLE support_amounts ADD COLUMN verification_status VARCHAR(32) DEFAULT 'VERIFIED'"))
+
+            # agricultural_faqs hafif şema göçü
+            faq_cursor = conn.execute(text("PRAGMA table_info(agricultural_faqs)"))
+            faq_columns = [row[1] for row in faq_cursor.fetchall()]
+            if faq_columns and "content_hash" not in faq_columns:
+                conn.execute(text("ALTER TABLE agricultural_faqs ADD COLUMN content_hash VARCHAR(64) DEFAULT NULL"))
+            if faq_columns and "effective_date" not in faq_columns:
+                conn.execute(text("ALTER TABLE agricultural_faqs ADD COLUMN effective_date VARCHAR(32) DEFAULT NULL"))
+            if faq_columns and "legal_span" not in faq_columns:
+                conn.execute(text("ALTER TABLE agricultural_faqs ADD COLUMN legal_span VARCHAR(256) DEFAULT NULL"))
+            if faq_columns and "moderation_status" not in faq_columns:
+                conn.execute(text("ALTER TABLE agricultural_faqs ADD COLUMN moderation_status VARCHAR(32) DEFAULT 'APPROVED'"))
+            if faq_columns and "harvested_at" not in faq_columns:
+                conn.execute(text("ALTER TABLE agricultural_faqs ADD COLUMN harvested_at VARCHAR(32) DEFAULT NULL"))
+            if faq_columns and "source_domain" not in faq_columns:
+                conn.execute(text("ALTER TABLE agricultural_faqs ADD COLUMN source_domain VARCHAR(128) DEFAULT NULL"))
+            if faq_columns and "version" not in faq_columns:
+                conn.execute(text("ALTER TABLE agricultural_faqs ADD COLUMN version INTEGER DEFAULT 1"))
+
             conn.commit()
         except Exception:
             pass
