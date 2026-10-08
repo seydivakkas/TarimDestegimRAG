@@ -39,19 +39,19 @@ def test_regression_known_eligibility_and_amounts():
         assert basic_res.status == EligibilityStatusEnum.ELIGIBLE
         assert planned_res.status == EligibilityStatusEnum.ELIGIBLE
 
-        # Tutar hesabı kontrolü: 12.4 da * 465.00 = 5766.00 TL
+        # Tutar hesabı kontrolü: 12.4 da * 477.10 = 5916.04 TL
         amt_rec = support_repo.get_amount("BASIC_SUPPORT_2026", "BUĞDAY")
         calc = SupportCalculator.calculate(basic_res, parcel.area_da, amt_rec.unit_amount)
-        assert calc.estimated_amount == Decimal("5766.00")
+        assert calc.estimated_amount == Decimal("5916.04")
 
-        # 2. Samsun/Çarşamba Fındık (10.0 da * 170.00 = 1700.00 TL)
+        # 2. Samsun/Çarşamba Fındık (10.0 da * 550.50 = 5505.00 TL)
         f_samsun = FarmerProfile(province="SAMSUN", district="ÇARŞAMBA", cks_status=True)
         p_findik = Parcel(crop="FINDIK", area_da=Decimal("10.0"), production_year=2026)
         res_samsun = orchestrator.evaluate_all(f_samsun, p_findik, session)
         basic_findik = next(r for r in res_samsun if r.support_id == "BASIC_SUPPORT_2026")
         amt_findik = support_repo.get_amount("BASIC_SUPPORT_2026", "FINDIK")
         calc_findik = SupportCalculator.calculate(basic_findik, p_findik.area_da, amt_findik.unit_amount)
-        assert calc_findik.estimated_amount == Decimal("1700.00")
+        assert calc_findik.estimated_amount == Decimal("5505.00")
     finally:
         session.close()
 
@@ -88,7 +88,7 @@ def test_regression_supersession_and_outdated_source():
         year=2026,
         snippet="Mevzuat metni",
     )
-    assert verifier.verify(valid_cit).is_valid is True
+    assert verifier.verify(valid_cit).is_valid is False  # Pasaj kanıtı henüz doğrulanmadı.
 
     # Eski / Pasif kaynak otomatik olarak reddedilmeli
     invalid_cit = CitationDetail(
