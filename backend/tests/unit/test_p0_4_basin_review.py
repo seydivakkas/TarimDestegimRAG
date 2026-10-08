@@ -7,6 +7,7 @@ import json
 
 import pytest
 from sqlalchemy import create_engine, select
+from backend.tests.legal_approval_testkit import sign_subject
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.connection import Base
@@ -32,7 +33,7 @@ def session():
     engine.dispose()
 
 
-def register_synthetic_snapshot(session, *, approve=False, crops=None, starred=True):
+def register_synthetic_snapshot(session, *, approve=False, crops=None, starred=True, monkeypatch=None):
     source = SourceModel(
         source_id=BASIN_SOURCE_ID, url=BASIN_SOURCE_URL,
         title="synthetic complete legal source for unit tests only",
@@ -61,6 +62,10 @@ def register_synthetic_snapshot(session, *, approve=False, crops=None, starred=T
     )
     session.add(snapshot)
     session.commit()
+    if approve:
+        if monkeypatch is None:
+            raise ValueError("Signed approval fixture requires monkeypatch")
+        sign_subject(session, snapshot, monkeypatch)
     return snapshot
 
 
@@ -76,8 +81,8 @@ def test_legacy_or_draft_missing_is_unknown_not_unsuitable(session):
     assert repo.evaluate_official_crop("KONYA", "KARATAY", "BUĞDAY", 2026).outcome == "UNKNOWN"
 
 
-def test_approved_complete_district_can_prove_both_membership_and_nonmembership(session):
-    register_synthetic_snapshot(session, approve=True)
+def test_approved_complete_district_can_prove_both_membership_and_nonmembership(session, monkeypatch):
+    register_synthetic_snapshot(session, approve=True, monkeypatch=monkeypatch)
     repo = BasinRepository(session)
     wheat = repo.evaluate_official_crop("KONYA", "KARATAY", "BUĞDAY", 2026)
     assert wheat.outcome == "LISTED"
@@ -98,9 +103,9 @@ def test_approved_complete_district_can_prove_both_membership_and_nonmembership(
     (True, EligibilityStatusEnum.REVIEW, "verified_support_rate"),
 ])
 def test_starred_grain_maize_condition_cannot_auto_grant_payment(
-    session, drip, expected, missing
+    session, drip, expected, missing, monkeypatch
 ):
-    register_synthetic_snapshot(session, approve=True)
+    register_synthetic_snapshot(session, approve=True, monkeypatch=monkeypatch)
     farmer = FarmerProfile(province="KONYA", district="KARATAY", cks_status=True)
     result = PlannedProductionRule().evaluate(farmer, make_parcel(drip=drip), session)
     assert result.status == expected
@@ -112,8 +117,8 @@ def test_starred_grain_maize_condition_cannot_auto_grant_payment(
         assert any("damla sulama" in failure for failure in result.failed_checks)
 
 
-def test_source_superseded_or_invalid_snapshot_fails_closed(session):
-    snapshot = register_synthetic_snapshot(session, approve=True)
+def test_source_superseded_or_invalid_snapshot_fails_closed(session, monkeypatch):
+    snapshot = register_synthetic_snapshot(session, approve=True, monkeypatch=monkeypatch)
     version = snapshot.source_version
     version.superseded = True
     session.commit()
