@@ -62,7 +62,8 @@ def test_eligibility_endpoint(client):
     data = response.json()
     assert len(data) == 5
     basic = next(d for d in data if d["support_id"] == "BASIC_SUPPORT_2026")
-    assert basic["status"] == "ELIGIBLE"
+    assert basic["status"] == "REVIEW"
+    assert "verified_support_rate" in basic["missing_fields"]
 
 
 def test_calculate_endpoint(client):
@@ -86,7 +87,7 @@ def test_calculate_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     basic_calc = next(d for d in data if d["support_id"] == "BASIC_SUPPORT_2026")
-    assert basic_calc["estimated_amount"] == "4771.00"
+    assert basic_calc["estimated_amount"] is None
 
 
 def test_evaluate_full_endpoint(client):
@@ -108,7 +109,7 @@ def test_evaluate_full_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     assert "total_estimated_amount" in data
-    assert Decimal(data["total_estimated_amount"]) > 0
+    assert data["total_estimated_amount"] is None
     assert len(data["explanations"]) == 5
 
 
