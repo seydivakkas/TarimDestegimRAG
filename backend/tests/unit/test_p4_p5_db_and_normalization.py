@@ -44,9 +44,13 @@ def test_db_seeding_and_repositories():
         assert prog is not None
         assert prog.name == "Temel Destek"
 
-        amt = support_repo.get_amount("BASIC_SUPPORT_2026", "BUĞDAY")
+        amt = support_repo.get_legacy_amount("BASIC_SUPPORT_2026", "BUĞDAY")
         assert amt is not None
         assert amt.unit_amount == Decimal("465.00")
+        assert support_repo.get_amount(
+            "BASIC_SUPPORT_2026", "BUĞDAY",
+            production_year=2026, province="KONYA", district="KARATAY",
+        ) is None
 
         window = support_repo.get_window("BASIC_SUPPORT_2026", 2026)
         assert window is not None
