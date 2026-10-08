@@ -702,12 +702,12 @@ def get_faq_banner_text() -> str:
     cats = len(stats.get("category_counts", {}))
     if total > 0:
         return (
-            f"📚 **Doğrulanmış Tarımsal Çözüm Veritabanı:** Toplam **{total} adet** kayıt "
-            f"({verified} yasal/teknik onaylı, {cats} farklı tarımsal ana disiplin). "
+            f"📚 **Tarımsal SSS Veritabanı:** Toplam **{total} adet** kayıt "
+            f"({verified} bağımsız kanıt doğrulaması tamamlanmış, {cats} kategori). "
             "Aşağıdaki tablodan soru seçebilir veya yukarıdaki sohbet alanına serbestçe yazabilirsiniz."
         )
     return (
-        "📚 **Doğrulanmış Tarımsal Çözüm Veritabanı:** Yürürlükteki mevzuat ve ziraî rehberler indekslenmiştir."
+        "📚 **SSS Kütüphanesi:** Bu oturum için doğrulanmış kayıt bilinmiyor."
     )
 
 
@@ -1108,15 +1108,15 @@ def build_ui() -> gr.Blocks:
                 portal ve rehberlerden soru-cevap veri setini çeker, SQLite veritabanına işler ve arama vektör indeksine (Hybrid BM25 + FAISS) canlı entegre eder.
                 """)
                 with gr.Row():
-                    btn_harvest_faqs = gr.Button("🔄 İnternet & Resmî Portallardan Soru-Cevapları Senkronize Et", variant="primary")
+                    btn_harvest_faqs = gr.Button("🔄 Yerel SSS Kayıtlarını Yeniden İndeksle (Web Tarama Değil)", variant="primary")
                 harvest_status_box = gr.Markdown("⏳ **Senkronizasyon Durumu:** Sistem hazır. Butona basarak güncel tarımsal çözümleri içe aktarabilirsiniz.")
 
                 def on_harvest_click() -> str:
                     res = api_client.harvest_faqs()
                     if res.get("status") == "SUCCESS":
-                        cnt = res.get("harvested_count", 0)
-                        tot = res.get("total_faqs_in_db", 0)
-                        return f"✅ **Senkronizasyon Başarılı:** {cnt} yeni soru-cevap veritabanına işlendi ve RAG indeksine eklendi! (Toplam Veritabanı: **{tot} SSS**)."
+                        cnt = res.get("seeded_count", 0)
+                        tot = res.get("total_faqs", 0)
+                        return f"**Yerel SSS güncellendi:** {cnt} tohum kaydı işlendi; veritabanında **{tot} SSS** bulunuyor. Dış portallar taranmadı ve kayıtlar bağımsız kanıt doğrulamasından geçmedi."
                     return f"⚠️ **Bilgi:** {res.get('message', 'İşlem tamamlandı.')}"
 
                 btn_harvest_faqs.click(on_harvest_click, outputs=[harvest_status_box])
