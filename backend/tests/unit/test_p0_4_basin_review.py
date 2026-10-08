@@ -37,7 +37,7 @@ def register_synthetic_snapshot(session, *, approve=False, crops=None, starred=T
     source = SourceModel(
         source_id=BASIN_SOURCE_ID, url=BASIN_SOURCE_URL,
         title="synthetic complete legal source for unit tests only",
-        authority="TEST", content_type="PDF", active=True,
+        authority="MINISTRY_OF_AGRICULTURE", content_type="PDF", active=True,
     )
     session.add(source)
     session.flush()
