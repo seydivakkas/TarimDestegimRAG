@@ -39,8 +39,8 @@ def session():
             SourceModel(
                 source_id="SYNTHETIC-LEGAL-DOCUMENT",
                 title="TEST ONLY - synthetic source",
-                url="https://example.invalid/document",
-                authority="TEST_ONLY",
+                url="https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+                authority="OFFICIAL_GAZETTE",
                 content_type="PDF",
                 active=True,
             ),
