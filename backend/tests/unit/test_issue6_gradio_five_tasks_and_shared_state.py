@@ -163,7 +163,8 @@ def test_evaluate_for_ui_returns_shared_state_and_formatted_views(client):
 
     assert isinstance(state_val, dict)
     assert "total_estimated_amount" in state_val
-    assert float(state_val["total_estimated_amount"]) > 0
+    # P0-5 fail-closed kuralı: İncelemede olan destek varsa total_estimated_amount None (Hesaplanmadı) döner
+    assert state_val["total_estimated_amount"] is None or float(state_val["total_estimated_amount"]) > 0
     assert "2026 Tarımsal Destek Ön Değerlendirmesi" in inline_html
     assert "Toplam Tahmini Hak Ediş" in kpi_html
     assert "support-card" in cards_html
