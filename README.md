@@ -1,13 +1,15 @@
 # TarımDesteğimRAG
 
+> **P0 uyarısı — 08.10.2026:** 2026 katsayı ve güvenilirlik düzeltmeleri sürmektedir. Bu README'de önceki sürümden kalan başarı, %0 desteksiz iddia, resmî atıf doğrulama ve Flutter hazır olma ifadeleri yeni sürüm için kanıtlanmış değildir. Bkz. [P0 doğrulama notu](docs/P0_DATA_RELIABILITY_2026_10_08.md). Yeni bir test koşusu yapılmadan finansal ya da hukuki kesinlik iddia edilmez.
+
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-blue?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square)
-![Flutter](https://img.shields.io/badge/Flutter-Mobile%20Ready-02569B?style=flat-square)
+![Flutter](https://img.shields.io/badge/Flutter-Source%20Incomplete-02569B?style=flat-square)
 ![Gradio](https://img.shields.io/badge/Gradio-PC%20Dashboard-orange?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-55%20passed%20(100%25)-brightgreen?style=flat-square)
-![Benchmark](https://img.shields.io/badge/benchmark%20v1-100%20cases%20(100%25)-success?style=flat-square)
-![Research](https://img.shields.io/badge/TÜBİTAK%202242-RQ1--RQ4%20PASS-blueviolet?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-P0%20rerun%20required-yellow?style=flat-square)
+![Benchmark](https://img.shields.io/badge/benchmark%20v1-revalidation%20required-yellow?style=flat-square)
+![Research](https://img.shields.io/badge/TÜBİTAK%202242-RQ1--RQ4%20Recheck-blueviolet?style=flat-square)
 
 Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar Hesaplama ve Kaynaklı Açıklama Sistemi (PC Web Paneli & Flutter Mobil İstemcisi).
 
@@ -17,7 +19,7 @@ Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar He
 
 1. **Deterministik Karar Motoru (Zero-LLM Rule Engine):**
    - Dış LLM (OpenAI, Gemini vb.) veya yapay zeka tahmini kullanılmaz; kararlar `%100` deterministik Python kuralları ile üretilir.
-   - Temel Destek, Planlı Üretim, Sertifikalı Tohum, Sertifikalı Fidan ve Yeraltı Su Kısıtı programları tam kapsanır.
+   - Temel Destek, Planlı Üretim, Sertifikalı Tohum, Sertifikalı Fidan ve Yeraltı Su Kısıtı programlarında örnek sınırlı kural kapsamı bulunur.
 
 2. **Kuruş Hassasiyetinde Hesaplayıcı (Decimal Calculator):**
    - Kayan nokta (float) yuvarlama hataları olmadan Python `decimal.Decimal` ile yasal hak ediş tahmini.
@@ -25,19 +27,19 @@ Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar He
 3. **Gelişmiş Hibrit Arama (BM25 + FAISS Dense + RRF):**
    - **BM25Plus:** Türkçe özel karakter ve tokenizasyon desteğiyle kesin sözcüksel eşleştirme.
    - **Dense FAISS:** `paraphrase-multilingual-MiniLM-L12-v2` çok dilli anlamsal embeddingler.
-   - **Reciprocal Rank Fusion (RRF):** Sözcüksel ve anlamsal aramayı birleştiren hibrit sıralama (MRR=1.0000).
+   - **Reciprocal Rank Fusion (RRF):** Sözcüksel ve anlamsal aramayı birleştiren hibrit sıralama (MRR yeniden ölçülecek).
 
 4. **Resmî Atıf ve Kanıt Koruması (Citation Verification Guard):**
-   - Her gerekçe 2026 Resmî Gazete maddesi ve BÜGEM havza kararlarıyla çapraz doğrulanır; desteksiz iddialar engellenir (%0 halüsinasyon).
+   - Atıf kayıt ve yıl alanları kontrol edilir; doğrudan belge/pasaj doğrulaması henüz tamamlanmamıştır.
 
-5. **Zengin PC Arayüzü (Gradio 9 Sekmeli Panel):**
+5. **Zengin PC Arayüzü (Gradio 8 Sekmeli Panel):**
    - **Profil & Parsel Girişi:** İl, ilçe, ÇKS durumu, parsel alanı ve ürün seçimi.
    - **Desteklerim:** Durum rozetleri (UYGUN, İNCELEME, UYGUN DEĞİL), KPI kartları ve toplam tutar.
    - **Destek Detay:** Birim fiyat (TL/da), dekar, hak ediş ve başvuru takvimi tablosu.
    - **Neden? (Gerekçe & Atıf):** `TemplateExplainer` açıklamaları, eksik belgeler ve Resmî Gazete madde alıntıları.
    - **Soru-Cevap Asistanı:** Semantik FAQ & mevzuat arama chatbotu.
    - **Mevzuat & Scraper Paneli:** Takip edilen kaynakların durumları ve kontrol mekanizması.
-   - **Doğrulama & Benchmark:** 100 resmi doğrulama vakası tablosu ve %100 başarı metrikleri.
+   - **Doğrulama & Benchmark:** 100 örnek senaryo ve yeniden ölçülecek başarı metrikleri.
    - **Admin & Sistem Mimarisi:** 2026 destek parametreleri, birim fiyatlar ve yasal dayanaklar.
 
 6. **Flutter Mobil İstemcisi (`mobile/`):**
