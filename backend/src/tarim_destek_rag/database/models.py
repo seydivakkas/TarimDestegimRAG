@@ -300,6 +300,50 @@ class ApplicationWindowModel(Base):
     program: Mapped["SupportProgramModel"] = relationship(back_populates="windows")
 
 
+
+class ReviewedWaterRestrictionScopeModel(Base):
+    """A COMPLETE nationally reviewed 2026 2024/39 m.6/3(a) district enumeration.
+
+    Distinct from 945 planning basins: source-and-amendment linked, never
+    automatically elevated from the educational guide / seed.
+    """
+
+    __tablename__ = "reviewed_water_restriction_scopes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    production_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    district_keys_json: Mapped[str] = mapped_column(Text, nullable=False)
+    coverage_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    amendment_source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="DRAFT")
+    reviewed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_version: Mapped["SourceVersionModel"] = relationship(
+        foreign_keys=[source_version_id]
+    )
+    amendment_source_version: Mapped["SourceVersionModel"] = relationship(
+        foreign_keys=[amendment_source_version_id]
+    )
+
+    __table_args__ = (
+        CheckConstraint("production_year = 2026", name="ck_water_scope_year_2026"),
+        CheckConstraint(
+            "review_status IN ('DRAFT','VERIFIED','REVOKED')",
+            name="ck_water_scope_review_status",
+        ),
+        UniqueConstraint(
+            "production_year", "source_version_id", "amendment_source_version_id",
+            name="uq_water_scope_source_versions",
+        ),
+    )
+
+
 class WaterRestrictionModel(Base):
     """Yeraltı su kısıtı bulunan havzalar ve ürün kuralları."""
 
