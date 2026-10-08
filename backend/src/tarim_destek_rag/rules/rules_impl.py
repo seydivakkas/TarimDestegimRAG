@@ -50,7 +50,7 @@ class BasicSupportRule(BaseRule):
 
         # 4. Ürün Birim Fiyatı Kontrolü
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop)
+        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
         if amount_record:
             passed.append(f"{parcel.crop} ürünü için temel destek tanımı mevcut.")
         else:
@@ -126,7 +126,7 @@ class PlannedProductionRule(BaseRule):
 
         # 3. Birim Tutar Kontrolü
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop)
+        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
         if amount_record:
             passed.append(f"{parcel.crop} için planlı üretim birim desteği tanımlı.")
         else:
@@ -174,7 +174,7 @@ class CertifiedSeedRule(BaseRule):
             passed.append("ÇKS kaydı aktif.")
 
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop)
+        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
         if not amount_record:
             failed.append(f"{parcel.crop} için sertifikalı tohum desteği bulunmuyor.")
         else:
@@ -231,7 +231,7 @@ class CertifiedSaplingRule(BaseRule):
             passed.append("ÇKS kaydı aktif.")
 
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop)
+        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
         if not amount_record:
             failed.append(f"{parcel.crop} için sertifikalı fidan desteği bulunmuyor.")
         else:
@@ -317,7 +317,7 @@ class WaterRestrictionRule(BaseRule):
 
         # Su kısıtında desteklenen münavebe ürünü mü?
         support_repo = SupportRepository(session)
-        amount_record = support_repo.get_amount(self.support_id, parcel.crop)
+        amount_record = support_repo.get_amount(self.support_id, parcel.crop, parcel.production_year)
         if amount_record:
             passed.append(
                 f"{parcel.crop} ürünü su kısıtı bölgesinde münavebe ürünü olarak desteklenir."

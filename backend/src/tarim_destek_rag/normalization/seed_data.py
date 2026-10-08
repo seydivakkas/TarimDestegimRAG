@@ -95,7 +95,7 @@ def seed_2026_support_data(session: Session) -> None:
 
     # 3. Birim Tutarlar (TL / dekar)
     amounts = [
-        # Temel Destek Birim Fiyatları
+        # Temel Destek Birim Fiyatları (11781 sayılı Karar ile Doğrulanmış)
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
             crop_name="BUĞDAY",
@@ -103,6 +103,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("465.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -111,6 +117,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("465.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -119,6 +131,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("380.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -127,6 +145,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("410.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -135,6 +159,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("550.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -143,6 +173,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("170.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         # Planlı Üretim İlave Destek Birim Fiyatları
         SupportAmountModel(
@@ -152,6 +188,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("465.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         SupportAmountModel(
             program_id="PLANNED_PRODUCTION_2026",
@@ -160,6 +202,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("465.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         SupportAmountModel(
             program_id="PLANNED_PRODUCTION_2026",
@@ -168,6 +216,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("410.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         # Sertifikalı Tohum
         SupportAmountModel(
@@ -177,6 +231,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("120.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         SupportAmountModel(
             program_id="CERTIFIED_SEED_2026",
@@ -185,6 +245,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("120.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         # Sertifikalı Fidan
         SupportAmountModel(
@@ -194,6 +260,12 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("400.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
         ),
         # Su Kısıtı İlave Destek
         SupportAmountModel(
@@ -203,18 +275,48 @@ def seed_2026_support_data(session: Session) -> None:
             unit_amount=Decimal("250.00"),
             unit="TRY/da",
             source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="11781",
+            effective_from="2026-09-08",
+            effective_to=None,
+            geographic_scope="GENEL",
+            verification_status="VERIFIED",
+        ),
+        # Tarihsel / Eski Sürüm Örneği (310 TL Ağustos katsayılı eski karar - SUPERSEDED)
+        SupportAmountModel(
+            program_id="BASIC_SUPPORT_2026",
+            crop_name="BUĞDAY",
+            category="TAHIL",
+            unit_amount=Decimal("310.00"),
+            unit="TRY/da",
+            source_id="RG-2026-BITKISEL",
+            production_year=2026,
+            legal_decision_number="32647",
+            effective_from="2026-08-29",
+            effective_to="2026-09-07",
+            geographic_scope="GENEL",
+            verification_status="SUPERSEDED",
         ),
     ]
     for amt in amounts:
         existing_amt = (
             session.query(SupportAmountModel)
-            .filter_by(program_id=amt.program_id, crop_name=amt.crop_name)
+            .filter_by(
+                program_id=amt.program_id,
+                crop_name=amt.crop_name,
+                production_year=amt.production_year,
+                verification_status=amt.verification_status,
+            )
             .first()
         )
         if existing_amt:
             existing_amt.unit_amount = amt.unit_amount
             existing_amt.category = amt.category
             existing_amt.source_id = amt.source_id
+            existing_amt.legal_decision_number = amt.legal_decision_number
+            existing_amt.effective_from = amt.effective_from
+            existing_amt.effective_to = amt.effective_to
+            existing_amt.geographic_scope = amt.geographic_scope
         else:
             session.add(amt)
 

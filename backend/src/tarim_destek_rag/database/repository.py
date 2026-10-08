@@ -89,13 +89,37 @@ class SupportRepository:
         )
         return list(self.session.scalars(stmt).all())
 
-    def get_amount(self, program_id: str, crop_name: str) -> SupportAmountModel | None:
-        """Belirtilen program ve ürün için birim destek tutarını sorgular."""
+    def get_amount(
+        self,
+        program_id: str,
+        crop_name: str,
+        production_year: int = 2026,
+        status: str = "VERIFIED",
+    ) -> SupportAmountModel | None:
+        """Belirtilen program, ürün ve üretim yılı için birim destek tutarını sorgular."""
         stmt = select(SupportAmountModel).where(
             SupportAmountModel.program_id == program_id,
             SupportAmountModel.crop_name == crop_name,
+            SupportAmountModel.production_year == production_year,
+            SupportAmountModel.verification_status == status,
         )
         return self.session.scalars(stmt).first()
+
+    def list_amount_history(
+        self,
+        program_id: str,
+        crop_name: str,
+    ) -> list[SupportAmountModel]:
+        """Bir program ve ürün için tüm mevzuat sürümleri ve tutar geçmişini listeler."""
+        stmt = (
+            select(SupportAmountModel)
+            .where(
+                SupportAmountModel.program_id == program_id,
+                SupportAmountModel.crop_name == crop_name,
+            )
+            .order_by(SupportAmountModel.production_year.desc(), SupportAmountModel.id.desc())
+        )
+        return list(self.session.scalars(stmt).all())
 
     def get_window(self, program_id: str, year: int = 2026) -> ApplicationWindowModel | None:
         """Başvuru takvimini sorgular."""
