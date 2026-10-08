@@ -1,35 +1,25 @@
-"""Mevzuat Atıf ve İddia Doğrulama Motoru (Citation & Claim Verifier).
-
-Master Plan & Issue #5 Uyumlu:
-- İddia-Paragraf (Claim-to-Span) ve Belge Sürümü Eşleştirme.
-- Atıfsız, Eski Sürümlü, ve Semantik Olarak Yanlış Eşleşen İddiaları Ayıklama.
-- Ayrık Metrikler: Citation Precision, Citation Recall, Unsupported Claim Rate,
-  Legal Freshness ve Refusal Accuracy.
-
-Telif Hakkı (c) 2026 Seydi Eryılmaz (@seydivakkas)
-ÖZEL LİSANS — TÜM HAKLAR SAKLIDIR
-"""
-
-from __future__ import annotations
+"""Kaynak kayıt, hash ve belge-pasaj kanıt doğrulayıcısı (fail closed)."""
 
 import re
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 
 from pydantic import BaseModel, Field
 
+from tarim_destek_rag.citations.evidence import EvidenceStore, canonical_url
 from tarim_destek_rag.explainer.template_explainer import CitationDetail
 from tarim_destek_rag.scraper.registry import SourceRegistry, source_registry
 
 
 class VerificationResult(BaseModel):
-    """Tekil atıf doğrulama sonucu."""
-
     is_valid: bool
     source_exists: bool
     source_active: bool
     year_valid: bool
     status: str
     message: str
+    document_sha256: str | None = None
+    page_number: int | None = None
 
 
 class ClaimVerificationResult(BaseModel):
@@ -56,90 +46,72 @@ class CitationMetricsResult(BaseModel):
 
 
 class CitationVerifier:
-    """Mevzuat iddialarının, gösterilen kaynakların ve metin aralıklarının geçerliliğini denetleyen guard."""
+    """Atıf, ancak izinli URL'den alınmış gerçek belgede pasaj eşleşirse geçerlidir."""
 
-    def __init__(self, registry: SourceRegistry | None = None) -> None:
-        if registry:
-            self.registry = registry
-        else:
-            self.registry = source_registry
-            if not self.registry.list_all():
-                try:
-                    from pathlib import Path
-                    cfg_path = Path("configs/sources.yaml")
-                    if cfg_path.exists():
-                        loaded = SourceRegistry.load_from_yaml(cfg_path)
-                        for s in loaded.list_all():
-                            if s.id not in self.registry._sources:
-                                self.registry.register(s)
-                except Exception:
-                    pass
+    def __init__(
+        self,
+        registry: SourceRegistry | None = None,
+        evidence_store: EvidenceStore | None = None,
+    ) -> None:
+        self.registry = registry if registry is not None else source_registry
+        self.evidence_store = evidence_store if evidence_store is not None else EvidenceStore()
 
     def verify(self, citation: CitationDetail) -> VerificationResult:
-        """Tek bir atfın kaynak ve yıl geçerlilik zincirini denetler (Geriye dönük uyumluluk)."""
+        def rejected(status: str, msg: str, *, exists=True, active=True, year=True) -> VerificationResult:
+            return VerificationResult(
+                is_valid=False, source_exists=exists, source_active=active,
+                year_valid=year, status=status, message=msg,
+            )
+
         try:
             source = self.registry.get_source(citation.source_id)
         except Exception:
-            return VerificationResult(
-                is_valid=False,
-                source_exists=False,
-                source_active=False,
-                year_valid=False,
-                status="INSUFFICIENT_EVIDENCE",
-                message=f"Atıf yapılan kaynak sistemde kayıtlı değil: {citation.source_id}",
+            return rejected(
+                "INSUFFICIENT_EVIDENCE", f"Kaynak kayıtlı değil: {citation.source_id}",
+                exists=False, active=False, year=False,
             )
-
         if not source.active:
-            return VerificationResult(
-                is_valid=False,
-                source_exists=True,
-                source_active=False,
-                year_valid=False,
-                status="INACTIVE_SOURCE",
-                message=f"Atıf yapılan kaynak pasif duruma alınmış: {citation.source_id}",
-            )
+            return rejected("INACTIVE_SOURCE", f"Kaynak pasif: {citation.source_id}", active=False, year=False)
+        if citation.year != 2026:
+            return rejected("OUTDATED_YEAR", f"Atıf hedef yılı 2026 değil: {citation.year}", year=False)
 
-        year_valid = citation.year == 2026
-        if not year_valid:
-            return VerificationResult(
-                is_valid=False,
-                source_exists=True,
-                source_active=True,
-                year_valid=False,
-                status="OUTDATED_YEAR",
-                message=f"Atıf yapılan mevzuat yılı 2026 değil: {citation.year}",
-            )
+        # Validate the actual clause payload before resolving source location.
+        # Empty/short citations must never be represented as verified evidence.
+        if not citation.snippet or len(citation.snippet.strip()) < 10:
+            return rejected("EMPTY_OR_SHORT_SNIPPET", "Missing original legal passage")
+        if not citation.section or not citation.section.strip():
+            return rejected("MISSING_SECTION", "Missing official legal article/section")
 
-        snippet_clean = citation.snippet.strip() if getattr(citation, "snippet", None) else ""
-        if not snippet_clean or len(snippet_clean) < 10:
-            return VerificationResult(
-                is_valid=False,
-                source_exists=True,
-                source_active=True,
-                year_valid=True,
-                status="EMPTY_OR_SHORT_SNIPPET",
-                message="Atıf metni (snippet) boş veya geçersiz uzunlukta (<10 karakter).",
-            )
+        if not citation.url or canonical_url(citation.url) != canonical_url(str(source.url)):
+            return rejected("SOURCE_URL_MISMATCH", "Atıf URL'si kayıtlı resmî kaynak URL'siyle uyuşmuyor.")
 
-        section_clean = citation.section.strip() if getattr(citation, "section", None) else ""
-        if not section_clean:
-            return VerificationResult(
-                is_valid=False,
-                source_exists=True,
-                source_active=True,
-                year_valid=True,
-                status="MISSING_SECTION",
-                message="Atıf yapılan mevzuat maddesi/bölümü belirtilmemiş.",
-            )
+        snapshot = self.evidence_store.get(source.id)
+        if snapshot is None:
+            snapshot = self.evidence_store.load_snapshot(source)
+        if snapshot is None:
+            return rejected("EVIDENCE_NOT_INDEXED", "Gerçek kaynak belgesi henüz indirilemedi veya hash doğrulanamadı.")
+
+        ok, page = self.evidence_store.match(source, snippet=citation.snippet, section=citation.section)
+        if not ok or page is None:
+            return rejected("PASSAGE_NOT_FOUND", "Atıf pasajı ve belirtilen bölüm aynı belge sayfasında eşleşmedi.")
+
+        fragment = urlsplit(citation.url).fragment
+        if fragment:
+            values = parse_qs(fragment).get("page")
+            if values:
+                try:
+                    if len(values) != 1 or int(values[0]) != page:
+                        return rejected("PAGE_MISMATCH", "Atıfta verilen PDF sayfası eşleşmiyor.")
+                except ValueError:
+                    return rejected("PAGE_MISMATCH", "Geçersiz sayfa numarası.")
 
         return VerificationResult(
-            is_valid=True,
-            source_exists=True,
-            source_active=True,
-            year_valid=True,
+            is_valid=True, source_exists=True, source_active=True, year_valid=True,
             status="VERIFIED",
-            message="Kaynak resmî, aktif ve 2026 yılı için doğrulanmış mevzuat maddesidir.",
+            message="Kaynağın hash'i doğrulandı; ilgili bölüm ve pasaj belgede bulundu.",
+            document_sha256=snapshot.sha256, page_number=page,
         )
+
 
     def verify_claim(
         self,
@@ -263,7 +235,21 @@ class CitationVerifier:
                     confidence_score=0.1,
                 )
 
-        # 6. Tüm koşullar sağlandı: VERIFIED
+        # Source registration or a user-provided text snippet never proves
+        # the legal statement. Require the original officially downloaded
+        # PDF/HTML with pinned SHA and exact passage before VERIFIED.
+        proof = self.verify(citation)
+        if not proof.is_valid:
+            return ClaimVerificationResult(
+                is_valid=False,
+                status="EVIDENCE_NOT_INDEXED" if proof.status == "EVIDENCE_NOT_INDEXED"
+                else "UNVERIFIED_SOURCE",
+                message="Original source bytes/passage not independently verified",
+                claim_supported=False, span_matched=False,
+                version_valid=proof.year_valid, confidence_score=0.0,
+            )
+
+        # 6. Only independently proven source/passage can be VERIFIED.
         return ClaimVerificationResult(
             is_valid=True,
             status="VERIFIED",
@@ -361,6 +347,7 @@ class CitationMetricsCalculator:
             legal_freshness=round(freshness, 4),
             refusal_accuracy=round(refusal_acc, 4),
         )
+
 
 
 citation_verifier = CitationVerifier()

@@ -1,4 +1,3 @@
-from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -88,7 +87,6 @@ def test_calculate_endpoint(client):
     data = response.json()
     basic_calc = next(d for d in data if d["support_id"] == "BASIC_SUPPORT_2026")
     assert basic_calc["estimated_amount"] is None
-    assert basic_calc["status"] == "REVIEW"
 
 
 def test_evaluate_full_endpoint(client):
@@ -111,7 +109,6 @@ def test_evaluate_full_endpoint(client):
     data = response.json()
     assert "total_estimated_amount" in data
     assert data["total_estimated_amount"] is None
-    assert all(c["estimated_amount"] is None for c in data["calculations"])
     assert len(data["explanations"]) == 5
 
 

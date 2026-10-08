@@ -14,7 +14,6 @@ from tarim_destek_rag.normalization.water_restriction_2026 import (
     stage_water_restriction_districts,
 )
 
-
 # 2026 Destekleme Katsayı ve Birim Fiyat Tablosu (8 Eylül 2026 Güncellemesi)
 SUPPORT_COEFFICIENTS_2026 = {
     "BASE_COEFFICIENT_AUGUST": Decimal("310.00"),

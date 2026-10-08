@@ -9,9 +9,9 @@ Telif Hakkı (c) 2026 Seydi Eryılmaz (@seydivakkas)
 from pathlib import Path
 
 from tarim_destek_rag.database.connection import SessionLocal, init_db
-from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 from tarim_destek_rag.evaluation.benchmark_runner import load_cases_from_jsonl
 from tarim_destek_rag.evaluation.benchmark_runner_v1 import BenchmarkV1Runner
+from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 
 
 def test_100_cases_dataset_integrity():

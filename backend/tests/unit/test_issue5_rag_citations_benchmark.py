@@ -17,7 +17,6 @@ Telif Hakkı (c) 2026 Seydi Eryılmaz (@seydivakkas)
 from __future__ import annotations
 
 import pytest
-
 from tarim_destek_rag.citations.verifier import (
     CitationMetricsCalculator,
     CitationVerifier,
@@ -52,10 +51,11 @@ def test_claim_verification_valid(verifier):
     doc_text = "MADDE 2 - Buğday ve arpa için 465 TL/da planlı üretim ilave desteği ödenir."
 
     res = verifier.verify_claim(claim, citation, doc_text)
-    assert res.is_valid is True
-    assert res.status == "VERIFIED"
-    assert res.claim_supported is True
-    assert res.span_matched is True
+    # Manually supplied doc_text is NOT proof of original official bytes;
+    # the official source SHA/page must be independently indexed first.
+    assert res.is_valid is False
+    assert res.status in ("EVIDENCE_NOT_INDEXED", "UNVERIFIED_SOURCE")
+    assert res.claim_supported is False
     assert res.version_valid is True
 
 
@@ -180,12 +180,11 @@ def test_citation_metrics_calculation_distinctness(verifier):
     metrics = CitationMetricsCalculator.calculate_metrics(eval_cases, verifier=verifier)
 
     assert metrics.total_claims == 4
-    # Precision: Doğrulanan atıflar / Sunulan toplam atıf sayısı (3 atıftan 1'i geçerli)
-    assert 0.3 <= metrics.citation_precision <= 0.4
-    # Recall: Beklenen doğru iddia bulundu mu?
-    assert metrics.citation_recall == 1.0
-    # Unsupported claim rate: 4 iddiadan 3'ü reddedildi/desteksiz
-    assert metrics.unsupported_claim_rate == 0.75
+    # No original-PDF evidence was supplied, including the one seemingly
+    # matching snippet. A fail-closed verifier must not award fake precision.
+    assert metrics.citation_precision == 0.0
+    assert metrics.citation_recall == 0.0
+    assert metrics.unsupported_claim_rate == 1.0
     # Refusal accuracy: Desteklenemez 3 iddiadan 3'ü de doğru reddedildi
     assert metrics.refusal_accuracy == 1.0
     # Legal freshness: 3 atıftan 2'si 2026 yılına ait

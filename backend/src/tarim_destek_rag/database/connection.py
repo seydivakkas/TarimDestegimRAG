@@ -1,5 +1,5 @@
-from collections.abc import Generator
 import sqlite3
+from collections.abc import Generator
 from pathlib import Path
 
 from sqlalchemy import create_engine, event

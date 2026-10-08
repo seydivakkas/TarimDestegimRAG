@@ -14,8 +14,8 @@ from frontend_pc.app import (
     evaluate_farmer_parcel,
     format_currency,
     generate_evaluation_report,
-    parse_irrigation_status,
     load_benchmark_data,
+    parse_irrigation_status,
 )
 
 

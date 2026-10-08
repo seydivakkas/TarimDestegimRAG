@@ -13,11 +13,15 @@ from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.connection import SessionLocal, init_db
 from tarim_destek_rag.database.legal_approvals import (
-    register_detached_approval, register_detached_revocation,
-    subject_digest, subject_payload, two_person_approved,
+    register_detached_approval,
+    register_detached_revocation,
+    subject_digest,
+    subject_payload,
+    two_person_approved,
 )
 from tarim_destek_rag.database.models import (
-    ReviewedBasinSnapshotModel, ReviewedWaterRestrictionDistrictModel,
+    ReviewedBasinSnapshotModel,
+    ReviewedWaterRestrictionDistrictModel,
     VerifiedSupportRateModel,
 )
 

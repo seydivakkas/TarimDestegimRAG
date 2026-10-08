@@ -12,24 +12,18 @@ from unittest.mock import MagicMock
 import gradio as gr
 import pytest
 from fastapi.testclient import TestClient
+from tarim_destek_rag.api.main import app
 
 from frontend_pc.api_client import ApiClient
 from frontend_pc.app import (
     build_ui,
-    calculate_window_status,
     evaluate_farmer_parcel,
-    format_currency,
     generate_evaluation_report,
-    parse_irrigation_status,
-    parse_tri_state,
 )
-from frontend_pc.formatters import render_kpi_html
 from frontend_pc.services.evaluation_service import (
-    build_farmer_and_parcel_dicts,
     evaluate_for_ui,
 )
-from frontend_pc.state import EvaluationStateManager, compute_payload_hash
-from tarim_destek_rag.api.main import app
+from frontend_pc.state import EvaluationStateManager
 
 
 @pytest.fixture(scope="module")

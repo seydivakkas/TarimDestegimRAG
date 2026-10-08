@@ -8,8 +8,8 @@ version uses an explicit non-hash marker. Runtime payment paths fail closed.
 from __future__ import annotations
 
 import json
-from datetime import date, datetime, timezone
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from datetime import UTC, date, datetime
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 
 from sqlalchemy import select
@@ -21,7 +21,6 @@ from tarim_destek_rag.database.models import (
     SupportProgramModel,
     VerifiedSupportRateModel,
 )
-
 
 CATALOG = (
     Path(__file__).resolve().parents[4] / "configs"
@@ -194,7 +193,7 @@ def stage_component_rates(
             source_id=source_id,
             version=0,  # Unverified staging; never a reviewed PDF version.
             content_hash=UNVERIFIED_CONTENT_HASH,
-            detected_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            detected_at=datetime.now(UTC).isoformat(timespec="seconds"),
             effective_from="2026-01-01",
             effective_to=None,
             superseded=False,

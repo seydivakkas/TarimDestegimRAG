@@ -1,27 +1,32 @@
 """P0-4 official basin list: syntax, staging and evidence-gated tri-state decisions."""
 
-from datetime import datetime, timezone
-from hashlib import sha256
-from decimal import Decimal
 import json
+from datetime import UTC, datetime
+from decimal import Decimal
+from hashlib import sha256
 
 import pytest
 from sqlalchemy import create_engine, select
-from backend.tests.legal_approval_testkit import sign_subject
 from sqlalchemy.orm import Session
-
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.models import (
-    ReviewedBasinSnapshotModel, SourceModel, SourceVersionModel,
+    ReviewedBasinSnapshotModel,
+    SourceModel,
+    SourceVersionModel,
 )
 from tarim_destek_rag.database.repository import BasinRepository
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
 from tarim_destek_rag.normalization.basin_2026 import (
-    BASIN_SOURCE_URL, BASIN_SOURCE_ID, PINNED_BASIN_PDF_SHA256,
-    stage_basin_districts, validate_basin_catalog,
+    BASIN_SOURCE_ID,
+    BASIN_SOURCE_URL,
+    PINNED_BASIN_PDF_SHA256,
+    stage_basin_districts,
+    validate_basin_catalog,
 )
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.rules_impl import PlannedProductionRule
+
+from backend.tests.legal_approval_testkit import sign_subject
 
 
 @pytest.fixture()
@@ -57,7 +62,7 @@ def register_synthetic_snapshot(session, *, approve=False, crops=None, starred=T
         review_status="VERIFIED" if approve else "DRAFT",
         coverage_complete=approve,
         reviewed_by="SYNTHETIC_TEST" if approve else None,
-        reviewed_at=datetime.now(timezone.utc) if approve else None,
+        reviewed_at=datetime.now(UTC) if approve else None,
         review_reference="NOT_AN_ACTUAL_SIGNOFF" if approve else None,
     )
     session.add(snapshot)

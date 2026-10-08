@@ -22,7 +22,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from tarim_destek_rag.api.main import app
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.faq_repository import FAQRepository
@@ -300,7 +299,7 @@ def test_moderation_reject_flow(session):
 
     # Denetim günlüğünde işlem kaydedilmiş olmalı
     logs = repo.get_audit_logs()
-    assert any(l.action == "REJECT" and l.faq_id == item.id for l in logs)
+    assert any(entry.action == "REJECT" and entry.faq_id == item.id for entry in logs)
 
 
 # ==============================================================================

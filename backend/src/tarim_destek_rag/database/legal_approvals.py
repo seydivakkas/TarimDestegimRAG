@@ -18,10 +18,10 @@ import hashlib
 import json
 import os
 import re
-from urllib.parse import urlsplit
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Literal
+from urllib.parse import urlsplit
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
@@ -29,8 +29,11 @@ from sqlalchemy import event, select
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
-    LegalApprovalAttestationModel, LegalApprovalRevocationModel, ReviewedBasinSnapshotModel,
-    ReviewedWaterRestrictionDistrictModel, VerifiedSupportRateModel,
+    LegalApprovalAttestationModel,
+    LegalApprovalRevocationModel,
+    ReviewedBasinSnapshotModel,
+    ReviewedWaterRestrictionDistrictModel,
+    VerifiedSupportRateModel,
 )
 
 Subject = (
@@ -207,7 +210,7 @@ def _validate_signature(
         return False
     try:
         created = datetime.fromisoformat(signed.signed_at.replace("Z", "+00:00"))
-        if created.tzinfo is None or created.astimezone(timezone.utc) > datetime.now(timezone.utc):
+        if created.tzinfo is None or created.astimezone(UTC) > datetime.now(UTC):
             return False
         signature = base64.b64decode(signed.signature_b64, validate=True)
         configured[1].verify(signature, attestation_message(
@@ -358,7 +361,7 @@ def register_detached_revocation(
         raise ValueError("Revocation is duplicate or does not match the current subject")
     try:
         created = datetime.fromisoformat(signed_at.replace("Z", "+00:00"))
-        if created.tzinfo is None or created.astimezone(timezone.utc) > datetime.now(timezone.utc):
+        if created.tzinfo is None or created.astimezone(UTC) > datetime.now(UTC):
             raise ValueError("Revocation timestamp is invalid")
         configured[1].verify(
             base64.b64decode(envelope["signature_b64"], validate=True),

@@ -1,0 +1,83 @@
+name: P0 Data Reliability
+
+on:
+  pull_request:
+  push:
+    branches:
+      - fix/p0-data-reliability-2026-10-08
+    paths:
+      - 'backend/**'
+      - 'frontend_pc/**'
+      - 'data/benchmark/**'
+      - 'benchmark/**'
+      - '.github/workflows/p0-validation.yml'
+  workflow_dispatch:
+
+jobs:
+  syntax-and-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile Python files
+        run: python -m compileall -q backend/src backend/tests frontend_pc
+      - name: Validate benchmark fixtures
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          paths = [Path('benchmark/cases.jsonl'), Path('data/benchmark/cases.jsonl')]
+          contents = [p.read_text(encoding='utf-8') for p in paths]
+          assert contents[0] == contents[1], 'benchmark fixtures diverged'
+          cases = [json.loads(line) for line in contents[0].splitlines() if line.strip()]
+          assert len(cases) == 100
+          assert len({case['case_id'] for case in cases}) == 100
+          assert all(case.get('irrigation') == 'IRRIGATED' for case in cases if case['category'] == 'WATER')
+          PY
+
+  official-evidence-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - name: Install project dependencies
+        run: uv sync --extra dev --frozen
+      - name: Confirm live official HTML passage
+        run: >
+          uv run python -m tarim_destek_rag.citations.ingest
+          --source-id TOB-2026-09-08
+          --section "BİTKİSEL VE HAYVANSAL ÜRETİMDE DESTEK TUTARLARI ARTIRILDI"
+          --snippet "DESTEK KATSAYI DEĞERİ 367 TL OLARAK GÜNCELLENDİ"
+      - name: Confirm live BUGEM PDF passage
+        run: >
+          uv run python -m tarim_destek_rag.citations.ingest
+          --source-id TOB-BUGEM-2026-CETVEL
+          --section "1-TEMEL DESTEK"
+          --snippet "Arpa, Buğday, Mısır (dane)"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: official-evidence-snapshots
+          path: data/evidence/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  targeted-pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.12'
+      - name: Install project dependencies
+        run: uv sync --extra dev --frozen
+      - name: Run P0 focused tests
+        run: uv run pytest backend/tests/unit/test_p0_2026_data_reliability.py -q
+      - name: Run full regression suite
+        run: uv run pytest backend/tests -q

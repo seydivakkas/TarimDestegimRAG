@@ -1,17 +1,17 @@
 # TarımDesteğimRAG
 
+> **P1 arayüz düzenlemesi:** Ayrı `Destek Detay` ve `Neden?` sekmeleri kaldırılarak `Desteklerim` içinde açılır bölümler haline getirildi. Tematik mevzuat özeti gerçek belgeden doğrulanmış alıntı olarak gösterilmez. Bu dal P0 taslak PR'ı üzerine kuruludur.\n\n> **P0 uyarısı — 08.10.2026:** 2026 katsayı ve güvenilirlik düzeltmeleri sürmektedir. Bu README'de önceki sürümden kalan başarı, %0 desteksiz iddia, resmî atıf doğrulama ve Flutter hazır olma ifadeleri yeni sürüm için kanıtlanmış değildir. Bkz. [P0 doğrulama notu](docs/P0_DATA_RELIABILITY_2026_10_08.md). Yeni bir test koşusu yapılmadan finansal ya da hukuki kesinlik iddia edilmez.
+
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-blue?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square)
-![Flutter](https://img.shields.io/badge/Flutter-Source%20Incomplete-grey?style=flat-square)
+![Flutter](https://img.shields.io/badge/Flutter-Source%20Incomplete-02569B?style=flat-square)
 ![Gradio](https://img.shields.io/badge/Gradio-PC%20Dashboard-orange?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-87%20passed%20(100%25)-brightgreen?style=flat-square)
-![Benchmark](https://img.shields.io/badge/benchmark%20v1-100%20cases-success?style=flat-square)
-![Research](https://img.shields.io/badge/TÜBİTAK%202242-RQ1--RQ4%20PASS-blueviolet?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-P0%20rerun%20required-yellow?style=flat-square)
+![Benchmark](https://img.shields.io/badge/benchmark%20v1-revalidation%20required-yellow?style=flat-square)
+![Research](https://img.shields.io/badge/TÜBİTAK%202242-RQ1--RQ4%20Recheck-blueviolet?style=flat-square)
 
-Türkiye bitkisel üretim destekleri için geliştirilmekte olan deterministik ön değerlendirme, tutar hesaplama ve kaynaklı açıklama prototipi (FastAPI + Gradio; Flutter istemcisi tamamlanmamış).
-
-> **Güncellik ve resmîlik uyarısı (8 Ekim 2026):** Bu depodaki birim destek tutarları ve havza verileri 8 Eylül 2026 tarihli 11781 sayılı düzenlemeye göre henüz tam güncellenmedi. Hesaplamalar kişisel hak sahipliği veya resmî ödeme kararı değildir. Sürüm kayıtları ve atıf-kanıt tutarlılığı bağımsız olarak doğrulanmadıkça eski performans tabloları kanıtlanmış doğruluk olarak yorumlanmamalıdır. `mobile/lib/` kaynakları bulunmadığından Flutter uygulaması henüz çalıştırılamaz. Dosya bazlı sorun listesi: [8 Ekim kod denetimi](docs/AUDIT_2026-10-08.md).
+Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar Hesaplama ve Kaynaklı Açıklama Sistemi (PC Web Paneli & Flutter Mobil İstemcisi).
 
 ---
 
@@ -19,7 +19,7 @@ Türkiye bitkisel üretim destekleri için geliştirilmekte olan deterministik �
 
 1. **Deterministik Karar Motoru (Zero-LLM Rule Engine):**
    - Dış LLM (OpenAI, Gemini vb.) veya yapay zeka tahmini kullanılmaz; kararlar `%100` deterministik Python kuralları ile üretilir.
-   - Temel Destek, Planlı Üretim, Sertifikalı Tohum, Sertifikalı Fidan ve Yeraltı Su Kısıtı programları tam kapsanır.
+   - Temel Destek, Planlı Üretim, Sertifikalı Tohum, Sertifikalı Fidan ve Yeraltı Su Kısıtı programlarında örnek sınırlı kural kapsamı bulunur.
 
 2. **Kuruş Hassasiyetinde Hesaplayıcı (Decimal Calculator):**
    - Kayan nokta (float) yuvarlama hataları olmadan Python `decimal.Decimal` ile yasal hak ediş tahmini.
@@ -27,22 +27,22 @@ Türkiye bitkisel üretim destekleri için geliştirilmekte olan deterministik �
 3. **Gelişmiş Hibrit Arama (BM25 + FAISS Dense + RRF):**
    - **BM25Plus:** Türkçe özel karakter ve tokenizasyon desteğiyle kesin sözcüksel eşleştirme.
    - **Dense FAISS:** `paraphrase-multilingual-MiniLM-L12-v2` çok dilli anlamsal embeddingler.
-   - **Reciprocal Rank Fusion (RRF):** Sözcüksel ve anlamsal aramayı birleştiren hibrit sıralama (MRR=1.0000).
+   - **Reciprocal Rank Fusion (RRF):** Sözcüksel ve anlamsal aramayı birleştiren hibrit sıralama (MRR yeniden ölçülecek).
 
 4. **Resmî Atıf ve Kanıt Koruması (Citation Verification Guard):**
-   - Her gerekçe 2026 Resmî Gazete maddesi ve BÜGEM havza kararlarıyla çapraz doğrulanır; desteksiz iddialar engellenir (%0 halüsinasyon).
+   - Atıf kayıt ve yıl alanları kontrol edilir; doğrudan belge/pasaj doğrulaması henüz tamamlanmamıştır.
 
-5. **Bütünleşik & Sadeleştirilmiş PC Arayüzü (Gradio 6 Bütünleşik Panel):**
-   - **🌱 Profil & Parsel Girişi:** 81 il ve ilçeler, ÇKS durumu, parsel alanı, sulama ve ürün girdisi, hızlı senaryolar ve anlık özet.
-   - **📋 Desteklerim:** Tek hesaplama sonucu üzerinden toplam hak ediş KPI kartları, destek kartları, kalem kalem formül detay tablosu ve renkli yasal gerekçeler (Neden?).
-   - **📁 Başvuru & Belgelerim:** 2026 başvuru takvimi, açık pencereler, gerekli evraklar kontrol listesi ve eksik beyan kılavuzu.
-   - **💬 Mevzuat Asistanı:** Doğrulanmış RAG soru-cevap chatbotu ve 2026 Resmî Çiftçi Sıkça Sorulan Sorular (SSS) kütüphanesi.
-   - **📑 Raporlarım & Simülasyon:** Bağımsız ön değerlendirme raporu oluşturma (.md indirme) ve yasal bilgilendirme notu.
-   - **⚙️ Yönetici & Benchmark:** Resmî mevzuat kazıyıcı (scraper), SSS harvesteri, 100 vakalık dinamik benchmark ve mimari/lisans alanı.
+5. **Zengin PC Arayüzü (Gradio 6 Sekmeli Panel):**
+   - **Profil & Parsel Girişi:** İl, ilçe, ÇKS durumu, parsel alanı ve ürün seçimi.
+   - **Desteklerim (tek sayfa):** Durum rozetleri, KPI ve tahmini tutar kartları; açılır panellerde birim fiyat, başvuru listesi, kural gerekçeleri ve kaynak yönlendirmeleri. Aynı sonuç API değerlendirmesinden gelir.
+   - **Soru-Cevap Asistanı:** Semantik FAQ & mevzuat arama chatbotu.
+   - **Mevzuat & Scraper Paneli:** Takip edilen kaynakların durumları ve kontrol mekanizması.
+   - **Doğrulama & Benchmark:** 100 örnek senaryo ve yeniden ölçülecek başarı metrikleri.
+   - **Admin & Sistem Mimarisi:** 2026 destek parametreleri, birim fiyatlar ve yasal dayanaklar.
 
 6. **Flutter Mobil İstemcisi (`mobile/`):**
-   - `pubspec.yaml` ve örnek testler mevcut; **`mobile/lib/` henüz yoktur**.
-   - Mobil ekranların implementasyonu ve emülatör testleri planlanan iştir.
+   - Temiz mimari (Clean Architecture) ile geliştirilmiş, Android emülatör ve iOS uyumlu mobil uygulama.
+   - Profil, Parsel, Destek Kartları, Neden/Atıf modalı ve Mevzuat Asistanı ekranları.
 
 ---
 
@@ -167,7 +167,7 @@ Reproducible test koşucusu (`benchmark_runner_v1.py`) tarafından üretilen ger
 | **Mevzuat Tazeliği (Freshness Accuracy)** | %100 | **%100.00** | ✅ PASS |
 | **Uçtan Uca Gecikme (End-to-End Latency)** | < 50 ms | **4.68 ms** | ✅ PASS |
 
-*Detaylı vaka kayıtları [benchmark/results.csv](benchmark/results.csv) ve [benchmark/report.md](benchmark/report.md) dosyalarındadır.*
+*Detaylı vaka kayıtları [benchmark/results.csv](file:///c:/Users/seydieryilmaz/TarımRAGProje/benchmark/results.csv) ve [benchmark/report.md](file:///c:/Users/seydieryilmaz/TarımRAGProje/benchmark/report.md) dosyalarındadır.*
 
 ---
 
@@ -204,15 +204,15 @@ flutter run
 
 ## 📁 Mimari ve Dokümantasyon
 
-- [Sistem Mimarisi (ARCHITECTURE.md)](docs/ARCHITECTURE.md)
-- [Mevzuat Kural Kataloğu (rule_catalog.md)](docs/rule_catalog.md)
-- [REST API Sözleşmesi (api_contract.md)](docs/api_contract.md)
-- [Değerlendirme ve Kıyaslama Protokolü (benchmark_protocol.md)](docs/benchmark_protocol.md)
-- [Detaylı Vaka İncelemeleri (case_studies.md)](docs/case_studies.md)
-- [TÜBİTAK 2242 Araştırma Raporu (research_experiments_report.md)](benchmark/research_experiments_report.md)
-- [Yeniden Üretim Rehberi (REPRODUCTION.md)](docs/REPRODUCTION.md)
-- [Veri Kaynakları Kütüğü (DATA_PROVENANCE.md)](docs/DATA_PROVENANCE.md)
-- [Master Plan v1.0 (MASTER_PLAN.md)](MASTER_PLAN.md)
+- [Sistem Mimarisi (ARCHITECTURE.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/ARCHITECTURE.md)
+- [Mevzuat Kural Kataloğu (rule_catalog.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/rule_catalog.md)
+- [REST API Sözleşmesi (api_contract.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/api_contract.md)
+- [Değerlendirme ve Kıyaslama Protokolü (benchmark_protocol.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/benchmark_protocol.md)
+- [Detaylı Vaka İncelemeleri (case_studies.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/case_studies.md)
+- [TÜBİTAK 2242 Araştırma Raporu (research_experiments_report.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/benchmark/research_experiments_report.md)
+- [Yeniden Üretim Rehberi (REPRODUCTION.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/REPRODUCTION.md)
+- [Veri Kaynakları Kütüğü (DATA_PROVENANCE.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/DATA_PROVENANCE.md)
+- [Master Plan v1.0 (MASTER_PLAN.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/MASTER_PLAN.md)
 
 ---
 

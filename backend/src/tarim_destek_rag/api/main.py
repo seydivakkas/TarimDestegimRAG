@@ -456,14 +456,14 @@ def get_moderation_logs(
     logs = repo.get_audit_logs(limit=limit)
     return [
         {
-            "id": l.id,
-            "action": l.action,
-            "faq_id": l.faq_id,
-            "performed_by": l.performed_by,
-            "timestamp": l.timestamp,
-            "details": l.details,
+            "id": record.id,
+            "action": record.action,
+            "faq_id": record.faq_id,
+            "performed_by": record.performed_by,
+            "timestamp": record.timestamp,
+            "details": record.details,
         }
-        for l in logs
+        for record in logs
     ]
 
 

@@ -218,13 +218,12 @@ class AssistantEngine:
         return None
 
     def _build_crop_amount_answer(self, crop: str, query: str) -> str:
-        """Ürün bazlı dekar başına kesin hak ediş tutarlarını formatlar."""
+        """Katalogdaki referans birim tutarlarını gösterir; kesin hak ediş değildir."""
         info = CROP_SUPPORT_CATALOG[crop]
         temel = info["temel_destek_tl"]
         planli = info["planli_uretim_tl"]
         tohum = info["sertifikali_tohum_tl"]
         su_kisiti = info["su_kisiti_tl"]
-        genc = info["kadin_genc_ilave_tl"]
         toplam = info["toplam_standart_tl"]
         aciklama = info.get("aciklama", "")
 
@@ -233,13 +232,13 @@ class AssistantEngine:
             "",
             f"Tarım ve Orman Bakanlığı 2026 bitkisel üretim destekleme mevzuatına göre **{crop}** ürünü için belirlenen dekar başına (da) birim tutarlar şöyledir:",
             "",
-            f"- 🔹 **Temel Destek (Mazot ve Gübre Yerine):** **{temel:,.2f} TL/da** (ÇKS kayıtlı her parsel alır)",
+            f"- 🔹 **Temel Destek (Mazot ve Gübre Yerine):** **{temel:,.2f} TL/da** (kayıt ve ürün koşulları sağlanırsa)",
         ]
 
         if planli > 0:
             lines.append(f"- 🔹 **Planlı Üretim Desteği (Tarım Havzaları):** **{planli:,.2f} TL/da** (Havzasında stratejik üretim yapan parseller)")
         else:
-            lines.append("- 🔹 **Planlı Üretim Desteği:** *Bu ürün için havza planlı üretim desteği tanımlanmamıştır.*")
+            lines.append("- 🔹 **Planlı Üretim Desteği:** *Bu referans katalogda planlı üretim tutarı yok; kesin ret anlamına gelmez.*")
 
         lines.append(f"- 🔹 **Standart Toplam Destek:** **{toplam:,.2f} TL/da**")
 
@@ -247,16 +246,16 @@ class AssistantEngine:
             lines.append(f"- 🔸 **Sertifikalı Tohum İlavesi:** **+{tohum:,.2f} TL/da** (Yetkili bayiden faturalı ve sertifikalı tohum)")
         if su_kisiti > 0:
             lines.append(f"- 🔸 **Yeraltı Su Kısıtı İlavesi:** **+{su_kisiti:,.2f} TL/da** (Su kısıtı olan kapalı havzalarda)")
-        lines.append(f"- 🌟 **Genç veya Kadın Çiftçi İlavesi:** **+{genc:,.2f} TL/da** (Temel desteğin %100'ü kadar ek ödeme)")
+        lines.append("- ℹ️ **Kadın / Genç Çiftçi İlavesi:** Otomatik ilave varsayılmaz; KOBÜKS ve diğer mevzuat koşulları ayrıca değerlendirilir.")
 
         if aciklama:
             lines.extend(["", f"ℹ️ *{aciklama}*"])
 
         lines.extend([
             "",
-            f"> 💡 **Örnek Hesap:** 100 dekar {crop.lower()} eken bir genç/kadın üretici, sertifikalı tohum kullanması durumunda dekar başına toplam **{(toplam + tohum + genc):,.2f} TL/da** destek alabilir (100 dekar için **{((toplam + tohum + genc) * 100):,.2f} TL**).",
+            f"> **Koşullu örnek:** Gerekli şartları karşılayan 100 da {crop.lower()} üretiminde yalnız temel ve planlı toplamı **{toplam * 100:,.2f} TL** olabilir; bunun kesin hak ediş olduğu varsayılamaz.",
             "",
-            "🏛️ **Yasal Dayanak:** *2024-2026 Bitkisel Üretime Yönelik Desteklemeler Kararı (Resmî Gazete) — Madde 2 ve Ek Tablo.*"
+            "🏛️ **Kaynaklar:** *BÜGEM 2026 kategori cetveli ve Bakanlığın 08.09.2026 tarihli 367 TL/da katsayı duyurusu.*"
         ])
         return "\n".join(lines)
 
@@ -281,50 +280,38 @@ class AssistantEngine:
         )
 
     def _build_women_young_farmer_answer(self) -> str:
-        """Kadın ve Genç Çiftçi avantajlarını açıklar."""
+        """Genel otomatik hak iddiası yerine özel kayıt şartlarını açıklar."""
         return (
-            "### 👩‍🌾 2026 Kadın ve Genç Çiftçi İlave Desteklemeleri\n\n"
-            "Tarım ve Orman Bakanlığı, tarımsal üretimin sürdürülebilirliğini sağlamak ve aile işletmelerini güçlendirmek amacıyla kadın ve genç çiftçilere **%100 ilave destekleme katsayısı** uygulamaktadır.\n\n"
-            "#### 🎯 Temel Şartlar ve Avantajlar:\n"
-            "- 👶 **Genç Çiftçi Yaş Kriteri:** Başvuru yapılan üretim yılında **41 yaşından gün almamış** olmak (1985 ve sonrası doğumlular).\n"
-            "- 👩 **Kadın Çiftçi:** Yaş şartı aranmaksızın ÇKS kaydını kendi adına açtıran tüm kadın üreticiler doğrudan yararlanır.\n"
-            "- 💰 **İlave Ödeme Oranı:** Hak edilen **Temel Desteğin (Mazot/Gübre) %100'ü (1 kat ilave)** kadar ekstra nakit destek ödenir.\n"
-            "- 🌾 **Örnek:** Buğday eken standart bir çiftçi 465 TL/da temel destek alırken, kadın veya genç çiftçi **465 TL + 465 TL = 930 TL/da** temel destek alır. Planlı üretimle birlikte bu tutar **1.395 TL/da** seviyesine ulaşır.\n"
-            "- ⭐ **Hibe ve Proje Önceliği:** Kırsal Kalkınma (KKYDP) ve makine-ekipman hibe programlarında kadın ve genç üreticilere +10 ek değerlendirme puanı verilir.\n\n"
-            "🏛️ **Yasal Dayanak:** *2024-2026 Bitkisel Üretime Yönelik Desteklemeler Kararı — Madde 5.*"
+            "### Kadın ve Genç Çiftçi Destekleri (2026)\n\n"
+            "Her kadın veya genç üreticiye temel desteğin otomatik %100'ü kadar ödeme "
+            "yapılacağı varsayılamaz. BÜGEM 2026 cetvelinde KOBÜKS kayıtlı kapalı ortam "
+            "üreticileri için özel katsayı yer almaktadır.\n\n"
+            "Bireysel uygunluk için işletme kaydı, üretim tipi ve programın koşulları doğrulanmalıdır.\n\n"
+            "Kaynak: BÜGEM 2026 Birim Fiyat Cetveli (Temel Destek)."
         )
 
     def _build_seed_sapling_answer(self, query: str) -> str:
-        """Sertifikalı tohum ve fidan kriterlerini açıklar."""
+        """Güncel katsayılı tohum ve fidan referanslarını verir."""
         return (
-            "### 🌱 2026 Sertifikalı Tohum ve Fidan Kullanım Destekleme Şartları\n\n"
-            "Verim ve kaliteyi artırmak amacıyla yetkili tohumluk ve fidan kullanımına dekar başına ilave nakit destek sağlanır.\n\n"
-            "#### 1. Sertifikalı Tohum Kullanım Desteği:\n"
-            "- ✅ Bakanlıkça yetkilendirilmiş tohum bayilerinden satın alınmış faturalı tohum olmalıdır.\n"
-            "- ✅ Faturanın üretim yılına ait olması ve tohum sertifika etiketinin ÇKS dosyasına eklenmesi zorunludur.\n"
-            "- ❌ Kendi mahsulünden ayrılan veya sertifikasız tohumlara ödeme yapılmaz.\n"
-            "- 💵 **Birim Tutar:** Buğday ve arpa için dekar başına **180 TL**, pamuk için **200 TL**, ayçiçeği ve mısır için **150 TL** ilave ödenir.\n\n"
-            "#### 2. Sertifikalı Fidan ve Kapama Bahçe Şartı:\n"
-            "- 🌳 **Kapama Bahçe Zorunluluğu:** Bodur ve yarı bodur meyve bahçelerinde asgari **5 dekar**, standart meyve türlerinde asgari **10 dekar** tek parça kapama bahçe kurulmalıdır.\n"
-            "- ❌ Münferit, dağınık veya tarla kenarına dikilmiş ağaçlar destek kapsamı dışındadır.\n"
-            "- 📑 Yetkili fidan üreticisinden alınmış fatura ve fidan sertifikası başvuru dosyasında yer almalıdır.\n\n"
-            "🏛️ **Yasal Dayanak:** *BÜGEM Sertifikalı Tohum ve Fidan Destekleme Uygulama Talimatı.*"
+            "### Sertifikalı Tohum ve Fidan Desteği (2026)\n\n"
+            "Sertifika, fatura, bitki türü ve uygulama tebliği koşulları ayrıca doğrulanmalıdır.\n\n"
+            "- Buğday / arpa sertifikalı tohum: 0,56 × 367 = **205,52 TL/da**.\n"
+            "- Sertifikalı fidan için cetvel katsayısı: 5 × 367 = **1.835,00 TL/da** "
+            "(tür ve kapama bahçe şartlarına bağlı).\n\n"
+            "Kaynak: BÜGEM 2026 cetveli ve Bakanlığın 08.09.2026 katsayı duyurusu."
         )
 
     def _build_water_basin_answer(self) -> str:
-        """Yeraltı su kısıtı havzaları desteğini açıklar."""
+        """Sulu tarım şartına bağlı su kısıtı ek desteğini açıklar."""
         return (
-            "### 💧 2026 Yeraltı Su Kısıtı Olan Havzalar Desteği (250 TL/da İlave)\n\n"
-            "Devlet Su İşleri (DSİ) ve Tarım Bakanlığı verilerine göre yeraltı su seviyesinin kritik eşiğin altına indiği kapalı havzalarda su tasarrufu sağlayan üretim modelleri desteklenmektedir.\n\n"
-            "#### 🌍 Kapsamdaki Başlıca Havzalar:\n"
-            "- Konya Kapalı Havzası (Karatay, Çumra, Selçuklu, Cihanbeyli, Kulu vb.)\n"
-            "- Karaman Merkez ve Kazımkarabekir\n"
-            "- Aksaray Merkez, Eskil ve Sultanhanı\n"
-            "- Niğde Bor ve Altunhisar havzaları\n\n"
-            "#### 📋 Destekleme Kuralları:\n"
-            "- 🟢 **Teşvik Edilen Ürünler:** Az su tüketen münavebe ürünleri olan **Kırmızı/Yeşil Mercimek**, **Nohut** ve **Yem Bitkileri** eken çiftçilere dekar başına **250 TL ilave su kısıtı desteği** verilir.\n"
-            "- 🔴 **Kısıtlanan Ürünler:** Bu havzalarda çok su tüketen **Dane Mısır** ekimi yapılması durumunda planlı üretim desteği ödenmez (Yalnızca kuru temel destek ödenir).\n\n"
-            "🏛️ **Yasal Dayanak:** *Yeraltı Sularının Yetersiz Olduğu Havzalar Kararı ve 2026 Bitkisel Üretim Tebliği.*"
+            "### Yeraltı Su Kısıtı İlave Desteği (2026)\n\n"
+            "Bu destek yalnız resmen belirlenmiş su kısıtı havzalarındaki **sulu tarım "
+            "arazileri** ve mevzuatta belirtilen ürün/üretim koşulları için değerlendirilir.\n\n"
+            "- Mercimek, nohut ve aspir gibi uygun 1. kategori ürünler için "
+            "0,8 × 367 = **293,60 TL/da** referans ilave tutardır.\n"
+            "- Diğer ürün kategorilerinin katsayıları farklıdır.\n"
+            "- Havza, sulama ve münavebe doğrulanmadan kesin ödeme söylenemez.\n\n"
+            "Kaynak: BÜGEM 2026 cetveli ve Bakanlığın 08.09.2026 katsayı duyurusu."
         )
 
     def _build_payment_schedule_answer(self) -> str:

@@ -436,40 +436,24 @@ def format_highlighted_citation_card(
 
 
 def render_document_viewer_html(article_key: str) -> str:
-    """Seçilen maddenin renkli işaretlenmiş tam metnini ve doğrulama göstergelerini üretir."""
+    """Yalnız resmî belge bağlantısını gösterir; sentetik özetleri alıntı gibi sunmaz."""
+    from html import escape
+
     data = get_article_preview(article_key)
-    title = data["title"]
-    source = data["source"]
-    url = data["url"]
-    raw_text = data["text"]
-
-    highlighted_body = ""
-    for paragraph in raw_text.split("\n"):
-        p_clean = paragraph.strip()
-        if not p_clean:
-            continue
-        hl_p = highlight_legal_text(p_clean)
-        highlighted_body += f'<p class="legal-reader-paragraph">{hl_p}</p>\n'
-
+    title = escape(str(data["title"]))
+    source = escape(str(data["source"]))
+    url = escape(str(data["url"]), quote=True)
     return (
-        f'<div class="legal-reader-container">\n'
-        f'  <div class="legal-reader-header">\n'
-        f'    <div>\n'
-        f'      <h4 class="legal-reader-title">🏛️ {title}</h4>\n'
-        f'      <span class="legal-source-sub">📌 Resmî Dayanak: <b>{source}</b></span>\n'
-        f'    </div>\n'
-        f'    <a href="{url}" target="_blank" rel="noopener noreferrer" class="doc-badge-tag doc-badge-pass" '
-        f'style="padding: 6px 14px; font-size: 0.88rem;">Resmî Belgeyi Aç ↗</a>\n'
-        f'  </div>\n'
-        f'  <div class="legal-legend-bar">\n'
-        f'    <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil:</b> Sağlanan Şart / Hak Kazanma</span>\n'
-        f'    <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı:</b> Ret Gerekçesi / Yasaklama</span>\n'
-        f'    <span class="legend-item"><span class="legend-dot dot-gold"></span> 🟡 <b>Kehribar:</b> Destek Tutarı / Katsayı / Tarih</span>\n'
-        f'    <span class="legend-item"><span class="legend-dot dot-ref"></span> 🔵 <b>Mavi:</b> Resmî Merci / Madde No</span>\n'
-        f'  </div>\n'
-        f'  <div class="legal-reader-content">\n'
-        f'    {highlighted_body}\n'
-        f'  </div>\n'
-        f'</div>'
+        '<div class="legal-reader-container">'
+        '<div class="legal-reader-header">'
+        f'<h4 class="legal-reader-title">{title}</h4>'
+        f'<span class="legal-source-sub">Kaynak kaydı: {source}</span>'
+        '</div>'
+        '<p class="legal-reader-paragraph">'
+        'Bu ekrandaki başlık ve kaynak yönlendirmesi resmî belgeden doğrulanmış '
+        'madde alıntısı değildir. Geçerli mevzuat metnini açarak inceleyiniz.'
+        '</p>'
+        f'<a class="legal-source-link" href="{url}" '
+        'target="_blank" rel="noopener noreferrer">Resmî kaynağı aç ↗</a>'
+        '</div>'
     )
-
