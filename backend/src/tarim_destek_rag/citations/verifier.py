@@ -75,6 +75,13 @@ class CitationVerifier:
         if citation.year != 2026:
             return rejected("OUTDATED_YEAR", f"Atıf hedef yılı 2026 değil: {citation.year}", year=False)
 
+        # Validate the actual clause payload before resolving source location.
+        # Empty/short citations must never be represented as verified evidence.
+        if not citation.snippet or len(citation.snippet.strip()) < 10:
+            return rejected("EMPTY_OR_SHORT_SNIPPET", "Missing original legal passage")
+        if not citation.section or not citation.section.strip():
+            return rejected("MISSING_SECTION", "Missing official legal article/section")
+
         if not citation.url or canonical_url(citation.url) != canonical_url(str(source.url)):
             return rejected("SOURCE_URL_MISMATCH", "Atıf URL'si kayıtlı resmî kaynak URL'siyle uyuşmuyor.")
 
