@@ -236,6 +236,15 @@ def _check_release(
                 or candidate_digest(candidate) != entry["candidate_sha256"]
                 or rate.unit_amount != candidate.proposed_unit_amount
                 or rate.unit != "TRY/da" or candidate.unit != "TRY/da"
+                or not rate.legal_clause or not rate.legal_clause.strip()
+                or not rate.approved_by or not rate.approved_at
+                or not rate.review_reference
+                or not rate.source_version.effective_from
+                or rate.source_version.effective_from > when.isoformat()
+                or (rate.source_version.effective_to
+                    and rate.source_version.effective_to < when.isoformat())
+                or candidate.effective_from != rate.effective_from
+                or candidate.effective_to != rate.effective_to
                 or rate.effective_from > when
                 or (rate.effective_to and rate.effective_to < when)
                 or source_refs.get(rate.source_version_id) != rate.source_version.content_hash
@@ -254,6 +263,28 @@ def _check_release(
                 or not sentence.exact_text
             ):
                 return None
+        # A separately VERIFIED rate omitted from the release for this
+        # program/crop/year could shadow the manifest under a more specific
+        # province/district. Refuse such ambiguities rather than picking an
+        # arbitrary rate in a future-year rollout.
+        declared = {e["rate_id"] for e in manifest["entries"]}
+        for entry in manifest["entries"]:
+            matches = list(session.scalars(select(VerifiedSupportRateModel).where(
+                VerifiedSupportRateModel.program_id.in_(
+                    (entry["program_key"],
+                     f"{entry['program_key']}_{snapshot.production_year}")
+                ),
+                VerifiedSupportRateModel.crop_name == entry["crop_code"],
+                VerifiedSupportRateModel.production_year == snapshot.production_year,
+                VerifiedSupportRateModel.review_status == "VERIFIED",
+                VerifiedSupportRateModel.effective_from <= when,
+            )).all())
+            for other in matches:
+                if (
+                    (other.effective_to is None or other.effective_to >= when)
+                    and other.id not in declared
+                ):
+                    return None
         return manifest
     except (ValueError, LookupError, KeyError, TypeError, AttributeError,
             json.JSONDecodeError, OSError, FileNotFoundError):
