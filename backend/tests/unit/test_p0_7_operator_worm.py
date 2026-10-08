@@ -236,10 +236,14 @@ def test_worm_compliance_archive_readback_and_tamper_denial(
     from tarim_destek_rag.database import legal_audit
     monkeypatch.setattr(legal_audit, "_client", lambda: fake)
     events = list(session.scalars(select(LegalApprovalAttestationModel)).all())
+    # Retain strong references so SQLAlchemy's weak identity map doesn't
+    # reload SQLite's timezone-naive timestamps in this mocked PG contract.
+    held_receipts = []
     for event in events:
-        archive_signed_event(
+        held_receipts.append(archive_signed_event(
             proxy, "RATE", rate.id, event.role, event, s3=fake
-        )
+        ))
+    assert all(r.retain_until.tzinfo is not None for r in held_receipts)
     # SQLite strips timezone information on commit; test WORM contracts with
     # newly flushed UTC receipts. Real production uses PostgreSQL TIMESTAMPTZ.
     assert production_audit_valid(proxy, rate) is True
