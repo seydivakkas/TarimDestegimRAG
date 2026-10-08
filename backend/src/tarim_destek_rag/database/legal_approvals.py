@@ -233,6 +233,12 @@ def two_person_approved(session: Session, subject: Subject) -> bool:
     # A deployment operator must explicitly authorize live legal activation.
     if os.getenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED") != "true":
         return False
+    # Never permit production activation with the old feature flag alone.
+    profile = os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE")
+    if profile != "production" and not (
+        profile == "isolated_test" and os.getenv("PYTEST_CURRENT_TEST")
+    ):
+        return False
     keys = _trusted_public_keys()
     if len(keys) < 2:
         return False
@@ -290,10 +296,13 @@ def two_person_approved(session: Session, subject: Subject) -> bool:
         return False
     if rows[0].principal_id == rows[1].principal_id:
         return False
-    return all(_validate_signature(
+    if not all(_validate_signature(
         row, kind=kind, record_id=subject.id, digest=digest,
         source_sha256=source_hash, keys=keys,
-    ) for row in rows)
+    ) for row in rows):
+        return False
+    from tarim_destek_rag.database.legal_audit import production_audit_valid
+    return production_audit_valid(session, subject)
 
 
 def register_detached_approval(
