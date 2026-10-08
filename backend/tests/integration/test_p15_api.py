@@ -39,6 +39,21 @@ def test_sources_endpoint(client):
     assert data[0]["authority"] == "OFFICIAL_GAZETTE"
 
 
+def test_official_reference_is_not_individual_eligibility(client):
+    """Source-backed 2026 totals must not be interpreted as farmer entitlement."""
+    response = client.get("/legal/2026-reference-rates")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["production_year"] == 2026
+    assert data["base_support_coefficient"]["amount"] == "367.00"
+    assert data["calculable_individual_entitlement"] is False
+    assert data["source"]["publisher"] == "T.C. Tarım ve Orman Bakanlığı"
+    assert any(
+        "BUĞDAY" in group["crop_codes"] and group["amount_per_da"] == "954.00"
+        for group in data["combined_support_references"]
+    )
+
+
 def test_eligibility_endpoint(client):
     """POST /eligibility testi."""
     payload = {
