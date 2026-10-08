@@ -1,7 +1,8 @@
 from collections.abc import Generator
+import sqlite3
 from pathlib import Path
 
-from sqlalchemy import create_engine, event, text
+from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -15,9 +16,11 @@ class Base(DeclarativeBase):
 @event.listens_for(Engine, "connect")
 def set_sqlite_pragma(dbapi_connection, connection_record):
     """SQLite için Foreign Key kısıtlarını zorunlu kıl."""
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+    # A PRAGMA on PostgreSQL/MySQL would prevent the DB driver from connecting.
+    if isinstance(dbapi_connection, sqlite3.Connection):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 
 def get_engine(db_url: str | None = None) -> Engine:
@@ -76,25 +79,4 @@ def init_db(target_engine: Engine | None = None) -> None:
                         connection.exec_driver_sql(
                             f"ALTER TABLE support_amounts ADD COLUMN {name} {definition}"
                         )
-
-    # SQLite hafif şema göçü (production_year ve diğer kolonlar yoksa otomatik ekle)
-    with eng.connect() as conn:
-        try:
-            cursor = conn.execute(text("PRAGMA table_info(support_amounts)"))
-            columns = [row[1] for row in cursor.fetchall()]
-            if columns and "production_year" not in columns:
-                conn.execute(text("ALTER TABLE support_amounts ADD COLUMN production_year INTEGER DEFAULT 2026"))
-            if columns and "legal_decision_number" not in columns:
-                conn.execute(text("ALTER TABLE support_amounts ADD COLUMN legal_decision_number VARCHAR(64) DEFAULT '11781'"))
-            if columns and "effective_from" not in columns:
-                conn.execute(text("ALTER TABLE support_amounts ADD COLUMN effective_from VARCHAR(10) DEFAULT '2026-09-08'"))
-            if columns and "effective_to" not in columns:
-                conn.execute(text("ALTER TABLE support_amounts ADD COLUMN effective_to VARCHAR(10) DEFAULT NULL"))
-            if columns and "geographic_scope" not in columns:
-                conn.execute(text("ALTER TABLE support_amounts ADD COLUMN geographic_scope VARCHAR(64) DEFAULT 'GENEL'"))
-            if columns and "verification_status" not in columns:
-                conn.execute(text("ALTER TABLE support_amounts ADD COLUMN verification_status VARCHAR(32) DEFAULT 'VERIFIED'"))
-            conn.commit()
-        except Exception:
-            pass
 

@@ -7,6 +7,7 @@ on:
       - "backend/src/tarim_destek_rag/normalization/legal_components_2026.py"
       - "backend/src/tarim_destek_rag/normalization/import_2026_components.py"
       - "backend/tests/unit/test_legal_components_2026.py"
+      - "backend/tests/unit/test_p0_5_signed_approval.py"
       - "backend/tests/unit/test_decision_2026_matrix.py"
       - "backend/tests/unit/test_p0_2_verified_rates.py"
       - ".github/workflows/legal-components-2026.yml"
@@ -32,7 +33,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install deterministic test dependencies
-        run: python -m pip install "pytest>=8,<10" "sqlalchemy>=2.0.35,<3" "pydantic>=2.9,<3" "pydantic-settings>=2.5,<3" "pyyaml>=6,<7"
+        run: python -m pip install "pytest>=8,<10" "sqlalchemy>=2.0.35,<3" "pydantic>=2.9,<3" "pydantic-settings>=2.5,<3" "pyyaml>=6,<7" "cryptography>=43,<47"
       - name: Compile source and tests
         run: |
           python -m compileall -q backend/src/tarim_destek_rag/normalization/legal_components_2026.py
@@ -43,4 +44,4 @@ jobs:
         env:
           PYTHONPATH: backend/src
           DATABASE_URL: "sqlite:///:memory:"
-        run: python -m pytest backend/tests/unit/test_legal_components_2026.py backend/tests/unit/test_decision_2026_matrix.py backend/tests/unit/test_p0_2_verified_rates.py backend/tests/unit/test_p4_p5_db_and_normalization.py backend/tests/unit/test_p7_p8_p9_rules_calculator.py backend/tests/unit/test_p10_benchmark.py backend/tests/unit/test_issue2_issue3_legislative_decision_engine.py -q
+        run: python -m pytest backend/tests/unit/test_p0_5_signed_approval.py backend/tests/unit/test_legal_components_2026.py backend/tests/unit/test_decision_2026_matrix.py backend/tests/unit/test_p0_2_verified_rates.py backend/tests/unit/test_p4_p5_db_and_normalization.py backend/tests/unit/test_p7_p8_p9_rules_calculator.py backend/tests/unit/test_p10_benchmark.py backend/tests/unit/test_issue2_issue3_legislative_decision_engine.py -q

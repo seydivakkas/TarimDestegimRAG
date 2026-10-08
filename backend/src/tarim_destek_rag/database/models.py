@@ -203,6 +203,63 @@ class ReviewedBasinSnapshotModel(Base):
     )
 
 
+
+class LegalApprovalAttestationModel(Base):
+    """Externally Ed25519-signed, append-only review/approval attestations.
+
+    Subject remains inert until both signatures validate under the deployment's
+    independently configured public-key trust store.
+    """
+
+    __tablename__ = "legal_approval_attestations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    principal_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    subject_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    signed_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    signature_b64: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "subject_type IN ('RATE','BASIN')", name="ck_approval_subject_type"
+        ),
+        CheckConstraint(
+            "role IN ('REVIEWER','APPROVER')", name="ck_approval_role"
+        ),
+        UniqueConstraint(
+            "subject_type", "subject_id", "role",
+            name="uq_legal_approval_subject_role",
+        ),
+    )
+
+
+
+class LegalApprovalRevocationModel(Base):
+    """Append-only tombstone that blocks a subject from ever becoming active again."""
+
+    __tablename__ = "legal_approval_revocations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    principal_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    signed_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str] = mapped_column(String(512), nullable=False)
+    signature_b64: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "subject_type", "subject_id", name="uq_legal_revocation_subject"
+        ),
+    )
+
+
 class BasinCropRuleModel(Base):
     """Tarım havzaları bazında desteklenen ürün kuralları (Planlı Üretim)."""
 

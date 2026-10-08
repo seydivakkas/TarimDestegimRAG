@@ -10,6 +10,8 @@ from tarim_destek_rag.normalization.basin_2026 import (
     BASIN_SOURCE_ID, BASIN_SOURCE_URL, PINNED_BASIN_PDF_SHA256,
 )
 
+from tarim_destek_rag.database.legal_approvals import two_person_approved
+
 from tarim_destek_rag.database.models import (
     ApplicationWindowModel,
     BasinCropRuleModel,
@@ -181,6 +183,8 @@ class SupportRepository:
                 or (rate.effective_to is not None and rate.effective_to < rate.effective_from)
             ):
                 continue
+            if not two_person_approved(self.session, rate):
+                continue
             usable.append(rate)
         return usable[0] if len(usable) == 1 else None
 
@@ -280,6 +284,10 @@ class BasinRepository:
             or (version.effective_to and version.effective_to < f"{year}-01-01")
         ):
             return BasinCropAssessment("UNKNOWN", "Belge sürümü veya bağımsız onay eksik.")
+        if not two_person_approved(self.session, snapshot):
+            return BasinCropAssessment(
+                "UNKNOWN", "İlçe ürün listesi iki bağımsız kriptografik onaydan geçmedi."
+            )
         try:
             crops = json.loads(snapshot.crop_codes_json)
         except (TypeError, ValueError):

@@ -11,6 +11,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.calculator.calculator import SupportCalculator
+from backend.tests.legal_approval_testkit import sign_subject
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.models import (
     SourceModel,
@@ -38,8 +39,8 @@ def session():
             SourceModel(
                 source_id="SYNTHETIC-LEGAL-DOCUMENT",
                 title="TEST ONLY - synthetic source",
-                url="https://example.invalid/document",
-                authority="TEST_ONLY",
+                url="https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+                authority="OFFICIAL_GAZETTE",
                 content_type="PDF",
                 active=True,
             ),
@@ -133,8 +134,8 @@ def test_unapproved_or_revoked_versions_fail_closed(session, state, approved):
     assert lookup(session) is None
 
 
-def test_verified_component_is_calculated_with_exact_decimal(session):
-    add_rate(session)
+def test_verified_component_is_calculated_with_exact_decimal(session, monkeypatch):
+    sign_subject(session, add_rate(session), monkeypatch)
     rate = lookup(session)
     assert rate is not None
     assert rate.unit_amount == Decimal("477.10")
@@ -147,9 +148,10 @@ def test_verified_component_is_calculated_with_exact_decimal(session):
     assert calc.estimated_amount == Decimal("5916.04")
 
 
-def test_wrong_year_district_and_time_range_rejected(session):
-    add_rate(session, province="KONYA", district="KARATAY",
-             effective_from=date(2026, 10, 1), effective_to=date(2026, 10, 31))
+def test_wrong_year_district_and_time_range_rejected(session, monkeypatch):
+    rate = add_rate(session, province="KONYA", district="KARATAY",
+                    effective_from=date(2026, 10, 1), effective_to=date(2026, 10, 31))
+    sign_subject(session, rate, monkeypatch)
     assert lookup(session) is not None
     assert lookup(session, year=2025) is None
     assert lookup(session, province="SAMSUN", district="ÇARŞAMBA") is None
@@ -157,18 +159,18 @@ def test_wrong_year_district_and_time_range_rejected(session):
     assert lookup(session, as_of=date(2026, 11, 1)) is None
 
 
-def test_superseded_source_version_rejected(session):
-    add_rate(session, superseded=True)
+def test_superseded_source_version_rejected(session, monkeypatch):
+    sign_subject(session, add_rate(session, superseded=True), monkeypatch)
     assert lookup(session) is None
 
 
-def test_source_not_yet_effective_rejected(session):
-    add_rate(session, source_version_start="2027-01-01")
+def test_source_not_yet_effective_rejected(session, monkeypatch):
+    sign_subject(session, add_rate(session, source_version_start="2027-01-01"), monkeypatch)
     assert lookup(session) is None
 
 
-def test_deactivated_source_rejected(session):
-    add_rate(session)
+def test_deactivated_source_rejected(session, monkeypatch):
+    sign_subject(session, add_rate(session), monkeypatch)
     session.get(SourceModel, "SYNTHETIC-LEGAL-DOCUMENT").active = False
     session.commit()
     assert lookup(session) is None
@@ -180,8 +182,9 @@ def test_overlapping_approved_sources_are_ambiguous(session):
     assert lookup(session) is None
 
 
-def test_blank_evidence_hash_rejected(session):
+def test_blank_evidence_hash_rejected(session, monkeypatch):
     rate = add_rate(session)
+    sign_subject(session, rate, monkeypatch)
     rate.source_version.content_hash = "not-sha256"
     session.commit()
     assert lookup(session) is None
