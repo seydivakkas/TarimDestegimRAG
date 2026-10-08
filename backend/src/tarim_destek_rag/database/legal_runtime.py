@@ -15,7 +15,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
-from tarim_destek_rag.database.connection import SessionLocal, init_db
+from tarim_destek_rag.database.connection import SessionLocal
 from tarim_destek_rag.database.legal_audit import production_profile
 
 ConnectionRole = Literal["reader", "writer"]
@@ -26,9 +26,13 @@ def legal_session(role: ConnectionRole) -> Iterator[Session]:
     if role not in ("reader", "writer"):
         raise ValueError("Invalid legal database role")
     if not production_profile():
-        # Offline-only legacy sqlite DB. The two-person authorizer still
-        # requires the isolated pytest profile to return successful decisions.
-        init_db()
+        # Operator CLI must never quietly run on a default SQLite database or
+        # initialize a schema outside an explicitly isolated pytest exercise.
+        if not (
+            os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE") == "isolated_test"
+            and os.getenv("PYTEST_CURRENT_TEST")
+        ):
+            raise ValueError("Legal officer/approval DB access requires production security profile")
         with SessionLocal() as session:
             yield session
         return
