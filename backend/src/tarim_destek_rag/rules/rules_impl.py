@@ -5,7 +5,7 @@ from tarim_destek_rag.database.repository import (
     SupportRepository,
     WaterRestrictionRepository,
 )
-from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
+from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.base import BaseRule, RuleResult
 
@@ -287,6 +287,16 @@ class WaterRestrictionRule(BaseRule):
             )
         else:
             passed.append(f"{loc} yeraltı su kısıtı bölgesindedir.")
+
+        # BÜGEM 2026 cetveline göre su kısıtı ek desteği yalnızca sulu tarım
+        # arazilerinde uygulanır; bilgi yoksa uygunluk kesinleştirilmez.
+        if parcel.irrigation == IrrigationStatusEnum.UNKNOWN:
+            missing.append("irrigation")
+            trace.append("Sulama durumu beyan edilmedi; inceleme gerekli.")
+        elif parcel.irrigation == IrrigationStatusEnum.IRRIGATED:
+            passed.append("Parsel sulu tarım arazisidir.")
+        else:
+            failed.append("Su kısıtı ilave desteği için sulu tarım arazisi şartı sağlanmadı.")
 
         # Su kısıtında desteklenen münavebe ürünü mü?
         support_repo = SupportRepository(session)
