@@ -530,6 +530,68 @@ def render_grounding_page(
     )
 
 
+@app.get("/api/v1/grounding/program/{program_key}", tags=["PDF Hukuki Kanıt"])
+def get_grounding_by_program(
+    program_key: str,
+    year: int,
+    crop_code: str | None = None,
+    session: Session = Depends(get_db_session),
+) -> dict[str, Any]:
+    from sqlalchemy import select
+    from tarim_destek_rag.database.models import DynamicRateModel
+    from tarim_destek_rag.auto_updater.grounding_repository import load_grounded_sentence
+
+    query = select(DynamicRateModel).where(
+        DynamicRateModel.program_key == program_key,
+        DynamicRateModel.production_year == year,
+    )
+    if crop_code:
+        query = query.where(DynamicRateModel.crop_code == crop_code)
+
+    rate_row = session.scalars(query).first()
+    if rate_row is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"{year} yılı için '{program_key}' programına ait doğrulanmış PDF kanıtı bulunamadı.",
+        )
+
+    try:
+        record, document, grounded, _ = load_grounded_sentence(
+            session,
+            archive_root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
+            evidence_id=rate_row.source_sentence_id,
+            year=year,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+    return {
+        "status": "DRAFT_NEEDS_HUMAN_LEGAL_REVIEW",
+        "program_key": program_key,
+        "crop_code": rate_row.crop_code,
+        "production_year": year,
+        "proposed_unit_amount": str(rate_row.proposed_unit_amount),
+        "source_id": document.source_id,
+        "source_url": document.original_url,
+        "original_pdf_sha256": grounded.document_sha256,
+        "sentence_id": record.id,
+        "article": record.article_no,
+        "paragraph": record.paragraph_no,
+        "clause": record.clause_no,
+        "page_number": grounded.page_number,
+        "exact_quote": grounded.exact_quote,
+        "bounding_boxes": grounded.to_dict()["bounding_boxes"],
+        "normalized_quads": grounded.normalized_quads,
+        "highlighted_image_url": (
+            f"/api/v1/grounding/image/{record.id}/page/{grounded.page_number}?year={year}"
+        ),
+        "legal_approval": False,
+        "payable_amount": None,
+    }
+
+
 # P0-8C: compare ONLY exact original-PDF source sentences. This is a
 # textual review report: never a determination of what is legally repealed.
 from pydantic import BaseModel, Field
