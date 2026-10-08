@@ -32,6 +32,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+pdf-evidence = [
+    "PyMuPDF>=1.25,<1.29",
+]
 production = [
     "psycopg[binary]>=3.2,<4",
 ]
