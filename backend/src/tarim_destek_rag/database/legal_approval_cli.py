@@ -21,13 +21,14 @@ from tarim_destek_rag.database.legal_approvals import (
 )
 from tarim_destek_rag.database.models import (
     ReviewedBasinSnapshotModel, VerifiedSupportRateModel,
-    ReviewedWaterRestrictionScopeModel,
+    ReviewedWaterRestrictionScopeModel, LegalReleaseModel,
 )
 
 
 def _get_subject(session: Session, kind: str, record_id: int):
     table = {"RATE": VerifiedSupportRateModel, "BASIN": ReviewedBasinSnapshotModel,
-             "WATER": ReviewedWaterRestrictionScopeModel}[kind]
+             "WATER": ReviewedWaterRestrictionScopeModel,
+             "RELEASE": LegalReleaseModel}[kind]
     obj = session.get(table, record_id)
     if obj is None:
         raise ValueError("Unknown legal record; no approval was submitted")
@@ -37,7 +38,7 @@ def _get_subject(session: Session, kind: str, record_id: int):
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("inspect", "apply-attestations", "revoke"))
-    parser.add_argument("--kind", required=True, choices=("RATE", "BASIN", "WATER"))
+    parser.add_argument("--kind", required=True, choices=("RATE", "BASIN", "WATER", "RELEASE"))
     parser.add_argument("--id", required=True, type=int)
     parser.add_argument("--bundle", type=Path, help="Externally signed JSON envelopes")
     parser.add_argument("--commit", action="store_true",
