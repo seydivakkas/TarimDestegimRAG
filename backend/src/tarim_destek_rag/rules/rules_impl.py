@@ -12,6 +12,39 @@ from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.base import BaseRule, RuleResult
 
 
+
+def _enforce_2026_water_crop_exclusion(
+    farmer: FarmerProfile, parcel: Parcel, session: Session,
+    failed: list[str], missing: list[str], trace: list[str],
+) -> None:
+    """2025/42 m.12 / 2024/39 m.17/2(j), 2026 effective water exclusions.
+
+    Art.5-7 support exclusion applies to GRAIN MAIZE and POTATO in declared
+    water-restricted districts. Historic drip practice does not override it.
+    """
+    if parcel.production_year != 2026:
+        return
+    if parcel.crop == "MISIR":
+        missing.append("crop_subtype")
+        trace.append("2026 mısır türü (dane/silaj) belirtilmemiş.")
+        return
+    if parcel.crop not in ("MISIR_DANE", "PATATES"):
+        return
+    water = WaterRestrictionRepository(session).assess_2026(
+        farmer.province, farmer.district, 2026
+    )
+    if water.outcome == "UNKNOWN":
+        missing.append("verified_water_scope")
+        trace.append("2026 su kısıtı konumu doğrulanmadı: " + water.reason)
+    elif water.outcome == "RESTRICTED":
+        failed.append(
+            "2025/42 m.12 uyarınca 2026 su kısıtı ilan edilmiş havzada "
+            "dane mısır/patates ekilişine m.5-7 destek ödemesi yapılamaz."
+        )
+    else:
+        trace.append("2026 su kısıtı dışında; diğer uygunluk koşulları ayrıca denetlenir.")
+
+
 class BasicSupportRule(BaseRule):
     """Temel Destek Değerlendirme Kuralı (2026)."""
 
@@ -24,6 +57,8 @@ class BasicSupportRule(BaseRule):
         failed = []
         missing = []
         trace = []
+
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
 
         trace.append("Temel destek değerlendirmesi başlatıldı.")
 
@@ -99,6 +134,8 @@ class PlannedProductionRule(BaseRule):
         missing = []
         trace = []
 
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
+
         trace.append("Planlı üretim havza uygunluğu değerlendiriliyor.")
 
         # 1. ÇKS zorunludur
@@ -128,15 +165,12 @@ class PlannedProductionRule(BaseRule):
                 f"{parcel.crop}, {loc} için onaylı 2026 ürün deseninde listeleniyor."
             )
             if assessment.drip_irrigation_required:
-                if parcel.drip_irrigation is None:
-                    missing.append("drip_irrigation")
-                    trace.append(
-                        "Dane mısır için yıldızlı ilçede damla sulama şartı; bilgi eksik."
-                    )
-                elif parcel.drip_irrigation is False:
-                    failed.append("Dane mısır için zorunlu damla sulama uygulanmıyor.")
-                else:
-                    passed.append("Dane mısır damla sulama şartı beyanen sağlandı.")
+                trace.append(
+                    "2026: 2025/42 m.4 eski damla sulama ödeme istisnasını kaldırdı. "
+                    "Yıldız işareti bireysel ödeme izni değildir."
+                )
+                if parcel.production_year != 2026:
+                    missing.append("future_year_water_rules")
 
         # 3. Birim Tutar Kontrolü
         support_repo = SupportRepository(session)
@@ -188,6 +222,8 @@ class CertifiedSeedRule(BaseRule):
         failed = []
         missing = []
         trace = []
+
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
 
         if farmer.cks_status is None:
             missing.append("cks_status")
@@ -254,6 +290,8 @@ class CertifiedSaplingRule(BaseRule):
         failed = []
         missing = []
         trace = []
+
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
 
         if farmer.cks_status is None:
             missing.append("cks_status")
@@ -336,6 +374,8 @@ class WaterRestrictionRule(BaseRule):
         missing = []
         trace = []
 
+        _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
+
         if farmer.cks_status is None:
             missing.append("cks_status")
         elif not farmer.cks_status:
@@ -344,19 +384,17 @@ class WaterRestrictionRule(BaseRule):
             passed.append("ÇKS kaydı aktif.")
 
         water_repo = WaterRestrictionRepository(session)
-        restriction = water_repo.get_restriction(
+        assessment = water_repo.assess_2026(
             farmer.province, farmer.district, parcel.production_year
         )
-
         loc = f"{farmer.province}/{farmer.district}"
-        if not restriction:
-            missing.append("verified_water_restriction")
-            trace.append("Su kısıtı kaydı yokluğu resmî ret anlamına gelmez.")
+        if assessment.outcome == "UNKNOWN":
+            missing.append("verified_water_provenance")
+            trace.append(f"{loc} 2026 su kısıtı belgesi henüz onaylı değil.")
+        elif assessment.outcome == "NOT_RESTRICTED":
+            failed.append(f"{loc} onaylı tam 2026 su kısıtı listesinde bulunmuyor.")
         else:
-            passed.append(f"{loc} yeraltı su kısıtı bölgesindedir.")
-
-        # Örnek coğrafi seed verisi resmî kararı ispatlamaz.
-        missing.append("verified_water_provenance")
+            passed.append(f"{loc} onaylı 2026 su kısıtı ilan edilmiş havzadadır.")
 
         # Su kısıtında desteklenen münavebe ürünü mü?
         support_repo = SupportRepository(session)
