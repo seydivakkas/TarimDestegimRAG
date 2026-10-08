@@ -12,7 +12,8 @@ import json
 import os
 from pathlib import Path
 
-from tarim_destek_rag.database.connection import SessionLocal
+from tarim_destek_rag.database.legal_runtime import legal_session
+from tarim_destek_rag.database.legal_audit import production_profile
 from tarim_destek_rag.database.legal_approval_cli import _get_subject
 from tarim_destek_rag.database.legal_operator import (
     authenticate_legal_officer, build_vault_signed_envelope,
@@ -43,6 +44,8 @@ def main() -> int:
     args = parser.parse_args()
     if not args.sign:
         parser.error("Remote signature requires explicit --sign")
+    if not production_profile():
+        raise ValueError("Remote officer signing requires explicit production security profile")
     if not args.out_file.parent.is_dir():
         parser.error("Output parent directory must already exist")
     if args.out_file.exists():
@@ -50,7 +53,7 @@ def main() -> int:
     officer = authenticate_legal_officer(
         _sensitive_file(args.oidc_token_file), args.role
     )
-    with SessionLocal() as session:
+    with legal_session("reader") as session:
         subject = _get_subject(session, args.kind, args.id)
         if subject.review_status != "VERIFIED":
             raise ValueError("Subject is not a prepared, independently reviewed candidate")
