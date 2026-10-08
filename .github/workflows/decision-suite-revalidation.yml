@@ -1,0 +1,65 @@
+name: Existing Decision Suite Revalidation (Full Dependencies)
+
+on:
+  pull_request:
+    paths:
+      - "configs/2026_documented_component_rates_draft.json"
+      - "backend/src/tarim_destek_rag/normalization/legal_components_2026.py"
+      - "backend/tests/unit/test_decision_2026_matrix.py"
+      - "backend/tests/unit/test_legal_components_2026.py"
+      - "backend/src/tarim_destek_rag/database/**"
+      - "backend/src/tarim_destek_rag/rules/**"
+      - "backend/src/tarim_destek_rag/models/farmer_parcel.py"
+      - "backend/src/tarim_destek_rag/normalization/basin_2026.py"
+      - "backend/tests/unit/test_p0_4_basin_review.py"
+      - "backend/tests/unit/test_official_basin_catalog_2026.py"
+      - "configs/2026_2027_basin_crop_draft.json"
+      - ".github/workflows/decision-suite-revalidation.yml"
+      - ".github/workflows/decision-suite-revalidation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  decision-legacy-and-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install project dependencies, including RAG/Gradio test modules
+        run: python -m pip install -e ".[dev]"
+      - name: Validate all installed decision tests and integration contracts
+        env:
+          HF_HUB_OFFLINE: "1"
+          TRANSFORMERS_OFFLINE: "1"
+          TOKENIZERS_PARALLELISM: "false"
+          DATABASE_URL: "sqlite:///./data/decision_ci.db"
+          PYTHONPATH: "backend/src:."
+        run: |
+          mkdir -p data
+          python -m pytest \
+            backend/tests/unit/test_p4_p5_db_and_normalization.py \
+            backend/tests/unit/test_p7_p8_p9_rules_calculator.py \
+            backend/tests/unit/test_p10_benchmark.py \
+            backend/tests/unit/test_p17_benchmark_v1.py \
+            backend/tests/unit/test_issue2_issue3_legislative_decision_engine.py \
+            backend/tests/unit/test_p0_2_verified_rates.py \
+            backend/tests/unit/test_legal_components_2026.py \
+            backend/tests/unit/test_p0_4_basin_review.py \
+            backend/tests/unit/test_official_basin_catalog_2026.py \
+            backend/tests/unit/test_decision_2026_matrix.py \
+            backend/tests/regression/test_regression_cases.py \
+            backend/tests/integration/test_p15_api.py \
+            backend/tests/integration/test_p16_frontend_pc.py \
+            -q --disable-warnings --maxfail=35 --junitxml=decision-ci-results.xml
+      - name: Attach evidence, including failed legacy assertions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: decision-revalidation-junit
+          path: decision-ci-results.xml
+          if-no-files-found: ignore

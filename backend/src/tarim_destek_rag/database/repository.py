@@ -1,14 +1,28 @@
-from sqlalchemy import select
+import json
+import re
+from dataclasses import dataclass
+from datetime import date
+
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
+
+from tarim_destek_rag.normalization.basin_2026 import (
+    BASIN_SOURCE_ID, BASIN_SOURCE_URL, PINNED_BASIN_PDF_SHA256,
+)
+
+from tarim_destek_rag.database.legal_approvals import two_person_approved
 
 from tarim_destek_rag.database.models import (
     ApplicationWindowModel,
     BasinCropRuleModel,
+    ReviewedBasinSnapshotModel,
     SourceModel,
     SourceVersionModel,
     SupportAmountModel,
     SupportProgramModel,
     WaterRestrictionModel,
+    ReviewedWaterRestrictionDistrictModel,
+    VerifiedSupportRateModel,
 )
 
 
@@ -89,13 +103,107 @@ class SupportRepository:
         )
         return list(self.session.scalars(stmt).all())
 
-    def get_amount(self, program_id: str, crop_name: str) -> SupportAmountModel | None:
-        """Belirtilen program ve ürün için birim destek tutarını sorgular."""
+    def get_legacy_amount(self, program_id: str, crop_name: str) -> SupportAmountModel | None:
+        """Unverified historic/seed values. Never use for entitlement calculations."""
         stmt = select(SupportAmountModel).where(
             SupportAmountModel.program_id == program_id,
             SupportAmountModel.crop_name == crop_name,
         )
         return self.session.scalars(stmt).first()
+
+    def get_amount(
+        self,
+        program_id: str,
+        crop_name: str,
+        *,
+        production_year: int,
+        province: str,
+        district: str,
+        as_of: date | None = None,
+    ) -> VerifiedSupportRateModel | None:
+        """Fail closed unless exactly one approved, effective, evidenced component matches.
+
+        No legacy rate fallback. National rates may apply to a local query, but
+        overlapping approved national/local versions produce an ambiguous result.
+        """
+        evaluation_date = as_of if as_of is not None else date.today()
+        stmt = (
+            select(VerifiedSupportRateModel)
+            .join(
+                SourceVersionModel,
+                VerifiedSupportRateModel.source_version_id == SourceVersionModel.id,
+            )
+            .join(SourceModel, SourceVersionModel.source_id == SourceModel.source_id)
+            .join(
+                SupportProgramModel,
+                VerifiedSupportRateModel.program_id == SupportProgramModel.id,
+            )
+            .where(
+                VerifiedSupportRateModel.program_id == program_id,
+                VerifiedSupportRateModel.crop_name == crop_name,
+                VerifiedSupportRateModel.production_year == production_year,
+                VerifiedSupportRateModel.review_status == "VERIFIED",
+                VerifiedSupportRateModel.unit == "TRY/da",
+                VerifiedSupportRateModel.unit_amount > 0,
+                VerifiedSupportRateModel.effective_from <= evaluation_date,
+                or_(
+                    VerifiedSupportRateModel.effective_to.is_(None),
+                    VerifiedSupportRateModel.effective_to >= evaluation_date,
+                ),
+                SourceModel.active.is_(True),
+                SupportProgramModel.active.is_(True),
+                SupportProgramModel.year == production_year,
+                SourceVersionModel.superseded.is_(False),
+                or_(
+                    and_(
+                        VerifiedSupportRateModel.province == "*",
+                        VerifiedSupportRateModel.district == "*",
+                    ),
+                    and_(
+                        VerifiedSupportRateModel.province == province.strip().upper(),
+                        VerifiedSupportRateModel.district == district.strip().upper(),
+                    ),
+                ),
+            )
+        )
+        candidates = list(self.session.scalars(stmt).all())
+        usable: list[VerifiedSupportRateModel] = []
+        for rate in candidates:
+            version = rate.source_version
+            if (
+                not rate.approved_by
+                or not rate.approved_at
+                or not rate.review_reference
+                or not rate.legal_clause.strip()
+                or version is None
+                or not re.fullmatch(r"[0-9a-fA-F]{64}", version.content_hash or "")
+                or not version.detected_at
+                or not version.effective_from
+                or version.effective_from > evaluation_date.isoformat()
+                or (version.effective_to and version.effective_to < evaluation_date.isoformat())
+                or (rate.effective_to is not None and rate.effective_to < rate.effective_from)
+            ):
+                continue
+            if not two_person_approved(self.session, rate):
+                continue
+            usable.append(rate)
+        return usable[0] if len(usable) == 1 else None
+
+    def list_amount_history(
+        self,
+        program_id: str,
+        crop_name: str,
+    ) -> list[SupportAmountModel]:
+        """Bir program ve ürün için tüm mevzuat sürümleri ve tutar geçmişini listeler."""
+        stmt = (
+            select(SupportAmountModel)
+            .where(
+                SupportAmountModel.program_id == program_id,
+                SupportAmountModel.crop_name == crop_name,
+            )
+            .order_by(SupportAmountModel.production_year.desc(), SupportAmountModel.id.desc())
+        )
+        return list(self.session.scalars(stmt).all())
 
     def get_window(self, program_id: str, year: int = 2026) -> ApplicationWindowModel | None:
         """Başvuru takvimini sorgular."""
@@ -106,11 +214,125 @@ class SupportRepository:
         return self.session.scalars(stmt).first()
 
 
+
+@dataclass(frozen=True)
+class BasinCropAssessment:
+    """Evidence-backed outcome for the *planning* crop list only."""
+
+    outcome: str  # LISTED, NOT_LISTED, UNKNOWN
+    reason: str
+    source_version_id: int | None = None
+    document_page: int | None = None
+    drip_irrigation_required: bool = False
+
+
 class BasinRepository:
     """Tarım havzaları ve ürün uygunluğu veri erişim katmanı."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
+
+
+    def evaluate_official_crop(
+        self,
+        province: str,
+        district: str,
+        crop_code: str,
+        year: int,
+    ) -> BasinCropAssessment:
+        """Fail closed on missing, stale, duplicate or incomplete district lists.
+
+        Old BasinCropRuleModel seed rows have NO authority here.
+        A complete reviewed district list allows a negative membership result.
+        These outcomes concern the planning *list*, not final farmer eligibility.
+        """
+        stmt = (
+            select(ReviewedBasinSnapshotModel)
+            .join(
+                SourceVersionModel,
+                ReviewedBasinSnapshotModel.source_version_id == SourceVersionModel.id,
+            )
+            .join(SourceModel, SourceVersionModel.source_id == SourceModel.source_id)
+            .where(
+                ReviewedBasinSnapshotModel.province == province.strip().upper(),
+                ReviewedBasinSnapshotModel.district == district.strip().upper(),
+                ReviewedBasinSnapshotModel.production_year == year,
+                ReviewedBasinSnapshotModel.review_status == "VERIFIED",
+                ReviewedBasinSnapshotModel.coverage_complete.is_(True),
+                SourceModel.active.is_(True),
+                SourceVersionModel.superseded.is_(False),
+            )
+        )
+        snapshots = list(self.session.scalars(stmt).all())
+        if len(snapshots) != 1:
+            return BasinCropAssessment(
+                "UNKNOWN", "Resmî tam ilçe ürün listesi henüz doğrulanmadı veya çakışıyor."
+            )
+        snapshot = snapshots[0]
+        version = snapshot.source_version
+        if (
+            not snapshot.reviewed_by
+            or not snapshot.reviewed_at
+            or not snapshot.review_reference
+            or snapshot.document_page < 1
+            or not version
+            or version.source_id != BASIN_SOURCE_ID
+            or version.content_hash != PINNED_BASIN_PDF_SHA256
+            or version.source is None
+            or version.source.url != BASIN_SOURCE_URL
+            or not version.effective_from
+            or version.effective_from > f"{year}-12-31"
+            or (version.effective_to and version.effective_to < f"{year}-01-01")
+        ):
+            return BasinCropAssessment("UNKNOWN", "Belge sürümü veya bağımsız onay eksik.")
+        if not two_person_approved(self.session, snapshot):
+            return BasinCropAssessment(
+                "UNKNOWN", "İlçe ürün listesi iki bağımsız kriptografik onaydan geçmedi."
+            )
+        try:
+            crops = json.loads(snapshot.crop_codes_json)
+        except (TypeError, ValueError):
+            crops = None
+        if (
+            not isinstance(crops, list)
+            or not crops
+            or any(not isinstance(x, str) or not x for x in crops)
+            or len(set(crops)) != len(crops)
+        ):
+            return BasinCropAssessment("UNKNOWN", "Ürün listesi bütünlük kontrolü başarısız.")
+        crop = crop_code.strip().upper()
+        # Generic crop labels must not become false negatives for subtype lists.
+        # E.g. MISIR != MISIR_DANE and PAMUK != PAMUK_KÜTLÜ.
+        known_exact_codes = {
+            "ARPA", "ASPİR", "AYÇİÇEĞİ_YAĞLIK", "BUĞDAY", "FASULYE_KURU",
+            "KANOLA", "MERCİMEK", "MISIR_DANE", "NOHUT", "PAMUK_KÜTLÜ",
+            "PATATES", "SOĞAN_KURU", "SOYA", "YEM_BITKILERI_GROUP",
+        }
+        if crop not in known_exact_codes:
+            return BasinCropAssessment(
+                "UNKNOWN", "Ürün alt türü resmî listeyle kesin eşleştirilemiyor."
+            )
+        if crop not in crops:
+            return BasinCropAssessment(
+                "NOT_LISTED", "Onaylı eksiksiz ilçe ürün deseninde bu ürün bulunmuyor.",
+                snapshot.source_version_id, snapshot.document_page,
+            )
+        drip = snapshot.drip_required_for_grain_maize and crop == "MISIR_DANE"
+        return BasinCropAssessment(
+            "LISTED", "Onaylı 2026 ilçe ürün deseninde ürün mevcut.",
+            snapshot.source_version_id, snapshot.document_page, drip,
+        )
+
+    def has_basin_records(
+        self, province: str, district: str, year: int = 2026
+    ) -> bool:
+        """İl ve ilçe için sisteme işlenmiş havza kuralı kaydı bulunup bulunmadığını kontrol eder."""
+        stmt = select(BasinCropRuleModel).where(
+            BasinCropRuleModel.province == province.upper(),
+            BasinCropRuleModel.district == district.upper(),
+            BasinCropRuleModel.year == year,
+        )
+        return self.session.scalars(stmt).first() is not None
 
     def is_crop_supported_in_basin(
         self, province: str, district: str, crop_name: str, year: int = 2026
@@ -127,6 +349,17 @@ class BasinRepository:
         return rule is not None
 
 
+@dataclass(frozen=True)
+class WaterRestrictionAssessment:
+    """Evidence-backed tri-state outcome for water restriction district status."""
+
+    outcome: str  # RESTRICTED, NOT_RESTRICTED, UNKNOWN
+    reason: str
+    source_version_id: int | None = None
+    document_page: int | None = None
+    legal_clause: str | None = None
+
+
 class WaterRestrictionRepository:
     """Yeraltı su kısıtı veri erişim katmanı."""
 
@@ -136,7 +369,7 @@ class WaterRestrictionRepository:
     def get_restriction(
         self, province: str, district: str, year: int = 2026
     ) -> WaterRestrictionModel | None:
-        """Konumun su kısıtı bölgesinde olup olmadığını sorgular."""
+        """Legacy helper for backwards compatibility. Do NOT use for verified decisions."""
         stmt = select(WaterRestrictionModel).where(
             WaterRestrictionModel.province == province.upper(),
             WaterRestrictionModel.district == district.upper(),
@@ -144,3 +377,89 @@ class WaterRestrictionRepository:
             WaterRestrictionModel.is_water_restricted.is_(True),
         )
         return self.session.scalars(stmt).first()
+
+    def evaluate_official_water_restriction(
+        self,
+        province: str,
+        district: str,
+        year: int = 2026,
+        as_of: date | None = None,
+    ) -> WaterRestrictionAssessment:
+        """Fail closed on unreviewed, conflict, missing or unsigned water restriction records.
+
+        Old WaterRestrictionModel seed rows have NO legal authority here.
+        A reviewed, verified and dual-signed record allows positive or negative determination.
+        Unreviewed or conflicting records return UNKNOWN.
+        """
+        evaluation_date = as_of if as_of is not None else date.today()
+        stmt = (
+            select(ReviewedWaterRestrictionDistrictModel)
+            .join(
+                SourceVersionModel,
+                ReviewedWaterRestrictionDistrictModel.source_version_id == SourceVersionModel.id,
+            )
+            .join(SourceModel, SourceVersionModel.source_id == SourceModel.source_id)
+            .where(
+                ReviewedWaterRestrictionDistrictModel.province == province.strip().upper(),
+                ReviewedWaterRestrictionDistrictModel.district == district.strip().upper(),
+                ReviewedWaterRestrictionDistrictModel.production_year == year,
+                ReviewedWaterRestrictionDistrictModel.review_status == "VERIFIED",
+                SourceModel.active.is_(True),
+                SourceVersionModel.superseded.is_(False),
+            )
+        )
+        candidates = list(self.session.scalars(stmt).all())
+        if len(candidates) != 1:
+            return WaterRestrictionAssessment(
+                outcome="UNKNOWN",
+                reason=f"İlçe için onaylı tekil resmî su kısıtı kaydı bulunamadı (kayıt sayısı: {len(candidates)}).",
+            )
+
+        rec = candidates[0]
+        version = rec.source_version
+        if (
+            not rec.reviewed_by
+            or not rec.reviewed_at
+            or not rec.review_reference
+            or version is None
+            or not re.fullmatch(r"[0-9a-fA-F]{64}", version.content_hash or "")
+            or not version.detected_at
+            or (version.effective_from and version.effective_from > evaluation_date.isoformat())
+            or (version.effective_to and version.effective_to < evaluation_date.isoformat())
+            or (rec.effective_to and rec.effective_to < rec.effective_from)
+        ):
+            return WaterRestrictionAssessment(
+                outcome="UNKNOWN",
+                reason="Mevzuat versiyonu veya tarih aralığı geçersiz/doğrulanmamış.",
+            )
+
+        if not two_person_approved(self.session, rec):
+            return WaterRestrictionAssessment(
+                outcome="UNKNOWN",
+                reason="İki yetkili bağımsız Ed25519 imzası bulunmuyor (fail-closed onay bekliyor).",
+            )
+
+        if rec.restriction_status == "RESTRICTED":
+            return WaterRestrictionAssessment(
+                outcome="RESTRICTED",
+                reason=f"{rec.province}/{rec.district} resmî karara göre yeraltı su kısıtı bölgesindedir.",
+                source_version_id=rec.source_version_id,
+                document_page=rec.document_page,
+                legal_clause=rec.legal_clause,
+            )
+        elif rec.restriction_status == "NOT_RESTRICTED":
+            return WaterRestrictionAssessment(
+                outcome="NOT_RESTRICTED",
+                reason=f"{rec.province}/{rec.district} resmî karara göre yeraltı su kısıtı bölgesinde yer almamaktadır.",
+                source_version_id=rec.source_version_id,
+                document_page=rec.document_page,
+                legal_clause=rec.legal_clause,
+            )
+        else:
+            return WaterRestrictionAssessment(
+                outcome="UNKNOWN",
+                reason=f"{rec.province}/{rec.district} su kısıtı durumu resmî inceleme / çelişki sürecindedir ({rec.conflict_notes or 'UNDER_REVIEW'}).",
+                source_version_id=rec.source_version_id,
+                document_page=rec.document_page,
+                legal_clause=rec.legal_clause,
+            )

@@ -14,6 +14,7 @@ from frontend_pc.app import (
     evaluate_farmer_parcel,
     format_currency,
     generate_evaluation_report,
+    parse_irrigation_status,
     load_benchmark_data,
 )
 
@@ -59,7 +60,8 @@ def test_api_client_with_testclient(client):
     }
     eval_res = api.evaluate_full(farmer, parcel)
     assert "rules" in eval_res
-    assert float(eval_res["total_estimated_amount"]) > 0
+    assert eval_res["total_estimated_amount"] is None
+    assert all(c["estimated_amount"] is None for c in eval_res["calculations"])
 
     # 5. Ask
     ask_res = api.ask("Konya buğday desteği", top_k=2)
@@ -67,10 +69,17 @@ def test_api_client_with_testclient(client):
     assert len(ask_res["matched_chunks"]) > 0
 
 
+def test_irrigation_selection_matches_parcel_enum():
+    assert parse_irrigation_status("Sulu Tarım") == "IRRIGATED"
+    assert parse_irrigation_status("Kuru Tarım") == "DRY"
+    assert parse_irrigation_status("❓ Bilmiyorum / Emin Değilim") == "UNKNOWN"
+
+
 def test_format_currency():
     """Para birimi biçimlendirici testi."""
     assert "1.000,50 ₺" in format_currency(1000.5)
     assert "0,00 ₺" in format_currency(0)
+    assert format_currency(None) == "Hesaplanmadı"
 
 
 def test_load_benchmark_data():
@@ -137,6 +146,11 @@ def test_generate_evaluation_report(client):
     assert "value" in res
     assert res["visible"] is True
     assert res["value"].endswith(".md")
+    from pathlib import Path
+    document = Path(res["value"]).read_text(encoding="utf-8")
+    assert "Bağımsız Yazılım Raporu" in document
+    assert "resmî bir belge değildir" in document
+    assert "# T.C. TARIM VE ORMAN BAKANLIĞI" not in document
 
 
 def test_evaluate_farmer_parcel_with_unknown_options(client):

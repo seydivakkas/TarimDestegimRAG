@@ -1,0 +1,40 @@
+name: P0-5 Signed Legal Approval and Revocation
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/tarim_destek_rag/database/**"
+      - "backend/tests/legal_approval_testkit.py"
+      - "backend/tests/unit/test_p0_5_signed_approval.py"
+      - "pyproject.toml"
+      - ".github/workflows/p0-5-signed-legal-approval.yml"
+  push:
+    branches: [main]
+    paths:
+      - "backend/src/tarim_destek_rag/database/**"
+      - "backend/tests/unit/test_p0_5_signed_approval.py"
+      - "pyproject.toml"
+
+permissions:
+  contents: read
+
+jobs:
+  trusted-dual-control:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install small deterministic verifier dependencies
+        run: python -m pip install "pytest>=8,<10" "sqlalchemy>=2.0.35,<3" "pydantic>=2.9,<3" "pydantic-settings>=2.5,<3" "pyyaml>=6,<7" "cryptography>=43,<47"
+      - name: Compile verifier and CLI
+        run: |
+          python -m compileall -q backend/src/tarim_destek_rag/database
+          python -m compileall -q backend/tests/unit/test_p0_5_signed_approval.py
+      - name: Verify independent signatures, tampering and revocation
+        env:
+          PYTHONPATH: "backend/src:."
+          DATABASE_URL: "sqlite:///:memory:"
+        run: python -m pytest backend/tests/unit/test_p0_5_signed_approval.py backend/tests/unit/test_p0_2_verified_rates.py backend/tests/unit/test_p0_4_basin_review.py -q

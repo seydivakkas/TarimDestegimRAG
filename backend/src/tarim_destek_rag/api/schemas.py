@@ -25,7 +25,7 @@ class FullEvaluationResponse(BaseModel):
     rules: list[RuleResult]
     calculations: list[CalculationResult]
     explanations: list[ExplanationResult]
-    total_estimated_amount: Decimal
+    total_estimated_amount: Decimal | None
 
 
 class AskQuestionRequest(BaseModel):
@@ -62,3 +62,16 @@ class ApiErrorResponse(BaseModel):
     code: str
     message: str
     details: dict[str, Any] = Field(default_factory=dict)
+
+
+class HarvestLiveRequest(BaseModel):
+    """Canlı resmî kaynak tarama isteği."""
+
+    source_url: str = Field(..., description="Taranacak izinli HTTPS resmî mevzuat/SSS adresi")
+    source_name: str = Field(default="Resmî Tarım Portalı", description="Kaynağın resmî adı")
+
+
+class ModerationRejectRequest(BaseModel):
+    """Moderatör ret gerekçesi isteği."""
+
+    reason: str = Field(..., min_length=3, description="Reddetme gerekçesi")

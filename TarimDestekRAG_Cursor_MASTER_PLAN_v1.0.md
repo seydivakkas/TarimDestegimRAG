@@ -7,6 +7,8 @@
 > Hedef platform: **Flutter mobil uygulama + Python/FastAPI backend**
 >
 > Bu dosya proje boyunca **ana teknik referans** kabul edilir. Cursor ile geliştirme yapılırken görevler bu dosyada tanımlanan sıraya, mimari sınırlara, test kapılarına ve kapsam kararlarına göre yürütülmelidir.
+>
+> 📌 **Tek Kaynak (Canonical Source):** Bu planın yetkili ana kopyası [`MASTER_PLAN.md`](file:///c:/Users/seydieryilmaz/TarımRAGProje/MASTER_PLAN.md) dosyasıdır. Değişiklikler ana dosyada tutulmalıdır.
 
 ---
 

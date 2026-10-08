@@ -45,15 +45,21 @@ class SupportCalculator:
             )
 
         if unit_amount is None or unit_amount <= Decimal("0.0"):
+            # Bilinmeyen/geçersiz birim tutar 0 TL hak ediş demek değildir.
+            # ÇKS / havza uygunluğu tek başına mevzuat birim fiyatını doğrulamaz.
             return CalculationResult(
                 support_id=rule_result.support_id,
                 support_name=rule_result.support_name,
-                status=rule_result.status,
+                status=EligibilityStatusEnum.REVIEW,
                 area_da=area_da,
-                unit_amount=Decimal("0.0"),
-                estimated_amount=Decimal("0.0"),
-                formula=f"{area_da} da * 0.00 TL/da",
+                unit_amount=unit_amount,
+                estimated_amount=None,
+                formula="Birim tutar doğrulanamadı; hesaplama yapılmadı.",
                 unit="TRY",
+                metadata={
+                    "verification_required": True,
+                    "reason_code": "MISSING_OR_INVALID_UNIT_AMOUNT",
+                },
             )
 
         # Kuruş hassasiyetinde çarpım

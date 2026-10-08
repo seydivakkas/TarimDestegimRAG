@@ -12,14 +12,17 @@ from tarim_destek_rag.database.models import (
     SourceModel,
     SourceVersionModel,
     SupportAmountModel,
+    VerifiedSupportRateModel,
     SupportProgramModel,
     WaterRestrictionModel,
+    ReviewedWaterRestrictionDistrictModel,
 )
 from tarim_destek_rag.database.repository import (
     BasinRepository,
     SourceRepository,
     SupportRepository,
     WaterRestrictionRepository,
+    WaterRestrictionAssessment,
 )
 
 __all__ = [
@@ -33,11 +36,14 @@ __all__ = [
     "SourceVersionModel",
     "SupportProgramModel",
     "SupportAmountModel",
+    "VerifiedSupportRateModel",
     "BasinCropRuleModel",
     "ApplicationWindowModel",
     "WaterRestrictionModel",
+    "ReviewedWaterRestrictionDistrictModel",
     "SourceRepository",
     "SupportRepository",
     "BasinRepository",
     "WaterRestrictionRepository",
+    "WaterRestrictionAssessment",
 ]

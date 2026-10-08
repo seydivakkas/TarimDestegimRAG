@@ -1,8 +1,11 @@
+from datetime import date, datetime
 from decimal import Decimal
 
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Date,
+    DateTime,
     ForeignKey,
     Integer,
     Numeric,
@@ -87,13 +90,174 @@ class SupportAmountModel(Base):
     source_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("sources.source_id"), nullable=False
     )
+    production_year: Mapped[int] = mapped_column(Integer, default=2026)
+    legal_decision_number: Mapped[str | None] = mapped_column(String(64), default=None, nullable=True)
+    effective_from: Mapped[str | None] = mapped_column(String(10), default=None, nullable=True)
+    effective_to: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    geographic_scope: Mapped[str] = mapped_column(String(64), default="GENEL")
+    verification_status: Mapped[str] = mapped_column(String(32), default="DRAFT")  # VERIFIED, DRAFT, SUPERSEDED, REJECTED
 
     __table_args__ = (
         CheckConstraint("unit_amount >= 0", name="check_positive_amount"),
-        UniqueConstraint("program_id", "crop_name", name="uq_program_crop"),
+        UniqueConstraint("program_id", "crop_name", "production_year", "verification_status", name="uq_program_crop_year_status"),
     )
 
     program: Mapped["SupportProgramModel"] = relationship(back_populates="amounts")
+
+
+class VerifiedSupportRateModel(Base):
+    """Reviewed legal rate component; legacy support_amounts are never payment authority.
+
+    Each row is a distinct legal/document version and is non-destructively retained.
+    An effective version is only usable if its source document version and approval
+    pass SupportRepository.get_amount's provenance checks.
+    """
+
+    __tablename__ = "verified_support_rates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    program_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("support_programs.id"), nullable=False
+    )
+    crop_name: Mapped[str] = mapped_column(String(64), nullable=False)
+    production_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    # Explicit national scope uses "*" for both fields, not nullable SQL uniqueness.
+    province: Mapped[str] = mapped_column(String(64), nullable=False, default="*")
+    district: Mapped[str] = mapped_column(String(64), nullable=False, default="*")
+    unit_amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
+    unit: Mapped[str] = mapped_column(String(16), nullable=False, default="TRY/da")
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    legal_clause: Mapped[str] = mapped_column(String(256), nullable=False)
+    review_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="DRAFT"
+    )
+    approved_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    review_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_version: Mapped["SourceVersionModel"] = relationship()
+
+    __table_args__ = (
+        CheckConstraint("unit_amount > 0", name="ck_verified_rate_positive"),
+        CheckConstraint(
+            "review_status IN ('DRAFT','VERIFIED','REVOKED')",
+            name="ck_verified_rate_review_status",
+        ),
+        CheckConstraint(
+            "(province = '*' AND district = '*') OR (province <> '*' AND district <> '*')",
+            name="ck_verified_rate_geo_scope",
+        ),
+        UniqueConstraint(
+            "program_id", "crop_name", "production_year", "province", "district",
+            "source_version_id", name="uq_rate_component_source_version",
+        ),
+    )
+
+
+
+class ReviewedBasinSnapshotModel(Base):
+    """Complete, versioned province/district crop set; NOT the old demo basin rows.
+
+    Only a reviewed, explicitly complete snapshot is eligible to provide
+    either positive or negative product membership evidence.
+    """
+
+    __tablename__ = "reviewed_basin_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    province: Mapped[str] = mapped_column(String(64), nullable=False)
+    district: Mapped[str] = mapped_column(String(64), nullable=False)
+    production_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    crop_codes_json: Mapped[str] = mapped_column(Text, nullable=False)
+    drip_required_for_grain_maize: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    document_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="DRAFT")
+    coverage_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    reviewed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    review_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_version: Mapped["SourceVersionModel"] = relationship()
+
+    __table_args__ = (
+        CheckConstraint("document_page > 0", name="ck_basin_snapshot_page"),
+        CheckConstraint(
+            "review_status IN ('DRAFT','VERIFIED','REVOKED')",
+            name="ck_basin_snapshot_review_status",
+        ),
+        UniqueConstraint(
+            "province", "district", "production_year", "source_version_id",
+            name="uq_basin_district_source_version",
+        ),
+    )
+
+
+
+class LegalApprovalAttestationModel(Base):
+    """Externally Ed25519-signed, append-only review/approval attestations.
+
+    Subject remains inert until both signatures validate under the deployment's
+    independently configured public-key trust store.
+    """
+
+    __tablename__ = "legal_approval_attestations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    role: Mapped[str] = mapped_column(String(16), nullable=False)
+    principal_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    subject_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    signed_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    signature_b64: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "subject_type IN ('RATE','BASIN','WATER')", name="ck_approval_subject_type"
+        ),
+        CheckConstraint(
+            "role IN ('REVIEWER','APPROVER')", name="ck_approval_role"
+        ),
+        UniqueConstraint(
+            "subject_type", "subject_id", "role",
+            name="uq_legal_approval_subject_role",
+        ),
+    )
+
+
+
+class LegalApprovalRevocationModel(Base):
+    """Append-only tombstone that blocks a subject from ever becoming active again."""
+
+    __tablename__ = "legal_approval_revocations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject_digest: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    principal_id: Mapped[str] = mapped_column(String(128), nullable=False)
+    signed_at: Mapped[str] = mapped_column(String(32), nullable=False)
+    reason: Mapped[str] = mapped_column(String(512), nullable=False)
+    signature_b64: Mapped[str] = mapped_column(String(128), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "subject_type", "subject_id", name="uq_legal_revocation_subject"
+        ),
+    )
 
 
 class BasinCropRuleModel(Base):
@@ -156,6 +320,44 @@ class WaterRestrictionModel(Base):
     )
 
 
+class ReviewedWaterRestrictionDistrictModel(Base):
+    """Resmî kaynaklı, versiyonlu ve çift onaylı yeraltı su kısıtı ilçe kütüğü (Issue #17 / P0-5b)."""
+
+    __tablename__ = "reviewed_water_restriction_districts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    province: Mapped[str] = mapped_column(String(64), nullable=False)
+    district: Mapped[str] = mapped_column(String(64), nullable=False)
+    production_year: Mapped[int] = mapped_column(Integer, default=2026, nullable=False)
+    restriction_status: Mapped[str] = mapped_column(
+        String(32), default="UNDER_REVIEW", nullable=False
+    )  # RESTRICTED, NOT_RESTRICTED, UNDER_REVIEW
+    effective_from: Mapped[str] = mapped_column(String(10), default="2026-01-01", nullable=False)
+    effective_to: Mapped[str | None] = mapped_column(String(10), default="2026-12-31", nullable=True)
+    source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    document_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    legal_clause: Mapped[str] = mapped_column(
+        String(128), default="Madde 6/3(a,b,c)", nullable=False
+    )
+    conflict_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    review_status: Mapped[str] = mapped_column(
+        String(32), default="DRAFT", nullable=False
+    )  # DRAFT, VERIFIED, REJECTED
+    reviewed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    review_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
+
+    source_version: Mapped["SourceVersionModel"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint(
+            "province", "district", "production_year", name="uq_reviewed_water_district"
+        ),
+    )
+
+
 class AgriculturalFAQModel(Base):
     """Genişletilmiş Tarımsal Soru-Cevap ve Sorun Kütüphanesi Tablosu."""
 
@@ -170,6 +372,27 @@ class AgriculturalFAQModel(Base):
     source_name: Mapped[str] = mapped_column(String(128), nullable=False)
     source_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     keywords: Mapped[str] = mapped_column(Text, nullable=False)
-    verified: Mapped[bool] = mapped_column(Boolean, default=True)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[str] = mapped_column(String(32), nullable=False)
 
+    # Issue #4: Provenance, Diff, Moderasyon & Sürüm Alanları
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    effective_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    legal_span: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    moderation_status: Mapped[str] = mapped_column(String(32), default="APPROVED")
+    harvested_at: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    source_domain: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ModerationAuditLogModel(Base):
+    """SSS ve Mevzuat moderasyon işlem denetim günlüğü."""
+
+    __tablename__ = "moderation_audit_logs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    action: Mapped[str] = mapped_column(String(32), nullable=False)  # HARVEST, APPROVE, REJECT, SUPERSEDE
+    faq_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    performed_by: Mapped[str] = mapped_column(String(64), nullable=False)
+    timestamp: Mapped[str] = mapped_column(String(32), nullable=False)
+    details: Mapped[str | None] = mapped_column(Text, nullable=True)

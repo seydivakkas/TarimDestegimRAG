@@ -102,6 +102,10 @@ def test_agricultural_faq_harvester():
         harvester = AgriculturalFAQHarvester(session)
         seed_count = harvester.seed_initial_knowledge()
         assert seed_count >= len(CURATED_AGRICULTURAL_FAQS)
+        # Örnek veri kaydı resmî kaynakta bağımsız teyit edilmeden doğrulanmış sayılamaz.
+        seeded_record = FAQRepository(session).get_by_id(CURATED_AGRICULTURAL_FAQS[0]["id"])
+        assert seeded_record is not None
+        assert seeded_record.verified is False
 
         # Chunk üretimi
         chunks = harvester.export_as_document_chunks()
@@ -113,7 +117,7 @@ def test_agricultural_faq_harvester():
 
 
 
-def test_api_faq_endpoints():
+def test_api_faq_endpoints(monkeypatch):
     """FastAPI /faqs, /faqs/stats ve /faqs/harvest uç noktalarının testi."""
     with TestClient(app) as client:
         # 1. GET /faqs
@@ -137,8 +141,20 @@ def test_api_faq_endpoints():
         assert "verified_count" in stats
         assert "category_counts" in stats
 
-        # 4. POST /faqs/harvest
-        resp_harvest = client.post("/faqs/harvest")
+        # 4. Yönetici yazma uç noktası varsayılan olarak erişime kapalı.
+        monkeypatch.delenv("TARIM_RAG_ADMIN_API_KEY", raising=False)
+        assert client.post("/faqs/harvest").status_code == 503
+
+        # Yanlış/eksik anahtar erişim sağlamaz.
+        monkeypatch.setenv("TARIM_RAG_ADMIN_API_KEY", "regression-test-secret")
+        assert client.post("/faqs/harvest").status_code == 403
+        assert client.post(
+            "/faqs/harvest", headers={"X-Admin-Key": "invalid"}
+        ).status_code == 403
+
+        resp_harvest = client.post(
+            "/faqs/harvest", headers={"X-Admin-Key": "regression-test-secret"}
+        )
         assert resp_harvest.status_code == 200
         harvest_res = resp_harvest.json()
         assert harvest_res["status"] == "SUCCESS"

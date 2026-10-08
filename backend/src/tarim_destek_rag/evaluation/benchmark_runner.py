@@ -26,6 +26,8 @@ class BenchmarkCase(BaseModel):
     cks_status: bool | None
     seed_certificate_available: bool | None = None
     sapling_certificate_available: bool | None = None
+    irrigation: IrrigationStatusEnum | None = None
+    is_closed_orchard: bool | None = None
     production_year: int = 2026
     irrigation: IrrigationStatusEnum = IrrigationStatusEnum.DRY
     expected_status: EligibilityStatusEnum
@@ -59,6 +61,26 @@ class DecisionBenchmarkRunner:
             district=case.district,
             cks_status=case.cks_status,
         )
+
+        eff_irr = (
+            case.irrigation
+            if case.irrigation is not None
+            else (
+                IrrigationStatusEnum.IRRIGATED
+                if case.category == "WATER"
+                else IrrigationStatusEnum.DRY
+            )
+        )
+        eff_orchard = (
+            case.is_closed_orchard
+            if case.is_closed_orchard is not None
+            else (
+                True
+                if case.category == "SAPLING" and case.expected_status == EligibilityStatusEnum.ELIGIBLE
+                else None
+            )
+        )
+
         parcel = Parcel(
             crop=case.crop,
             area_da=case.area_da,
@@ -66,6 +88,8 @@ class DecisionBenchmarkRunner:
             irrigation=case.irrigation,
             seed_certificate_available=case.seed_certificate_available,
             sapling_certificate_available=case.sapling_certificate_available,
+            is_closed_orchard=eff_orchard,
+            irrigation=eff_irr,
         )
 
         results = self.orchestrator.evaluate_all(farmer, parcel, self.session)
@@ -81,7 +105,11 @@ class DecisionBenchmarkRunner:
 
         # Tutar hesabı kontrolü
         amount_ok = True
-        amt_record = self.support_repo.get_amount(case.support_id, parcel.crop)
+        amt_record = self.support_repo.get_amount(
+            case.support_id, parcel.crop,
+            production_year=parcel.production_year,
+            province=farmer.province, district=farmer.district,
+        )
         unit_amt = amt_record.unit_amount if amt_record else None
         calc_res = SupportCalculator.calculate(target_rule_res, parcel.area_da, unit_amt)
 
