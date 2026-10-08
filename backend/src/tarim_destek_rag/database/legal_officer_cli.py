@@ -17,6 +17,7 @@ from tarim_destek_rag.database.legal_audit import production_profile
 from tarim_destek_rag.database.legal_approval_cli import _get_subject
 from tarim_destek_rag.database.legal_operator import (
     authenticate_legal_officer, build_vault_signed_envelope,
+    build_vault_revocation_envelope,
 )
 
 
@@ -35,6 +36,8 @@ def main() -> int:
     parser.add_argument("--kind", required=True, choices=("RATE", "BASIN", "WATER"))
     parser.add_argument("--id", type=int, required=True)
     parser.add_argument("--role", required=True, choices=("REVIEWER", "APPROVER"))
+    parser.add_argument("--action", choices=("approve", "revoke"), default="approve")
+    parser.add_argument("--reason", help="Mandatory for revocation; included in Ed25519 signature")
     parser.add_argument("--oidc-token-file", type=Path, required=True)
     parser.add_argument("--vault-token-file", type=Path, required=True)
     parser.add_argument("--ack-subject-sha256", required=True)
@@ -44,6 +47,8 @@ def main() -> int:
     args = parser.parse_args()
     if not args.sign:
         parser.error("Remote signature requires explicit --sign")
+    if args.action == "revoke" and (args.role != "APPROVER" or not args.reason):
+        parser.error("Revocation requires APPROVER role and --reason")
     if not production_profile():
         raise ValueError("Remote officer signing requires explicit production security profile")
     if not args.out_file.parent.is_dir():
@@ -57,10 +62,16 @@ def main() -> int:
         subject = _get_subject(session, args.kind, args.id)
         if subject.review_status != "VERIFIED":
             raise ValueError("Subject is not a prepared, independently reviewed candidate")
-        envelope = build_vault_signed_envelope(
+        sign_function = (
+            build_vault_revocation_envelope if args.action == "revoke"
+            else build_vault_signed_envelope
+        )
+        kwargs = {"reason": args.reason} if args.action == "revoke" else {}
+        envelope = sign_function(
             subject, officer,
             vault_token=_sensitive_file(args.vault_token_file),
             acknowledged_subject_digest=args.ack_subject_sha256,
+            **kwargs,
         )
         # Fail if a read-only officer role has silently modified any records.
         session.rollback()
