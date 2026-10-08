@@ -52,6 +52,31 @@ def init_db(target_engine: Engine | None = None) -> None:
     eng = target_engine or engine
     Base.metadata.create_all(bind=eng)
 
+    # Non-destructive compatibility for databases created before the extended
+    # support_amounts ORM model. SQLAlchemy create_all does not add columns to
+    # an existing table. No legacy row is promoted to VERIFIED.
+    if eng.dialect.name == "sqlite":
+        ddl = {
+            "production_year": "INTEGER DEFAULT 2026",
+            "legal_decision_number": "VARCHAR(64)",
+            "effective_from": "VARCHAR(10)",
+            "effective_to": "VARCHAR(10)",
+            "geographic_scope": "VARCHAR(64) DEFAULT 'GENEL'",
+            "verification_status": "VARCHAR(32) DEFAULT 'DRAFT'",
+        }
+        with eng.begin() as connection:
+            existing = {
+                row[1] for row in connection.exec_driver_sql(
+                    "PRAGMA table_info('support_amounts')"
+                ).all()
+            }
+            if existing:
+                for name, definition in ddl.items():
+                    if name not in existing:
+                        connection.exec_driver_sql(
+                            f"ALTER TABLE support_amounts ADD COLUMN {name} {definition}"
+                        )
+
     # SQLite hafif şema göçü (production_year ve diğer kolonlar yoksa otomatik ekle)
     with eng.connect() as conn:
         try:
