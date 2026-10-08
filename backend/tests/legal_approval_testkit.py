@@ -2,17 +2,16 @@
 
 import base64
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-
 from tarim_destek_rag.database.legal_approvals import (
-    TRUST_ENV, _subject_kind, attestation_message, register_detached_approval, subject_digest,
-)
-from tarim_destek_rag.database.models import (
-    ReviewedBasinSnapshotModel, ReviewedWaterRestrictionDistrictModel,
-    VerifiedSupportRateModel,
+    TRUST_ENV,
+    _subject_kind,
+    attestation_message,
+    register_detached_approval,
+    subject_digest,
 )
 
 
@@ -37,7 +36,7 @@ def detached_envelope(subject, role, signers):
     kind = _subject_kind(subject)
     digest = subject_digest(subject)
     sha = subject.source_version.content_hash
-    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    now = datetime.now(UTC).isoformat(timespec="seconds")
     signature = key.sign(attestation_message(
         kind=kind, record_id=subject.id, digest=digest,
         source_sha256=sha, principal_id=principal, role=role, signed_at=now,

@@ -4,28 +4,34 @@ Ephemeral Ed25519 keys in this test file are NEVER trusted production identities
 """
 
 import base64
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import pytest
 from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import Session
-
-from backend.tests.legal_approval_testkit import (
-    detached_envelope, sign_subject, trust_pair,
-)
-from backend.tests.unit.test_p0_2_verified_rates import add_rate
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.legal_approvals import (
-    TRUST_ENV, register_detached_approval, register_detached_revocation,
-    revocation_message, subject_digest, two_person_approved,
+    TRUST_ENV,
+    register_detached_approval,
+    register_detached_revocation,
+    revocation_message,
+    subject_digest,
+    two_person_approved,
 )
 from tarim_destek_rag.database.models import (
-    LegalApprovalAttestationModel, LegalApprovalRevocationModel,
-    SourceModel, SupportProgramModel,
+    LegalApprovalAttestationModel,
+    SourceModel,
+    SupportProgramModel,
 )
 from tarim_destek_rag.database.repository import SupportRepository
+
+from backend.tests.legal_approval_testkit import (
+    detached_envelope,
+    sign_subject,
+    trust_pair,
+)
+from backend.tests.unit.test_p0_2_verified_rates import add_rate
 
 
 @pytest.fixture
@@ -148,7 +154,7 @@ def test_signed_revocation_cannot_be_reversed_by_status_toggle(session, monkeypa
     assert lookup(session) is not None
     principal, signer = keys["APPROVER"]
     reason = "Document clause superseded; controlled test revocation"
-    created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    created = datetime.now(UTC).isoformat(timespec="seconds")
     digest = subject_digest(rate)
     sha = rate.source_version.content_hash
     signed = signer.sign(revocation_message(
@@ -172,7 +178,7 @@ def test_untrusted_revocation_signature_cannot_be_registered(session, monkeypatc
     rate = add_rate(session)
     keys = trust_pair(monkeypatch)
     principal, signer = keys["REVIEWER"]
-    created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    created = datetime.now(UTC).isoformat(timespec="seconds")
     digest = subject_digest(rate)
     sha = rate.source_version.content_hash
     signature = signer.sign(revocation_message(

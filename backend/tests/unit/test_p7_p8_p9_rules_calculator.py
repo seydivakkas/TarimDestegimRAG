@@ -112,8 +112,8 @@ def test_calculator_precision():
     farmer = FarmerProfile(province="KONYA", district="KARATAY", cks_status=True)
     parcel = Parcel(crop="BUĞDAY", area_da=Decimal("12.4"), production_year=2026)
 
-    from tarim_destek_rag.rules.base import RuleResult
     from tarim_destek_rag.normalization.legal_components_2026 import load_component_catalog
+    from tarim_destek_rag.rules.base import RuleResult
 
     # Arithmetic unit test ONLY: synthetic eligibility, NOT a farmer entitlement.
     rule_res = RuleResult(

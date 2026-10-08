@@ -22,7 +22,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from tarim_destek_rag.api.main import app
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.faq_repository import FAQRepository

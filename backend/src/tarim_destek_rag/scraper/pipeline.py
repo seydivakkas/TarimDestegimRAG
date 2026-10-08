@@ -105,7 +105,7 @@ class OfficialFAQParser:
                     span_match = re.search(r"(Madde\s*\d+(?:,\s*Fıkra\s*\d+)?)", f"{q_text} {citation}", re.I)
                     legal_span = span_match.group(1) if span_match else "Genel Hüküm"
 
-                    item_hash = hashlib.sha256(f"{q_text}::{a_text}::{citation}".encode("utf-8")).hexdigest()
+                    item_hash = hashlib.sha256(f"{q_text}::{a_text}::{citation}".encode()).hexdigest()
                     if item_hash in seen_hashes:
                         continue
                     seen_hashes.add(item_hash)
@@ -136,7 +136,7 @@ class OfficialFAQParser:
                         span_match = re.search(r"(Madde\s*\d+(?:,\s*Fıkra\s*\d+)?)", f"{q_text} {a_text}", re.I)
                         legal_span = span_match.group(1) if span_match else "Genel Hüküm"
 
-                        item_hash = hashlib.sha256(f"{q_text}::{a_text}::{citation}".encode("utf-8")).hexdigest()
+                        item_hash = hashlib.sha256(f"{q_text}::{a_text}::{citation}".encode()).hexdigest()
                         extracted_items.append({
                             "question": q_text,
                             "answer": a_text,

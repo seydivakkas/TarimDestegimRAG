@@ -6,23 +6,23 @@ from datetime import date
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
-from tarim_destek_rag.normalization.basin_2026 import (
-    BASIN_SOURCE_ID, BASIN_SOURCE_URL, PINNED_BASIN_PDF_SHA256,
-)
-
 from tarim_destek_rag.database.legal_approvals import two_person_approved
-
 from tarim_destek_rag.database.models import (
     ApplicationWindowModel,
     BasinCropRuleModel,
     ReviewedBasinSnapshotModel,
+    ReviewedWaterRestrictionDistrictModel,
     SourceModel,
     SourceVersionModel,
     SupportAmountModel,
     SupportProgramModel,
-    WaterRestrictionModel,
-    ReviewedWaterRestrictionDistrictModel,
     VerifiedSupportRateModel,
+    WaterRestrictionModel,
+)
+from tarim_destek_rag.normalization.basin_2026 import (
+    BASIN_SOURCE_ID,
+    BASIN_SOURCE_URL,
+    PINNED_BASIN_PDF_SHA256,
 )
 
 

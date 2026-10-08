@@ -7,13 +7,16 @@ Never auto-review or auto-approve. Production stays fail-closed.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
-    ReviewedWaterRestrictionDistrictModel, SourceModel, SourceVersionModel,
+    ReviewedWaterRestrictionDistrictModel,
+    SourceModel,
+    SourceVersionModel,
 )
 
 WATER_SOURCE_ID = "OFFICIAL-GAZETTE-TEBLIG-2024-39"
@@ -99,7 +102,7 @@ def stage_water_restriction_districts(
             source_id=WATER_SOURCE_ID,
             content_hash=PINNED_TEBLIG_2024_39_SHA256,
             version=1,
-            detected_at=datetime.now(timezone.utc).isoformat(),
+            detected_at=datetime.now(UTC).isoformat(),
             effective_from=f"{year}-01-01",
             effective_to=f"{year}-12-31",
             superseded=False,

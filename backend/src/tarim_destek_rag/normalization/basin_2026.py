@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import hashlib
 import json
-import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
-    ReviewedBasinSnapshotModel, SourceModel, SourceVersionModel,
+    ReviewedBasinSnapshotModel,
+    SourceModel,
+    SourceVersionModel,
 )
 
 BASIN_SOURCE_ID = "TOB-2026-2027-BASIN-DESENI"
@@ -123,7 +125,7 @@ def stage_basin_districts(
             source_id=BASIN_SOURCE_ID,
             content_hash=checksum,
             version=0,  # Imported but not authorized.
-            detected_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            detected_at=datetime.now(UTC).isoformat(timespec="seconds"),
             superseded=False, effective_from="2026-01-01",
             effective_to="2027-12-31",
         )

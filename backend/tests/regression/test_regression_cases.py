@@ -12,12 +12,12 @@ from decimal import Decimal
 from tarim_destek_rag.calculator.calculator import SupportCalculator
 from tarim_destek_rag.citations.verifier import CitationVerifier
 from tarim_destek_rag.database.connection import SessionLocal, init_db
-from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 from tarim_destek_rag.database.repository import SupportRepository
 from tarim_destek_rag.explainer.template_explainer import CitationDetail
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
 from tarim_destek_rag.models.source import AuthorityEnum, SourceDefinition
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
+from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator
 from tarim_destek_rag.scraper.registry import SourceRegistry
 

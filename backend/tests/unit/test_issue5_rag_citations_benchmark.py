@@ -17,7 +17,6 @@ Telif Hakkı (c) 2026 Seydi Eryılmaz (@seydivakkas)
 from __future__ import annotations
 
 import pytest
-
 from tarim_destek_rag.citations.verifier import (
     CitationMetricsCalculator,
     CitationVerifier,

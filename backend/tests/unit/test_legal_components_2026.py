@@ -1,23 +1,27 @@
 """2026 legal component golden cases; stale 310 TL source must not be used."""
 
 import json
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
-
 from tarim_destek_rag.calculator.calculator import SupportCalculator
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.models import (
-    SourceVersionModel, SupportProgramModel, VerifiedSupportRateModel,
+    SourceVersionModel,
+    SupportProgramModel,
+    VerifiedSupportRateModel,
 )
 from tarim_destek_rag.database.repository import SupportRepository
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
 from tarim_destek_rag.normalization.legal_components_2026 import (
-    CATALOG, PROGRAMS, UNVERIFIED_CONTENT_HASH,
-    load_component_catalog, stage_component_rates,
+    CATALOG,
+    PROGRAMS,
+    UNVERIFIED_CONTENT_HASH,
+    load_component_catalog,
+    stage_component_rates,
 )
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator
@@ -136,7 +140,7 @@ def test_hash_unknown_still_blocks_even_if_approval_metadata_injected(session):
     ).one()
     staged.review_status = "VERIFIED"
     staged.approved_by = "UNTRUSTED_TEST"
-    staged.approved_at = datetime.now(timezone.utc)
+    staged.approved_at = datetime.now(UTC)
     staged.review_reference = "FORGED"
     session.commit()
     assert SupportRepository(session).get_amount(

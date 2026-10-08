@@ -4,9 +4,11 @@ import io
 import pytest
 from pypdf import PdfWriter
 from pypdf.generic import DecodedStreamObject, DictionaryObject, NameObject
-
 from tarim_destek_rag.citations.evidence import (
-    EvidenceError, EvidenceStore, extract_document_pages, require_official_https,
+    EvidenceError,
+    EvidenceStore,
+    extract_document_pages,
+    require_official_https,
 )
 from tarim_destek_rag.citations.verifier import CitationVerifier
 from tarim_destek_rag.explainer.template_explainer import CitationDetail

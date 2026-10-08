@@ -10,8 +10,6 @@ from unittest.mock import MagicMock
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-
-from tarim_destek_rag.calculator.calculator import SupportCalculator
 from tarim_destek_rag.citations.verifier import CitationVerifier
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.explainer.template_explainer import CitationDetail

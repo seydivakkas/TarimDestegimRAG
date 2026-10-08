@@ -5,8 +5,6 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-
-from frontend_pc.app import parse_irrigation_status
 from tarim_destek_rag.citations.verifier import CitationVerifier
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.repository import SupportRepository
@@ -19,6 +17,8 @@ from tarim_destek_rag.retrieval.hybrid import HybridRetriever
 from tarim_destek_rag.retrieval.models import DocumentChunk
 from tarim_destek_rag.rules.rules_impl import BasicSupportRule, WaterRestrictionRule
 from tarim_destek_rag.scraper.registry import SourceRegistry
+
+from frontend_pc.app import parse_irrigation_status
 
 
 @pytest.fixture

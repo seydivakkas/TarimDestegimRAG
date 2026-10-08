@@ -1,35 +1,39 @@
 """Unit and cryptographic tests for P0-5b 2026 water restriction reconciliation (Issue #17)."""
 
-import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-
-from backend.tests.legal_approval_testkit import detached_envelope, sign_subject
 from tarim_destek_rag.database.connection import Base
-from tarim_destek_rag.database.legal_approvals import (
-    register_detached_approval, register_detached_revocation,
-    revocation_message, subject_digest, two_person_approved, TRUST_ENV,
-)
 from tarim_destek_rag.database.models import (
-    ReviewedWaterRestrictionDistrictModel, SourceModel, SourceVersionModel,
-    SupportProgramModel, VerifiedSupportRateModel,
+    ReviewedWaterRestrictionDistrictModel,
+    SourceModel,
+    SourceVersionModel,
+    SupportProgramModel,
+    VerifiedSupportRateModel,
 )
 from tarim_destek_rag.database.repository import (
-    SupportRepository, WaterRestrictionRepository,
+    WaterRestrictionRepository,
 )
 from tarim_destek_rag.models.farmer_parcel import (
-    FarmerProfile, IrrigationStatusEnum, Parcel,
+    FarmerProfile,
+    IrrigationStatusEnum,
+    Parcel,
 )
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.normalization.water_restriction_2026 import (
-    PINNED_TEBLIG_2024_39_SHA256, WATER_SOURCE_ID, WATER_SOURCE_URL,
-    load_water_restriction_catalog, stage_water_restriction_districts,
+    PINNED_TEBLIG_2024_39_SHA256,
+    WATER_SOURCE_ID,
+    WATER_SOURCE_URL,
+    load_water_restriction_catalog,
+    stage_water_restriction_districts,
     validate_water_restriction_catalog,
 )
 from tarim_destek_rag.rules.rules_impl import WaterRestrictionRule
+
+from backend.tests.legal_approval_testkit import sign_subject
 
 
 @pytest.fixture
@@ -103,7 +107,7 @@ def test_conflict_districts_stay_unknown_even_if_reviewed(session, monkeypatch):
         conflict_notes="52_DISTRICT_FAQ_OMISSION_VS_2024_39",
         review_status="VERIFIED",
         reviewed_by="LEGAL_EXPERT",
-        reviewed_at=datetime.now(timezone.utc),
+        reviewed_at=datetime.now(UTC),
         review_reference="CONFLICT_AUDIT",
     )
     session.add(model)
@@ -133,7 +137,7 @@ def test_signed_restricted_and_not_restricted_evaluation(session, monkeypatch):
         legal_clause="Madde 6/3(a)",
         review_status="VERIFIED",
         reviewed_by="EXPERT_1",
-        reviewed_at=datetime.now(timezone.utc),
+        reviewed_at=datetime.now(UTC),
         review_reference="REF_1",
     )
     session.add(karatay)
@@ -151,7 +155,7 @@ def test_signed_restricted_and_not_restricted_evaluation(session, monkeypatch):
         legal_clause="Madde 6/3(a)",
         review_status="VERIFIED",
         reviewed_by="EXPERT_1",
-        reviewed_at=datetime.now(timezone.utc),
+        reviewed_at=datetime.now(UTC),
         review_reference="REF_2",
     )
     session.add(selcuklu)
@@ -182,7 +186,7 @@ def test_water_restriction_rule_full_matrix(session, monkeypatch):
         legal_clause="Madde 6/3(a)",
         review_status="VERIFIED",
         reviewed_by="EXPERT",
-        reviewed_at=datetime.now(timezone.utc),
+        reviewed_at=datetime.now(UTC),
         review_reference="REF",
     )
     # Selçuklu'yu onayla (Kısıtsız)
@@ -198,7 +202,7 @@ def test_water_restriction_rule_full_matrix(session, monkeypatch):
         legal_clause="Madde 6/3(a)",
         review_status="VERIFIED",
         reviewed_by="EXPERT",
-        reviewed_at=datetime.now(timezone.utc),
+        reviewed_at=datetime.now(UTC),
         review_reference="REF",
     )
     # Program ve onaylı tutar ekle
@@ -217,7 +221,7 @@ def test_water_restriction_rule_full_matrix(session, monkeypatch):
         source_version_id=version.id,
         review_status="VERIFIED",
         approved_by="EXPERT",
-        approved_at=datetime.now(timezone.utc),
+        approved_at=datetime.now(UTC),
         review_reference="RATE_REF",
     )
     session.add_all([karatay, selcuklu, prog, rate])
