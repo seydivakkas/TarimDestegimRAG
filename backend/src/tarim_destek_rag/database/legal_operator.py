@@ -65,6 +65,11 @@ def authenticate_legal_officer(id_token: str, expected_role: str) -> LegalOffice
         issuer = cfg["issuer"]
         audience = cfg["audience"]
         keys = cfg["jwks"]["keys"]
+        mfa_acr = cfg["required_mfa_acr"]
+        if not isinstance(mfa_acr, list) or not mfa_acr or not all(
+            isinstance(x, str) and x for x in mfa_acr
+        ):
+            raise ValueError("An explicit IdP MFA assurance allowlist is required")
         if not isinstance(issuer, str) or not issuer.startswith("https://"):
             raise ValueError("Invalid OIDC issuer")
         if not isinstance(audience, str) or not audience:
@@ -80,8 +85,10 @@ def authenticate_legal_officer(id_token: str, expected_role: str) -> LegalOffice
         claims = jwt.decode(
             id_token, key=public, algorithms=["RS256"],
             issuer=issuer, audience=audience, leeway=15,
-            options={"require": ["iss", "aud", "sub", "iat", "exp", "auth_time"]},
+            options={"require": ["iss", "aud", "sub", "iat", "exp", "auth_time", "acr"]},
         )
+        if claims["acr"] not in mfa_acr:
+            raise ValueError("Recent MFA assurance policy not met")
         now = datetime.now(timezone.utc).timestamp()
         if (
             not isinstance(claims.get("sub"), str)
