@@ -202,3 +202,20 @@ class ApiClient:
             return response.content
         except Exception:
             return None
+
+    def get_grounding_by_program(
+        self, program_key: str, year: int, crop_code: str | None = None,
+    ) -> dict[str, Any]:
+        """Fetch exact verified PDF clause by program key and year."""
+        try:
+            params: dict[str, Any] = {"year": year}
+            if crop_code:
+                params["crop_code"] = crop_code
+            response = self._request(
+                "GET", f"/api/v1/grounding/program/{program_key}",
+                params=params,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}

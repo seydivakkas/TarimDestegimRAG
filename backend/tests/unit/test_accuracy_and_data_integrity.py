@@ -144,7 +144,7 @@ def test_water_restriction_requires_irrigated(memory_db_session):
     assert res_unk.status == EligibilityStatusEnum.REVIEW
     assert "irrigation" in res_unk.missing_fields
 
-    # 3. Sulu parsel -> ELIGIBLE
+    # 3. Sulu parsel -> Şartlar sağlandı ancak resmi onay kapısı fail-closed (REVIEW)
     p_irr = Parcel(
         crop="MERCİMEK",
         area_da=Decimal("20.0"),
@@ -152,10 +152,13 @@ def test_water_restriction_requires_irrigated(memory_db_session):
         irrigation=IrrigationStatusEnum.IRRIGATED,
     )
     res_irr = rule.evaluate(farmer, p_irr, memory_db_session)
-    assert res_irr.status == EligibilityStatusEnum.ELIGIBLE
+    assert res_irr.status == EligibilityStatusEnum.REVIEW
+    assert len(res_irr.failed_checks) == 0
+    assert any("sulu arazi şartı sağlandı" in p.lower() for p in res_irr.passed_checks)
+    assert "verified_water_provenance" in res_irr.missing_fields
 
 
-def test_missing_basin_data_not_equivalent_to_ineligible(memory_db_session):
+def test_missing_basin_data_not_equivalent_to_ineligible(memory_db_session, monkeypatch):
     """3. test_missing_basin_data_not_equivalent_to_ineligible:
     Henüz kaynaklanmamış ilçe, açık destek dışı ilçe gibi muamele görmez; REVIEW döner.
     """
@@ -167,15 +170,25 @@ def test_missing_basin_data_not_equivalent_to_ineligible(memory_db_session):
 
     res_unknown = rule.evaluate(farmer_unknown, parcel, memory_db_session)
     assert res_unknown.status == EligibilityStatusEnum.REVIEW
-    assert "basin_data" in res_unknown.missing_fields
+    assert "verified_basin_provenance" in res_unknown.missing_fields
 
-    # Bilinen ilçe ama desteklenmeyen ürün: KONYA / KARATAY (MISIR desteklenmiyor)
+    # Bilinen ve onaylı ilçe ama desteklenmeyen ürün:
+    from backend.tests.unit.test_p0_4_basin_review import register_synthetic_snapshot
+
+    register_synthetic_snapshot(
+        memory_db_session,
+        approve=True,
+        crops=["BUĞDAY", "ARPA"],
+        starred=False,
+        monkeypatch=monkeypatch,
+    )
+
     farmer_known = FarmerProfile(province="KONYA", district="KARATAY", cks_status=True)
-    parcel_misir = Parcel(crop="MISIR", area_da=Decimal("10.0"), production_year=2026)
+    parcel_patates = Parcel(crop="PATATES", area_da=Decimal("10.0"), production_year=2026)
 
-    res_known = rule.evaluate(farmer_known, parcel_misir, memory_db_session)
+    res_known = rule.evaluate(farmer_known, parcel_patates, memory_db_session)
     assert res_known.status == EligibilityStatusEnum.NOT_ELIGIBLE
-    assert any("planlı üretim kapsamında yer almamaktadır" in f for f in res_known.failed_checks)
+    assert any("resmî ürün deseninde yok" in f for f in res_known.failed_checks)
 
 
 def test_certified_sapling_requires_closed_orchard_and_min_area(memory_db_session):
@@ -221,7 +234,7 @@ def test_certified_sapling_requires_closed_orchard_and_min_area(memory_db_sessio
     assert res_none_orchard.status == EligibilityStatusEnum.REVIEW
     assert "is_closed_orchard" in res_none_orchard.missing_fields
 
-    # 4. Tüm şartlar sağlandı -> ELIGIBLE
+    # 4. Tüm fiziki şartlar sağlandı -> onaylı imza/fiyat olmadan fail-closed REVIEW
     p_ok = Parcel(
         crop="FINDIK",
         area_da=Decimal("10.0"),
@@ -230,7 +243,11 @@ def test_certified_sapling_requires_closed_orchard_and_min_area(memory_db_sessio
         is_closed_orchard=True,
     )
     res_ok = rule.evaluate(farmer, p_ok, memory_db_session)
-    assert res_ok.status == EligibilityStatusEnum.ELIGIBLE
+    assert res_ok.status == EligibilityStatusEnum.REVIEW
+    assert len(res_ok.failed_checks) == 0
+    assert any("kapama meyve bahçesi şartı sağlandı" in p.lower() for p in res_ok.passed_checks)
+    assert any("asgari alan şartı" in p.lower() for p in res_ok.passed_checks)
+    assert "verified_support_rate" in res_ok.missing_fields
 
 
 def test_rule_failure_priority_over_missing(memory_db_session):

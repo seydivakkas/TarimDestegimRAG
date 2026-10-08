@@ -1278,12 +1278,26 @@ def build_ui() -> gr.Blocks:
                     "Şimdilik gerçek kaynak cümlesi kayıt numarası gerektirir."
                 )
                 with gr.Row():
+                    lookup_mode = gr.Radio(
+                        ["Kural/Program Seçimi", "Doğrudan Cümle ID"],
+                        value="Kural/Program Seçimi",
+                        label="Kanıt Arama Yöntemi",
+                    )
+                with gr.Row():
+                    program_select = gr.Dropdown(
+                        choices=["BASIC_SUPPORT", "PLANNED_PRODUCTION", "WATER_RESTRICTION", "CERTIFIED_SEED", "CERTIFIED_SAPLING"],
+                        value="BASIC_SUPPORT",
+                        label="Destek Programı",
+                    )
+                    crop_input = gr.Textbox(
+                        label="Ürün Kodu (Örn: BUĞDAY)", value="BUĞDAY",
+                    )
                     pdf_evidence_id = gr.Number(
                         label="Kaydedilmiş kaynak cümlesi ID", value=1,
                         minimum=1, precision=0,
                     )
                     show_pdf_proof = gr.Button(
-                        "PDF Sayfasındaki Cümleyi Sarı İşaretle", variant="secondary"
+                        "PDF Sayfasındaki Cümleyi Sarı İşaretle", variant="primary"
                     )
                 pdf_proof_note = gr.Markdown(
                     "Belge kanıtı bulunamadığında yanlış sayfa veya metin gösterilmez."
@@ -1293,21 +1307,35 @@ def build_ui() -> gr.Blocks:
                     interactive=False, type="pil",
                 )
 
-                def on_show_pdf_proof(sentence_id: float, target_year: float):
+                def on_show_pdf_proof(mode: str, prog: str, crop: str, sentence_id: float, target_year: float):
                     from io import BytesIO
                     from PIL import Image
 
-                    item = api_client.get_grounding_evidence(
-                        int(sentence_id), int(target_year)
-                    )
-                    if item.get("status") != "DRAFT_NEEDS_HUMAN_LEGAL_REVIEW":
-                        return (
-                            "**Kanıt bulunamadı veya doğrulanamadı.** "
-                            "Kaynak PDF, yıl ve cümle eşleşmesi kontrol edilmeli.",
-                            None,
+                    if mode == "Kural/Program Seçimi":
+                        item = api_client.get_grounding_by_program(
+                            str(prog), int(target_year), crop_code=str(crop).strip() or None
                         )
+                        if item.get("status") == "ERROR" or "sentence_id" not in item:
+                            return (
+                                f"**{int(target_year)} yılı ve {prog} için doğrulanmış PDF kanıtı bulunamadı.** "
+                                f"Detay: {item.get('message', 'Kayıt yok')}",
+                                None,
+                            )
+                        eff_id = item["sentence_id"]
+                    else:
+                        item = api_client.get_grounding_evidence(
+                            int(sentence_id), int(target_year)
+                        )
+                        if item.get("status") != "DRAFT_NEEDS_HUMAN_LEGAL_REVIEW":
+                            return (
+                                "**Kanıt bulunamadı veya doğrulanamadı.** "
+                                "Kaynak PDF, yıl ve cümle eşleşmesi kontrol edilmeli.",
+                                None,
+                            )
+                        eff_id = int(sentence_id)
+
                     payload = api_client.get_grounding_page_bytes(
-                        int(sentence_id), int(item["page_number"]), int(target_year)
+                        eff_id, int(item["page_number"]), int(target_year)
                     )
                     if not payload:
                         return "**PDF sayfa görüntüsü doğrulanamadı.**", None
@@ -1318,17 +1346,18 @@ def build_ui() -> gr.Blocks:
                     safe_quote = html.escape(str(item["exact_quote"]))
                     safe_sha = html.escape(str(item["original_pdf_sha256"]))
                     summary = (
-                        f"**DRAFT / Hukukî onay bekleniyor** — Üretim yılı: {int(target_year)}, "
+                        f"**DRAFT / Hukukî onay bekleniyor** — Program: {item.get('program_key', '-')} | "
+                        f"Üretim yılı: {int(target_year)}, "
                         f"PDF sayfası: {item['page_number']}. "
-                        f"Kaynak SHA-256: {safe_sha}. "
-                        f"\n\n**Gerçek PDF cümlesi:** {safe_quote}"
+                        f"Kaynak SHA-256: `{safe_sha}`. "
+                        f"\n\n**Gerçek Resmî PDF Cümlesi:** *{safe_quote}*"
                         f"\n\nResmî adres: {safe_url}"
                     )
                     return summary, view
 
                 show_pdf_proof.click(
                     on_show_pdf_proof,
-                    inputs=[pdf_evidence_id, update_year],
+                    inputs=[lookup_mode, program_select, crop_input, pdf_evidence_id, update_year],
                     outputs=[pdf_proof_note, pdf_proof_image],
                 )
 
