@@ -14,6 +14,17 @@
 
 **Sürüm çelişkisi düzeltmesi:** Önceki Issue #17'de yayımlanmış kopyalarda geçtiği ileri sürülen **Hatay/Kırıkhan, Konya/Yalıhüyük ve Mardin/Nusaybin** adlarını bağımsız 2026 kısıt listesi olarak kabul etmiyoruz. Görülen Bakanlık PDF'sinin **2024/39 m.6/3(a)** metni ve 52 ilçe bilgi notu bunları **2026'daki 52 ilçelik kapsamda saymıyor**. **Kırıkhan ve Nusaybin** hakkında tarihsel çıkarılma notu da var. Bu aşamada resmî 52 kümesi referansını çıkarabiliriz; ancak makine, *insan onayı ve ikinci mevzuat sürümü imzaları yokken* **olumsuz ya da olumlu karar üretmez**.
 
+## 1.1. İki özgün belgenin gerçek SHA-256 kanıtı
+
+GitHub Actions [2026 water source evidence](https://github.com/seydivakkas/TarimDestegimRAG/actions/runs/37824333841) çalışmasında resmî hostlardan içerikler indirildi, 2024/39 PDF 9. sayfa ve 2025/42'nin yürürlük/değişiklik hükümleri metin olarak doğrulandı, ham dosyalar artefakt olarak saklandı.
+
+| Belge | İndirilen ham baytların SHA-256'sı |
+|---|---|
+| 2024/39, Bakanlıktaki PDF | `8b8b0785e2692268a60a0931f54aa36783ca32d80aea12800b66b25ea0d71612` |
+| 2025/42, özgün Resmî Gazete HTML | `74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269` |
+
+`water_2026.py` ve `WaterRestrictionRepository.assess_2026` **her iki hash'i sabit olarak doğrular**; herhangi bir 64 haneli hash yetmez. Esas mevzuat kaynağı değişirse yeni sürüm+uzman incelemesi gerekecektir. Bu kanıt **insan onayı değildir**.
+
 ## 2. Kontrol edilen veri kümesi
 
 - `configs/2026_water_restriction_52_draft.json`: 2026, **11 il**, tam **52 ilçe**, kanuni kaynak/URL, madde ve değişiklik notları, ayrıca `DRAFT` ve `authoritative_membership_approved=false`.
@@ -49,6 +60,12 @@ PR #16 ile hazırlanan **Ed25519 REVIEWER+APPROVER** imza denetleyicisine `WATER
 - değişiklik **2025/42** kaynak sürümü/id/URL/hash,
 - inceleme alanları
 üzerinden hesaplanır. Kaynak veya tek ilçe değiştirilirse imza geçersiz olur; iptal kaydı aynı konu sürümünü kalıcı olarak kapatır.
+
+### Üretimde etkinleştirme: varsayılan KAPALI
+
+`TARIM_RAG_LEGAL_ACTIVATION_ENABLED` varsayılan olarak ayarlı değildir. **Tam olarak `true` olmadığı sürece** iki geçerli imza bulunsa bile hiçbir mevzuat kaydı `two_person_approved` kontrolünden geçmez. Bu değişken bir özellik kilidi ve **asla yetki kanıtının yerine geçmez**. Ayrı `TARIM_RAG_LEGAL_TRUSTED_KEYS_JSON` anahtar sicili, gerçek iki bağımsız görevli ve imza işlemleri yine şarttır. Test yardımcıları anahtarı sadece geçici test oturumunda açar.
+
+Kurumsal gerçek onay adımları: kimlik ve görev yetkisi doğrulaması → Bakanlık hukukî madde incelemesi → PDF ve HTML kaynak hash kontrolü → bağımsız REVIEWER ve APPROVER imzaları → ayrı üretim DB rolü ve değiştirilemez haricî audit → yetkilendirilmiş dağıtımda kill-switch kontrolü → üretim smoke test. Herhangi bir aşama eksikse kilit **açılmamalı**.
 
 Sadece daha önce gerçekten yetkisi tanımlanmış, iki farklı gerçek kişinin KMS/HSM anahtarıyla imzaladığı kayıtlar çalışabilir. Mevcut repoda gerçek kimlik/anahtar **bulunmuyor**; yalnız geçici test anahtarları vardır. Gerçek yetkililerin ataması, kurum içi erişim kontrolü, veritabanı rol ayrımı, haricî WORM audit ve mevzuat inceleme tutanağı tamamlanmadan `VERIFIED` yapılmamalıdır.
 
