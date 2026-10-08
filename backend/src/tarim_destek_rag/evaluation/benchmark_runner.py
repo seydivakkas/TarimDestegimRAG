@@ -29,7 +29,6 @@ class BenchmarkCase(BaseModel):
     irrigation: IrrigationStatusEnum | None = None
     is_closed_orchard: bool | None = None
     production_year: int = 2026
-    irrigation: IrrigationStatusEnum = IrrigationStatusEnum.DRY
     expected_status: EligibilityStatusEnum
     expected_amount: Decimal | None = None
     notes: str = ""
@@ -85,7 +84,6 @@ class DecisionBenchmarkRunner:
             crop=case.crop,
             area_da=case.area_da,
             production_year=case.production_year,
-            irrigation=case.irrigation,
             seed_certificate_available=case.seed_certificate_available,
             sapling_certificate_available=case.sapling_certificate_available,
             is_closed_orchard=eff_orchard,
