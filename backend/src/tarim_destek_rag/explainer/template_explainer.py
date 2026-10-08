@@ -39,9 +39,7 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         year=2026,
         url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1",
         snippet=(
-            "MADDE 1 - 2026 üretim yılında Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan üreticilere, "
-            "mazot ve gübre maliyetlerini karşılamak amacıyla Temel Destek ödenir. "
-            "ÇKS ve temel destekleme başvuruları 1 Eylül 2026 - 31 Aralık 2026 tarihleri arasındadır."
+            "2026 katsayı düzenlemesi 367 TL/da; BÜGEM 2. kategoride buğday/arpada temel destek 1,3 × 367 = 477,10 TL/da. Kaynak başlıkları referanstır; içerik/pasaj eşleşmesi bağımsız doğrulanmamıştır."
         ),
     ),
     "PLANNED_PRODUCTION_2026": CitationDetail(
@@ -51,9 +49,7 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         year=2026,
         url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1",
         snippet=(
-            "MADDE 2 - Bakanlıkça ilan edilen Tarım Havzalarında öncelikli stratejik ürünleri üreten üreticilere, "
-            "temel desteğe ilave olarak Planlı Üretim Desteği ödenir. Buğday ve arpa için 465 TL/da, kütlü pamuk için 540 TL/da. "
-            "Münavebe şartına uymayan veya havzasında desteklenmeyen ürün eken üreticiler planlı üretim desteğinden yararlanamaz."
+            "2026 üretim yılında buğday/arpada planlı destek 1,3 × 367 = 477,10 TL/da referansıdır. Havza, ürün ve münavebe şartları ayrıca sağlanmalıdır. Bu açıklama doğrudan mevzuat alıntısı değildir."
         ),
     ),
     "CERTIFIED_SEED_2026": CitationDetail(
@@ -63,9 +59,7 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         year=2026,
         url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
         snippet=(
-            "MADDE 3 - Yetkili tohumluk bayilerinden faturalı sertifikalı tohum satın alarak ekim yapan "
-            "ÇKS kayıtlı üreticilere Sertifikalı Tohum Kullanım Desteği verilir. Tohum faturasının ve sertifika "
-            "etiket kopyasının ÇKS başvuru dosyasına eklenmesi zorunludur."
+            "2026 buğday/arpada sertifikalı tohum katsayısı 0,56 × 367 = 205,52 TL/da'dır. Sertifika ve kayıt belgeleri ilgili tebliğ koşullarına göre kontrol edilmelidir. Doğrudan mevzuat alıntısı değildir."
         ),
     ),
     "CERTIFIED_SAPLING_2026": CitationDetail(
@@ -75,8 +69,7 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         year=2026,
         url="https://www.tarimorman.gov.tr/BUGEM/Menu/16/Sertifikali-Fidan-Kullanim-Destegi",
         snippet=(
-            "MADDE 6 - Yetkili fidan üreticilerinden temin edilen sertifikalı/standart fidanlar ile en az 5 dekar alanda "
-            "kapama meyve bahçesi tesis eden üreticilere fidan kullanım desteği verilir. Münferit dağınık dikimlere destek verilmez."
+            "BÜGEM 2026 cetvelinde sertifikalı meyve fidanı katsayısı 5 × 367 = 1.835,00 TL/da referansı verir. Gerçek uygunluk bitki türü, belge ve bahçe kurulum şartlarına bağlıdır."
         ),
     ),
     "WATER_RESTRICTION_2026": CitationDetail(
@@ -86,9 +79,7 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         year=2026,
         url="https://www.tarimorman.gov.tr/BUGEM/Menu/17/Yeralti-Sularinin-Yetersiz-Oldugu-Havzalar",
         snippet=(
-            "MADDE 4 - Yeraltı su seviyesinin kritik olduğu tespit edilen havzalarda su tüketimi az olan münavebe ürünleri "
-            "(Nohut, Mercimek vb.) eken çiftçilere dekar başına 250 TL ilave Su Kısıtı Desteği verilir. "
-            "Bu havzalarda dane mısır gibi çok su tüketen ürünler ekenlere planlı destek verilmez."
+            "2026 su kısıtı 1. kategori ilave destek katsayısı 0,8 × 367 = 293,60 TL/da. Yalnız tanımlı su kısıtı havzasında sulu tarım arazisi ve uygun ürün koşulları sağlanırsa değerlendirilir."
         ),
     ),
 }
@@ -106,7 +97,7 @@ class TemplateExplainer:
         """Kural kararı ve hesaplamaya göre insan dilinde şeffaf gerekçe üretir."""
         citations: list[CitationDetail] = []
 
-        # 1. Kural bazlı resmî kanonik atıfı ekle
+        # 1. Referans açıklama ekle; bu pasaj resmî belge ile doğrulanmış alıntı değildir.
         primary_citation = SUPPORT_CITATION_DEFAULTS.get(rule_res.support_id)
         if primary_citation:
             citations.append(primary_citation)
