@@ -108,8 +108,7 @@ def test_water_restriction_rule():
 
 def test_calculator_precision():
     """Master plan örneği: 12.4 da * 465 TL/da = 5766.00 TL tam Decimal hesabı."""
-    session = get_test_db_session()
-    farmer = FarmerProfile(province="KONYA", district="KARATAY", cks_status=True)
+    # Pure Decimal arithmetic exercise; no database or farmer entitlement.
     parcel = Parcel(crop="BUĞDAY", area_da=Decimal("12.4"), production_year=2026)
 
     from tarim_destek_rag.normalization.legal_components_2026 import load_component_catalog
