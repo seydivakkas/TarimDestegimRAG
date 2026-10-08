@@ -89,6 +89,18 @@ def parse_tri_state(val: str | bool | None) -> bool | None:
     return None
 
 
+def parse_irrigation_status(value: str | None) -> str:
+    """UI sulama seçimini API Parcel.irrigation enum değerine dönüştürür."""
+    text = str(value or "").strip().lower()
+    if "bilmiyorum" in text or "emin değilim" in text or "?" in text:
+        return "UNKNOWN"
+    if "kuru" in text:
+        return "DRY"
+    if "sulu" in text:
+        return "IRRIGATED"
+    return "UNKNOWN"
+
+
 def load_benchmark_data() -> pd.DataFrame:
     """Benchmark veri setini okur ve 100 vakalık detaylı özet tablo oluşturur."""
     bench_file = Path("benchmark/cases.jsonl")
@@ -96,6 +108,13 @@ def load_benchmark_data() -> pd.DataFrame:
         bench_file = Path("data/benchmark/cases.jsonl")
     if not bench_file.exists():
         return pd.DataFrame()
+
+    # Vaka tanımları test sonucu değildir. Önce kaydedilmiş koşu sonuçlarını eşleştir.
+    run_results = {}
+    results_file = Path("benchmark/results.csv")
+    if results_file.exists():
+        for result in pd.read_csv(results_file).to_dict("records"):
+            run_results[str(result.get("case_id", ""))] = result
 
     records = []
     with open(bench_file, encoding="utf-8") as f:
@@ -114,6 +133,16 @@ def load_benchmark_data() -> pd.DataFrame:
                 else "-"
             )
 
+            result = run_results.get(str(item.get("case_id")), {})
+            if not result:
+                test_label = "Ölçülmedi"
+            elif str(result.get("status_match", "")).lower() == "true" and str(
+                result.get("amount_match", "")
+            ).lower() == "true":
+                test_label = "Kaydedilmiş: başarılı"
+            else:
+                test_label = "Kaydedilmiş: başarısız"
+
             records.append(
                 {
                     "Vaka ID": item.get("case_id"),
@@ -124,19 +153,37 @@ def load_benchmark_data() -> pd.DataFrame:
                     "Hedef Destek": item.get("support_id", "-"),
                     "Beklenen Karar": item.get("expected_status", "-"),
                     "Beklenen Tutar": amt_str,
-                    "Test Doğrulaması": "✅ %100 Uyum",
+                    "Test Doğrulaması": test_label,
                 }
             )
     return pd.DataFrame(records)
 
 
-def format_currency(val: float | int | str) -> str:
+def get_benchmark_summary() -> str:
+    """Son kaydedilmiş vaka eşleşmelerini gösterir; güncellik/metinsel atıf kanıtı değildir."""
+    data = load_benchmark_data()
+    if data.empty:
+        return "Henüz benchmark vaka verisi bulunmuyor."
+    labels = data["Test Doğrulaması"]
+    measured = int(labels.str.startswith("Kaydedilmiş:").sum())
+    passed = int((labels == "Kaydedilmiş: başarılı").sum())
+    return (
+        f"**{len(data)} tanımlı vaka · {measured} kaydedilmiş vaka sonucu · "
+        f"{passed} kaydedilmiş başarılı eşleşme.** "
+        "Kaynak: `benchmark/results.csv`. Bu sayılar güncel mevzuat geçerliliğini, "
+        "bağımsız atıf denetimini veya gerçek zamanlı benchmark çalışmasını kanıtlamaz."
+    )
+
+
+def format_currency(val: float | int | str | None) -> str:
     """Türk Lirası para birimi biçimlendirici."""
+    if val is None:
+        return "Hesaplanmadı"
     try:
         f_val = float(val)
         return f"{f_val:,.2f} ₺".replace(",", "X").replace(".", ",").replace("X", ".")
     except (ValueError, TypeError):
-        return "0,00 ₺"
+        return "Doğrulama gerekli"
 
 
 def evaluate_farmer_parcel(
@@ -159,10 +206,6 @@ def evaluate_farmer_parcel(
     parsed_seed = parse_tri_state(seed_cert)
     parsed_sapling = parse_tri_state(sapling_cert)
     parsed_orchard = parse_tri_state(closed_orchard)
-    is_irrigated = None
-    irr_lower = str(irrigation_type).lower()
-    if "bilmiyorum" not in irr_lower and "?" not in irr_lower:
-        is_irrigated = "sulu" in irr_lower
 
     farmer_data = {
         "farmer_id": "FARMER-DEMO-001",
@@ -179,7 +222,7 @@ def evaluate_farmer_parcel(
         "crop": crop.strip().upper(),
         "area_da": float(area_da),
         "production_year": 2026,
-        "is_irrigated": is_irrigated,
+        "irrigation": parse_irrigation_status(irrigation_type),
         "seed_certificate_available": parsed_seed,
         "sapling_certificate_available": parsed_sapling,
         "is_closed_orchard": parsed_orchard,
@@ -199,18 +242,23 @@ def evaluate_farmer_parcel(
     exp_map = {e.get("support_id"): e for e in explanations_list}
     calc_map = {c.get("support_id"): c for c in calculations}
 
-    eligible_count = sum(1 for e in rules if e.get("status") == "ELIGIBLE")
-    review_count = sum(1 for e in rules if e.get("status") == "REVIEW")
-    ineligible_count = sum(1 for e in rules if e.get("status") == "NOT_ELIGIBLE")
+    # Hesaplayıcı, birim tutar bulunamadığında kuraldan daha temkinli REVIEW dönebilir.
+    effective_statuses = [
+        calc_map.get(r.get("support_id"), {}).get("status", r.get("status"))
+        for r in rules
+    ]
+    eligible_count = effective_statuses.count("ELIGIBLE")
+    review_count = effective_statuses.count("REVIEW")
+    ineligible_count = effective_statuses.count("NOT_ELIGIBLE")
 
     # 1. Tab 1 Canlı Özet Kartı (Inline Summary)
     inline_chips = ""
     for r in rules:
         sid = r.get("support_id")
         sname = r.get("support_name", sid)
-        st = r.get("status")
         c = calc_map.get(sid, {})
-        amt = c.get("estimated_amount", 0.0) or 0.0
+        st = c.get("status", r.get("status"))
+        amt = c.get("estimated_amount")
 
         if st == "ELIGIBLE":
             badge = "<span class='badge-eligible'>UYGUN</span>"
@@ -236,13 +284,13 @@ def evaluate_farmer_parcel(
     <div class="inline-summary-box">
         <div class="inline-summary-header">
             <div>
-                <h3 style="margin: 0; color: #166534; font-size: 1.35rem;">🎉 2026 Hak Ediş Hesaplaması Tamamlandı!</h3>
+                <h3 style="margin: 0; color: #166534; font-size: 1.35rem;">2026 Tarımsal Destek Ön Değerlendirmesi</h3>
                 <p style="margin: 4px 0 0 0; color: #15803d; font-size: 0.95rem;">
                     Parsel: <b>{float(area_da):.1f} da {crop.upper()}</b> &middot; Konum: <b>{province.upper()} / {district.upper()}</b>
                 </p>
             </div>
             <div style="text-align: right;">
-                <div style="font-size: 0.85rem; color: #166534; font-weight: 700; text-transform: uppercase;">Toplam Tahmini Destek</div>
+                <div style="font-size: 0.85rem; color: #166534; font-weight: 700; text-transform: uppercase;">Hesaplanabilen Destekler Toplamı</div>
                 <div class="inline-summary-payout">{format_currency(total_payout)}</div>
             </div>
         </div>
@@ -264,7 +312,7 @@ def evaluate_farmer_parcel(
     kpi_html = f"""
     <div class="kpi-container">
         <div class="kpi-card">
-            <div class="kpi-title">Toplam Tahmini Hak Ediş</div>
+            <div class="kpi-title">Hesaplanabilen Tahmini Toplam</div>
             <div class="kpi-value green">{format_currency(total_payout)}</div>
         </div>
         <div class="kpi-card">
@@ -289,10 +337,10 @@ def evaluate_farmer_parcel(
     for ev in rules:
         sid = ev.get("support_id")
         sname = ev.get("support_name", sid)
-        status = ev.get("status")
         calc = calc_map.get(sid, {})
-        total_amt = calc.get("estimated_amount", 0.0) or 0.0
-        unit_amt = calc.get("unit_amount", 0.0) or 0.0
+        status = calc.get("status", ev.get("status"))
+        total_amt = calc.get("estimated_amount")
+        unit_amt = calc.get("unit_amount")
         formula = calc.get("formula", "-")
 
         exp = exp_map.get(sid, {})
@@ -302,7 +350,7 @@ def evaluate_farmer_parcel(
         if status == "ELIGIBLE":
             badge_class = "badge-eligible"
             card_class = "eligible"
-            status_text = "HAK KAZANDI (UYGUN)"
+            status_text = "ÖN DEĞERLENDİRME: UYGUN"
         elif status == "REVIEW":
             badge_class = "badge-review"
             card_class = "review"
@@ -335,12 +383,12 @@ def evaluate_farmer_parcel(
             {
                 "Destek Programı": sname,
                 "Durum": status_text,
-                "Birim Fiyat (TL/da)": f"{float(unit_amt):.2f} ₺" if float(unit_amt) > 0 else "-",
+                "Birim Fiyat (TL/da)": f"{float(unit_amt):.2f} ₺" if unit_amt is not None and float(unit_amt) > 0 else "Doğrulama gerekli",
                 "Alan (da)": f"{area_da:.1f}",
                 "Tahmini Tutar": format_currency(total_amt),
                 "Hesaplama Formülü": formula,
-                "Başvuru Dönemi": "01.09.2026 - 31.12.2026",
-                "Dayanak": "RG-2026-BITKISEL",
+                "Başvuru Dönemi": "Program bazında kaynak doğrulaması gerekli",
+                "Dayanak": "Kaynak/sürüm kontrolü gerekli",
             }
         )
 
@@ -426,16 +474,12 @@ def generate_evaluation_report(
     closed_orchard: str | bool | None,
     client: ApiClient | None = None,
 ) -> dict:
-    """Çiftçi ve parsel için resmî ön değerlendirme raporu oluşturur ve indirilebilir dosya döner."""
+    """Bağımsız yazılımın resmî olmayan ön değerlendirme raporunu hazırlar."""
     active_client = client or api_client
     parsed_cks = parse_tri_state(cks_status)
     parsed_seed = parse_tri_state(seed_cert)
     parsed_sapling = parse_tri_state(sapling_cert)
     parsed_orchard = parse_tri_state(closed_orchard)
-    is_irrigated = None
-    irr_lower = str(irrigation_type).lower()
-    if "bilmiyorum" not in irr_lower and "?" not in irr_lower:
-        is_irrigated = "sulu" in irr_lower
 
     farmer_data = {
         "farmer_id": "FARMER-REPORT-001",
@@ -451,7 +495,7 @@ def generate_evaluation_report(
         "crop": crop.strip().upper(),
         "area_da": float(area_da),
         "production_year": 2026,
-        "is_irrigated": is_irrigated,
+        "irrigation": parse_irrigation_status(irrigation_type),
         "seed_certificate_available": parsed_seed,
         "sapling_certificate_available": parsed_sapling,
         "is_closed_orchard": parsed_orchard,
@@ -491,8 +535,10 @@ def generate_evaluation_report(
     )
 
     report_lines = [
-        "# T.C. TARIM VE ORMAN BAKANLIĞI",
-        "## 2026 BİTKİSEL ÜRETİM DESTEKLERİ RESMÎ ÖN DEĞERLENDİRME RAPORU",
+        "# TarımDestekRAG — Bağımsız Yazılım Raporu",
+        "## 2026 Bitkisel Üretim Destekleri — Tahmini Ön Değerlendirme",
+        "",
+        "**Bu belge Tarım ve Orman Bakanlığı tarafından düzenlenmiş veya onaylanmış resmî bir belge değildir.**",
         "",
         f"**Rapor Tarihi:** {now_str}",
         "**Doğrulama Motoru:** TarımDestekRAG Deterministik Kural Motoru (Zero-LLM)",
@@ -658,9 +704,9 @@ def get_application_windows_table() -> pd.DataFrame:
         rows.append(
             {
                 "Destek Programı": s.get("name", s.get("id")),
-                "Başlangıç Tarihi": s.get("application_start") or "01.09.2026",
-                "Bitiş Tarihi": s.get("application_end") or "31.12.2026",
-                "Durum": "🟢 BAŞVURUYA AÇIK" if s.get("active", True) else "🔴 KAPALI",
+                "Başlangıç Tarihi": s.get("application_start") or "Kaynak doğrulaması gerekli",
+                "Bitiş Tarihi": s.get("application_end") or "Kaynak doğrulaması gerekli",
+                "Durum": "Takvim ayrıca teyit edilmeli" if s.get("active", True) else "Program pasif",
                 "Açıklama": s.get("description", "-"),
             }
         )
@@ -861,11 +907,11 @@ def build_ui() -> gr.Blocks:
                 )
                 with gr.Row():
                     btn_report = gr.Button(
-                        "📄 Resmî Ön Değerlendirme Raporu Oluştur & İndir (.md)",
+                        "📄 Bağımsız Ön Değerlendirme Raporu Oluştur & İndir (.md)",
                         variant="secondary",
                         size="sm",
                     )
-                file_report = gr.File(label="İndirilebilir Resmî Rapor Dosyası", visible=False)
+                file_report = gr.File(label="İndirilebilir Ön Değerlendirme Raporu", visible=False)
                 out_disclaimer = gr.HTML("")
 
             # ================= SEKME 4: DESTEK DETAY TABLOSU =================
@@ -1106,18 +1152,10 @@ def build_ui() -> gr.Blocks:
                 gr.Markdown("""
                 ### 🧪 Deterministik Kural Motoru Benchmark Test Seti (100 Vaka)
                 100 farklı çiftçi/parsel senaryosunda (ÇKS eksikliği, havza uyumsuzluğu, sertifikasız tohum vb.)
-                sistem kararının resmî mevzuatla %100 uyumu doğrulanmıştır.
+                bu bölüm kaydedilmiş test çıktılarını gösterir. Mevzuatla bağımsız uyum doğrulaması değildir.
                 """)
                 gr.DataFrame(value=load_benchmark_data(), interactive=False)
-                gr.HTML("""
-                <div class="kpi-container" style="margin-top: 16px;">
-                    <div class="kpi-card"><div class="kpi-title">Toplam Test Vakası</div><div class="kpi-value">100</div></div>
-                    <div class="kpi-card"><div class="kpi-title">Uygunluk Doğruluğu</div><div class="kpi-value green">%100</div></div>
-                    <div class="kpi-card"><div class="kpi-title">Tutar Doğruluğu</div><div class="kpi-value green">%100</div></div>
-                    <div class="kpi-card"><div class="kpi-title">Hibrit MRR</div><div class="kpi-value green">1.0000</div></div>
-                    <div class="kpi-card"><div class="kpi-title">Ortalama Gecikme</div><div class="kpi-value green">4.68 ms</div></div>
-                </div>
-                """)
+                gr.Markdown(get_benchmark_summary())
 
             # ================= SEKME 9: ADMIN & LİSANS =================
             with gr.TabItem("⚙️ Admin & Sistem Mimarisi", id="tab_admin"):
