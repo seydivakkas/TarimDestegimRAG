@@ -215,3 +215,20 @@ def test_partial_national_extraction_is_rejected():
     catalog["province_count"] = 1
     with pytest.raises(ValueError, match="Partial"):
         validate_basin_catalog(catalog)
+
+
+@pytest.mark.parametrize("raw,code", [
+    ("Mısır (Dane)", "MISIR_DANE"),
+    ("Dane Mısır", "MISIR_DANE"),
+    ("Pamuk (Kütlü)", "PAMUK_KÜTLÜ"),
+    ("Ayçiçeği (Yağlık)", "AYÇİÇEĞİ_YAĞLIK"),
+    ("Kolza (Kanola)", "KANOLA"),
+    ("Kuru Fasulye", "FASULYE_KURU"),
+    ("Soğan (Kuru)", "SOĞAN_KURU"),
+    ("Mısır", "MISIR"),
+    ("Pamuk", "PAMUK"),
+])
+def test_official_subtype_aliases_never_guess_generic_crop(raw, code):
+    from tarim_destek_rag.normalization.normalizer import normalize_crop_name
+
+    assert normalize_crop_name(raw) == code
