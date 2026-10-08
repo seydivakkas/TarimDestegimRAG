@@ -1,9 +1,11 @@
+import hmac
 import json
+import os
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -92,8 +94,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        origin.strip()
+        for origin in os.getenv(
+            "TARIM_RAG_CORS_ORIGINS", "http://localhost:7860,http://127.0.0.1:7860"
+        ).split(",")
+        if origin.strip()
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -296,15 +304,27 @@ def get_faq_stats(session: Session = Depends(get_db_session)) -> dict[str, Any]:
     if stats["total_count"] == 0:
         return {
             "total_count": len(FARMER_FAQ_LIST),
-            "verified_count": len(FARMER_FAQ_LIST),
+            "verified_count": 0,
             "category_counts": {c: 1 for c in {f["category"] for f in FARMER_FAQ_LIST}},
         }
     return stats
 
 
+def require_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
+    """Yazma uç noktasını güvenli varsayılanla (kapalı) koru."""
+    expected = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Yönetici yazma işlemleri yapılandırılmadı.")
+    if x_admin_key is None or not hmac.compare_digest(x_admin_key, expected):
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli.")
+
+
 @app.post("/faqs/harvest", tags=["Chatbot / Semantik Arama"])
-def harvest_faqs(session: Session = Depends(get_db_session)) -> dict[str, Any]:
-    """İnternet ve resmî portallardan tarımsal soru-cevap veri tabanını günceller / senkronize eder."""
+def harvest_faqs(
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Gerçek web taraması değil: yalnızca yerleşik örnek SSS verisini yeniden yükler."""
     harvester = AgriculturalFAQHarvester(session)
     count = harvester.seed_initial_knowledge()
     new_chunks = harvester.export_as_document_chunks()
@@ -312,7 +332,7 @@ def harvest_faqs(session: Session = Depends(get_db_session)) -> dict[str, Any]:
         hybrid_retriever.add_chunks(new_chunks)
     return {
         "status": "SUCCESS",
-        "message": f"Tarımsal soru-cevap veritabanı güncellendi ({count} kayıt)",
+        "message": f"Yerleşik SSS kayıtları yeniden yüklendi ({count} kayıt); web taraması yapılmadı.",
         "harvested_count": count,
         "total_faqs": count,
         "total_faqs_in_db": count,

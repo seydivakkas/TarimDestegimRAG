@@ -1,7 +1,7 @@
 # TarımDestekRAG — Benchmark v1 Değerlendirme Raporu
 
-**Rapor Tarihi:** 2026-10-06
-**Test Edilen Vaka Sayısı:** 100 (100% Tamamlandı)
+**Rapor Tarihi:** 2026-10-08
+**Test Edilen Vaka Sayısı:** 100
 **Lisans:** Özel Lisans — Tüm Hakları Saklıdır (c) 2026 Seydi Eryılmaz (@seydivakkas)
 
 ---
@@ -10,11 +10,11 @@
 
 | Metrik | Hedef | Ölçülen Sonuç | Durum |
 |---|---|---|---|
-| **Uygunluk Karar Doğruluğu (Eligibility Accuracy)** | %100 | **%100.00** | ✅ PASS |
-| **Kural Kapsamı (Rule Coverage)** | %100 | **%100.00** | ✅ PASS |
-| **Tutar Hesaplama Doğruluğu (Decimal Exact Match)** | %100 | **%100.00** | ✅ PASS |
+| **Uygunluk Karar Doğruluğu (Eligibility Accuracy)** | %100 | **%100.00** | Vaka verisine göre |
+| **Kural Kapsamı (Rule Coverage)** | %100 | **%100.00** | Vaka verisine göre |
+| **Tutar Hesaplama Doğruluğu (Decimal Exact Match)** | %100 | **%100.00** | Vaka verisine göre |
 
-> *Tüm tutar hesaplamaları Python `decimal.Decimal` hassasiyetinde kuruşu kuruşuna doğrulanmıştır.*
+> *Bu metrikler depo içindeki beklenen sonuçlara karşı ölçülür; güncel mevzuatla bağımsız karşılaştırma değildir.*
 
 ---
 
@@ -22,9 +22,7 @@
 
 | Yöntem | Hit@1 | Hit@3 | Hit@5 | MRR | Gecikme |
 |---|---|---|---|---|---|
-| **BM25 Sözcüksel (Lexical)** | %87.50 | %100.00 | %100.00 | 0.9375 | 0.35 ms |
-| **Dense (FAISS Vector)** | %100.00 | %100.00 | %100.00 | 1.0000 | 15.20 ms |
-| **Hibrit (BM25 + FAISS + RRF)** | **%100.00** | **%100.00** | **%100.00** | **1.0000** | **15.42 ms** |
+| **Hibrit (BM25 + FAISS + RRF)** | **%100.00** | **%100.00** | **%100.00** | **1.0000** | **44.23 ms** |
 
 ---
 
@@ -32,9 +30,9 @@
 
 | Metrik | Hedef | Ölçülen Sonuç | Açıklama |
 |---|---|---|---|
-| **Atıf Doğruluğu (Citation Accuracy)** | >= %98 | **%100.00** | Resmî Gazete madde numarası ve link doğrulaması |
-| **Desteksiz İddia Oranı (Unsupported Claim Rate)** | %0.00 | **%0.00** | Zero-LLM deterministik şablon kural koruması |
-| **Mevzuat Tazeliği (Freshness Accuracy)** | %100 | **%100.00** | Mülga ve yürürlükteki mevzuat ayrımı |
+| **Atıf Kayıt Geçerliliği (Citation Registry Validity)** | >= %98 | **%100.00** | Tüm atıflarda kayıt, aktiflik ve yıl kontrolü; metinsel kanıt doğrulaması değil |
+| **Atıfsız veya Geçersiz Atıflı Açıklama Oranı (Proxy)** | %0.00 | **%0.00** | Anlamsal desteksiz iddia oranı henüz ölçülmüyor |
+| **Mevzuat Tazeliği (Freshness Accuracy)** | %100 | **Ölçülmedi** | Kaynak sürümü, yürürlük ve değişiklik kontrolü henüz yok |
 
 ---
 
@@ -42,13 +40,13 @@
 
 | Bileşen | Ortalama Süre (ms) |
 |---|---|
-| **Rule Engine Değerlendirmesi** | 2.69 ms |
-| **Hibrit Arama (RRF Retrieval)** | 15.42 ms |
-| **Deterministik Açıklama Üretimi** | 0.02 ms |
-| **Uçtan Uca (End-to-End Latency)** | **3.07 ms** |
+| **Rule Engine Değerlendirmesi** | 4.42 ms |
+| **Hibrit Arama (RRF Retrieval)** | 44.23 ms |
+| **Deterministik Açıklama Üretimi** | 0.03 ms |
+| **Uçtan Uca (End-to-End Latency)** | **5.06 ms** |
 
 ---
 
 ## 5. Sonuç
 
-TarımDestekRAG sistemi, Master Plan TD-P17 standartlarında tanımlanan tüm başarı kapılarını **%100 doğruluk ve sıfır halüsinasyon** garantisiyle geçmiştir.
+**Sınırlamalar:** Ölçümler depo içi test vakalarına göredir. Atıf kontrolü sadece kaynak kaydı/aktiflik/yıl denetimidir. Mevzuat tazeliği ve iddia-kanıt uyumu ölçülmediği için genel doğruluk veya sıfır halüsinasyon garantisi verilemez.

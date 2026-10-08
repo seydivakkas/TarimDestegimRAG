@@ -3,13 +3,15 @@
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-blue?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square)
-![Flutter](https://img.shields.io/badge/Flutter-Mobile%20Ready-02569B?style=flat-square)
+![Flutter](https://img.shields.io/badge/Flutter-Source%20Incomplete-grey?style=flat-square)
 ![Gradio](https://img.shields.io/badge/Gradio-PC%20Dashboard-orange?style=flat-square)
 ![Tests](https://img.shields.io/badge/tests-87%20passed%20(100%25)-brightgreen?style=flat-square)
-![Benchmark](https://img.shields.io/badge/benchmark%20v1-100%20cases%20(100%25)-success?style=flat-square)
+![Benchmark](https://img.shields.io/badge/benchmark%20v1-100%20cases-success?style=flat-square)
 ![Research](https://img.shields.io/badge/TÜBİTAK%202242-RQ1--RQ4%20PASS-blueviolet?style=flat-square)
 
-Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar Hesaplama ve Kaynaklı Açıklama Sistemi (PC Web Paneli & Flutter Mobil İstemcisi).
+Türkiye bitkisel üretim destekleri için geliştirilmekte olan deterministik ön değerlendirme, tutar hesaplama ve kaynaklı açıklama prototipi (FastAPI + Gradio; Flutter istemcisi tamamlanmamış).
+
+> **Güncellik ve resmîlik uyarısı (8 Ekim 2026):** Bu depodaki birim destek tutarları ve havza verileri 8 Eylül 2026 tarihli 11781 sayılı düzenlemeye göre henüz tam güncellenmedi. Hesaplamalar kişisel hak sahipliği veya resmî ödeme kararı değildir. Sürüm kayıtları ve atıf-kanıt tutarlılığı bağımsız olarak doğrulanmadıkça eski performans tabloları kanıtlanmış doğruluk olarak yorumlanmamalıdır. `mobile/lib/` kaynakları bulunmadığından Flutter uygulaması henüz çalıştırılamaz. Dosya bazlı sorun listesi: [8 Ekim kod denetimi](docs/AUDIT_2026-10-08.md).
 
 ---
 
@@ -39,8 +41,8 @@ Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar He
    - **⚙️ Yönetici & Benchmark:** Resmî mevzuat kazıyıcı (scraper), SSS harvesteri, 100 vakalık dinamik benchmark ve mimari/lisans alanı.
 
 6. **Flutter Mobil İstemcisi (`mobile/`):**
-   - Temiz mimari (Clean Architecture) ile geliştirilmiş, Android emülatör ve iOS uyumlu mobil uygulama.
-   - Profil, Parsel, Destek Kartları, Neden/Atıf modalı ve Mevzuat Asistanı ekranları.
+   - `pubspec.yaml` ve örnek testler mevcut; **`mobile/lib/` henüz yoktur**.
+   - Mobil ekranların implementasyonu ve emülatör testleri planlanan iştir.
 
 ---
 
@@ -165,7 +167,7 @@ Reproducible test koşucusu (`benchmark_runner_v1.py`) tarafından üretilen ger
 | **Mevzuat Tazeliği (Freshness Accuracy)** | %100 | **%100.00** | ✅ PASS |
 | **Uçtan Uca Gecikme (End-to-End Latency)** | < 50 ms | **4.68 ms** | ✅ PASS |
 
-*Detaylı vaka kayıtları [benchmark/results.csv](file:///c:/Users/seydieryilmaz/TarımRAGProje/benchmark/results.csv) ve [benchmark/report.md](file:///c:/Users/seydieryilmaz/TarımRAGProje/benchmark/report.md) dosyalarındadır.*
+*Detaylı vaka kayıtları [benchmark/results.csv](benchmark/results.csv) ve [benchmark/report.md](benchmark/report.md) dosyalarındadır.*
 
 ---
 
@@ -202,15 +204,15 @@ flutter run
 
 ## 📁 Mimari ve Dokümantasyon
 
-- [Sistem Mimarisi (ARCHITECTURE.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/ARCHITECTURE.md)
-- [Mevzuat Kural Kataloğu (rule_catalog.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/rule_catalog.md)
-- [REST API Sözleşmesi (api_contract.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/api_contract.md)
-- [Değerlendirme ve Kıyaslama Protokolü (benchmark_protocol.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/benchmark_protocol.md)
-- [Detaylı Vaka İncelemeleri (case_studies.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/case_studies.md)
-- [TÜBİTAK 2242 Araştırma Raporu (research_experiments_report.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/benchmark/research_experiments_report.md)
-- [Yeniden Üretim Rehberi (REPRODUCTION.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/REPRODUCTION.md)
-- [Veri Kaynakları Kütüğü (DATA_PROVENANCE.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/DATA_PROVENANCE.md)
-- [Master Plan v1.0 (MASTER_PLAN.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/MASTER_PLAN.md)
+- [Sistem Mimarisi (ARCHITECTURE.md)](docs/ARCHITECTURE.md)
+- [Mevzuat Kural Kataloğu (rule_catalog.md)](docs/rule_catalog.md)
+- [REST API Sözleşmesi (api_contract.md)](docs/api_contract.md)
+- [Değerlendirme ve Kıyaslama Protokolü (benchmark_protocol.md)](docs/benchmark_protocol.md)
+- [Detaylı Vaka İncelemeleri (case_studies.md)](docs/case_studies.md)
+- [TÜBİTAK 2242 Araştırma Raporu (research_experiments_report.md)](benchmark/research_experiments_report.md)
+- [Yeniden Üretim Rehberi (REPRODUCTION.md)](docs/REPRODUCTION.md)
+- [Veri Kaynakları Kütüğü (DATA_PROVENANCE.md)](docs/DATA_PROVENANCE.md)
+- [Master Plan v1.0 (MASTER_PLAN.md)](MASTER_PLAN.md)
 
 ---
 
