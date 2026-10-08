@@ -29,7 +29,7 @@ class FarmerProfile(BaseModel):
     @field_validator("province", "district")
     @classmethod
     def uppercase_names(cls, v: str) -> str:
-        return v.strip().upper()
+        return v.strip().replace("i", "İ").replace("ı", "I").upper()
 
 
 class Parcel(BaseModel):
@@ -43,6 +43,9 @@ class Parcel(BaseModel):
         default=IrrigationStatusEnum.DRY, description="Sulama durumu"
     )
     production_year: int = Field(default=2026, description="Üretim yılı")
+    drip_irrigation: bool | None = Field(
+        default=None, description="Dane mısırda şart koşulan damla sulama beyanı"
+    )
 
     # Özel destek gereksinim beyanları
     seed_certificate_available: bool | None = Field(

@@ -60,7 +60,8 @@ def test_api_client_with_testclient(client):
     }
     eval_res = api.evaluate_full(farmer, parcel)
     assert "rules" in eval_res
-    assert float(eval_res["total_estimated_amount"]) > 0
+    assert eval_res["total_estimated_amount"] is None
+    assert all(c["estimated_amount"] is None for c in eval_res["calculations"])
 
     # 5. Ask
     ask_res = api.ask("Konya buğday desteği", top_k=2)

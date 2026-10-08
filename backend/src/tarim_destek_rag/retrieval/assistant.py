@@ -34,9 +34,10 @@ class AssistantEngine:
 
     def __init__(self, retriever: HybridRetriever | None = None) -> None:
         self.retriever = retriever or hybrid_retriever
-        # İndekste henüz mevzuat parçaları yoksa varsayılan resmî parçaları otomatik yükle
-        if hasattr(self.retriever, "bm25_retriever") and len(self.retriever.bm25_retriever._chunks) == 0:
-            self.retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
+        # Module import must never download an embedding model from the network.
+        # Seed the lexical fallback only; lifespan can build dense vectors later.
+        if hasattr(self.retriever, "bm25_retriever") and not self.retriever.bm25_retriever._chunks:
+            self.retriever.bm25_retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
 
     def answer_question(
         self, question: str, top_k: int = 3

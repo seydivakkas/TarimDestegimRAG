@@ -1,14 +1,27 @@
-from sqlalchemy import select
+import json
+import re
+from dataclasses import dataclass
+from datetime import date
+
+from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
+
+from tarim_destek_rag.normalization.basin_2026 import (
+    BASIN_SOURCE_ID, BASIN_SOURCE_URL, PINNED_BASIN_PDF_SHA256,
+)
+
+from tarim_destek_rag.database.legal_approvals import two_person_approved
 
 from tarim_destek_rag.database.models import (
     ApplicationWindowModel,
     BasinCropRuleModel,
+    ReviewedBasinSnapshotModel,
     SourceModel,
     SourceVersionModel,
     SupportAmountModel,
     SupportProgramModel,
     WaterRestrictionModel,
+    VerifiedSupportRateModel,
 )
 
 
@@ -89,21 +102,91 @@ class SupportRepository:
         )
         return list(self.session.scalars(stmt).all())
 
+    def get_legacy_amount(self, program_id: str, crop_name: str) -> SupportAmountModel | None:
+        """Unverified historic/seed values. Never use for entitlement calculations."""
+        stmt = select(SupportAmountModel).where(
+            SupportAmountModel.program_id == program_id,
+            SupportAmountModel.crop_name == crop_name,
+        )
+        return self.session.scalars(stmt).first()
+
     def get_amount(
         self,
         program_id: str,
         crop_name: str,
-        production_year: int = 2026,
-        status: str = "VERIFIED",
-    ) -> SupportAmountModel | None:
-        """Belirtilen program, ürün ve üretim yılı için birim destek tutarını sorgular."""
-        stmt = select(SupportAmountModel).where(
-            SupportAmountModel.program_id == program_id,
-            SupportAmountModel.crop_name == crop_name,
-            SupportAmountModel.production_year == production_year,
-            SupportAmountModel.verification_status == status,
+        *,
+        production_year: int,
+        province: str,
+        district: str,
+        as_of: date | None = None,
+    ) -> VerifiedSupportRateModel | None:
+        """Fail closed unless exactly one approved, effective, evidenced component matches.
+
+        No legacy rate fallback. National rates may apply to a local query, but
+        overlapping approved national/local versions produce an ambiguous result.
+        """
+        evaluation_date = as_of if as_of is not None else date.today()
+        stmt = (
+            select(VerifiedSupportRateModel)
+            .join(
+                SourceVersionModel,
+                VerifiedSupportRateModel.source_version_id == SourceVersionModel.id,
+            )
+            .join(SourceModel, SourceVersionModel.source_id == SourceModel.source_id)
+            .join(
+                SupportProgramModel,
+                VerifiedSupportRateModel.program_id == SupportProgramModel.id,
+            )
+            .where(
+                VerifiedSupportRateModel.program_id == program_id,
+                VerifiedSupportRateModel.crop_name == crop_name,
+                VerifiedSupportRateModel.production_year == production_year,
+                VerifiedSupportRateModel.review_status == "VERIFIED",
+                VerifiedSupportRateModel.unit == "TRY/da",
+                VerifiedSupportRateModel.unit_amount > 0,
+                VerifiedSupportRateModel.effective_from <= evaluation_date,
+                or_(
+                    VerifiedSupportRateModel.effective_to.is_(None),
+                    VerifiedSupportRateModel.effective_to >= evaluation_date,
+                ),
+                SourceModel.active.is_(True),
+                SupportProgramModel.active.is_(True),
+                SupportProgramModel.year == production_year,
+                SourceVersionModel.superseded.is_(False),
+                or_(
+                    and_(
+                        VerifiedSupportRateModel.province == "*",
+                        VerifiedSupportRateModel.district == "*",
+                    ),
+                    and_(
+                        VerifiedSupportRateModel.province == province.strip().upper(),
+                        VerifiedSupportRateModel.district == district.strip().upper(),
+                    ),
+                ),
+            )
         )
-        return self.session.scalars(stmt).first()
+        candidates = list(self.session.scalars(stmt).all())
+        usable: list[VerifiedSupportRateModel] = []
+        for rate in candidates:
+            version = rate.source_version
+            if (
+                not rate.approved_by
+                or not rate.approved_at
+                or not rate.review_reference
+                or not rate.legal_clause.strip()
+                or version is None
+                or not re.fullmatch(r"[0-9a-fA-F]{64}", version.content_hash or "")
+                or not version.detected_at
+                or not version.effective_from
+                or version.effective_from > evaluation_date.isoformat()
+                or (version.effective_to and version.effective_to < evaluation_date.isoformat())
+                or (rate.effective_to is not None and rate.effective_to < rate.effective_from)
+            ):
+                continue
+            if not two_person_approved(self.session, rate):
+                continue
+            usable.append(rate)
+        return usable[0] if len(usable) == 1 else None
 
     def list_amount_history(
         self,
@@ -130,11 +213,114 @@ class SupportRepository:
         return self.session.scalars(stmt).first()
 
 
+
+@dataclass(frozen=True)
+class BasinCropAssessment:
+    """Evidence-backed outcome for the *planning* crop list only."""
+
+    outcome: str  # LISTED, NOT_LISTED, UNKNOWN
+    reason: str
+    source_version_id: int | None = None
+    document_page: int | None = None
+    drip_irrigation_required: bool = False
+
+
 class BasinRepository:
     """Tarım havzaları ve ürün uygunluğu veri erişim katmanı."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
+
+
+    def evaluate_official_crop(
+        self,
+        province: str,
+        district: str,
+        crop_code: str,
+        year: int,
+    ) -> BasinCropAssessment:
+        """Fail closed on missing, stale, duplicate or incomplete district lists.
+
+        Old BasinCropRuleModel seed rows have NO authority here.
+        A complete reviewed district list allows a negative membership result.
+        These outcomes concern the planning *list*, not final farmer eligibility.
+        """
+        stmt = (
+            select(ReviewedBasinSnapshotModel)
+            .join(
+                SourceVersionModel,
+                ReviewedBasinSnapshotModel.source_version_id == SourceVersionModel.id,
+            )
+            .join(SourceModel, SourceVersionModel.source_id == SourceModel.source_id)
+            .where(
+                ReviewedBasinSnapshotModel.province == province.strip().upper(),
+                ReviewedBasinSnapshotModel.district == district.strip().upper(),
+                ReviewedBasinSnapshotModel.production_year == year,
+                ReviewedBasinSnapshotModel.review_status == "VERIFIED",
+                ReviewedBasinSnapshotModel.coverage_complete.is_(True),
+                SourceModel.active.is_(True),
+                SourceVersionModel.superseded.is_(False),
+            )
+        )
+        snapshots = list(self.session.scalars(stmt).all())
+        if len(snapshots) != 1:
+            return BasinCropAssessment(
+                "UNKNOWN", "Resmî tam ilçe ürün listesi henüz doğrulanmadı veya çakışıyor."
+            )
+        snapshot = snapshots[0]
+        version = snapshot.source_version
+        if (
+            not snapshot.reviewed_by
+            or not snapshot.reviewed_at
+            or not snapshot.review_reference
+            or snapshot.document_page < 1
+            or not version
+            or version.source_id != BASIN_SOURCE_ID
+            or version.content_hash != PINNED_BASIN_PDF_SHA256
+            or version.source is None
+            or version.source.url != BASIN_SOURCE_URL
+            or not version.effective_from
+            or version.effective_from > f"{year}-12-31"
+            or (version.effective_to and version.effective_to < f"{year}-01-01")
+        ):
+            return BasinCropAssessment("UNKNOWN", "Belge sürümü veya bağımsız onay eksik.")
+        if not two_person_approved(self.session, snapshot):
+            return BasinCropAssessment(
+                "UNKNOWN", "İlçe ürün listesi iki bağımsız kriptografik onaydan geçmedi."
+            )
+        try:
+            crops = json.loads(snapshot.crop_codes_json)
+        except (TypeError, ValueError):
+            crops = None
+        if (
+            not isinstance(crops, list)
+            or not crops
+            or any(not isinstance(x, str) or not x for x in crops)
+            or len(set(crops)) != len(crops)
+        ):
+            return BasinCropAssessment("UNKNOWN", "Ürün listesi bütünlük kontrolü başarısız.")
+        crop = crop_code.strip().upper()
+        # Generic crop labels must not become false negatives for subtype lists.
+        # E.g. MISIR != MISIR_DANE and PAMUK != PAMUK_KÜTLÜ.
+        known_exact_codes = {
+            "ARPA", "ASPİR", "AYÇİÇEĞİ_YAĞLIK", "BUĞDAY", "FASULYE_KURU",
+            "KANOLA", "MERCİMEK", "MISIR_DANE", "NOHUT", "PAMUK_KÜTLÜ",
+            "PATATES", "SOĞAN_KURU", "SOYA", "YEM_BITKILERI_GROUP",
+        }
+        if crop not in known_exact_codes:
+            return BasinCropAssessment(
+                "UNKNOWN", "Ürün alt türü resmî listeyle kesin eşleştirilemiyor."
+            )
+        if crop not in crops:
+            return BasinCropAssessment(
+                "NOT_LISTED", "Onaylı eksiksiz ilçe ürün deseninde bu ürün bulunmuyor.",
+                snapshot.source_version_id, snapshot.document_page,
+            )
+        drip = snapshot.drip_required_for_grain_maize and crop == "MISIR_DANE"
+        return BasinCropAssessment(
+            "LISTED", "Onaylı 2026 ilçe ürün deseninde ürün mevcut.",
+            snapshot.source_version_id, snapshot.document_page, drip,
+        )
 
     def has_basin_records(
         self, province: str, district: str, year: int = 2026

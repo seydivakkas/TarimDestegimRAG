@@ -52,6 +52,7 @@ class BenchmarkV1Report(BaseModel):
     retrieval_hit3: float
     retrieval_hit5: float
     retrieval_mrr: float
+    retrieval_benchmark_executed: bool = True
     citation_accuracy: float
     unsupported_claim_rate: float
     freshness_accuracy: float | None
@@ -77,8 +78,17 @@ class BenchmarkV1Runner:
         except Exception as e:
             logger.warning("Kaynak kütüğü yüklenemedi: %s", e)
 
-    def run_all(self, cases_path: str = "data/benchmark/cases.jsonl") -> BenchmarkV1Report:
-        """Tüm benchmark testlerini ve metriklerini yürütür."""
+    def run_all(
+        self,
+        cases_path: str = "data/benchmark/cases.jsonl",
+        *,
+        include_retrieval: bool = True,
+    ) -> BenchmarkV1Report:
+        """Run decision tests and, only when requested, the ML-backed retrieval test.
+
+        Use include_retrieval=False in CI decision-only runs; this skips (does
+        NOT fake) metrics requiring a separately provisioned embedding model.
+        """
         cases = load_cases_from_jsonl(cases_path)
         total_cases = len(cases)
         assert total_cases > 0, "Benchmark vakaları bulunamadı!"
@@ -147,7 +157,11 @@ class BenchmarkV1Runner:
             assert target_res is not None
 
             # Hesaplama
-            amt_record = self.support_repo.get_amount(case.support_id, parcel.crop)
+            amt_record = self.support_repo.get_amount(
+                case.support_id, parcel.crop,
+                production_year=parcel.production_year,
+                province=farmer.province, district=farmer.district,
+            )
             unit_amt = amt_record.unit_amount if amt_record else None
             calc_res = SupportCalculator.calculate(target_res, parcel.area_da, unit_amt)
 
@@ -197,7 +211,7 @@ class BenchmarkV1Runner:
             })
 
         # 2. Retrieval Benchmark Run
-        retrieval_res = run_retrieval_benchmark()
+        retrieval_res = run_retrieval_benchmark() if include_retrieval else {}
         hybrid_metrics = retrieval_res.get("Hybrid", {})
 
         # 3. Metriklerin Derlenmesi
@@ -219,6 +233,7 @@ class BenchmarkV1Runner:
             retrieval_hit3=hybrid_metrics.get("hit@3", 0.0) * 100,
             retrieval_hit5=hybrid_metrics.get("hit@5", 0.0) * 100,
             retrieval_mrr=hybrid_metrics.get("mrr", 0.0),
+            retrieval_benchmark_executed=include_retrieval,
             citation_accuracy=cit_acc,
             unsupported_claim_rate=unsupp_rate,
             freshness_accuracy=freshness_acc,
@@ -253,6 +268,11 @@ class BenchmarkV1Runner:
         md_path = bench_dir / "report.md"
         freshness_display = ("Ölçülmedi" if report.freshness_accuracy is None
                              else f"%{report.freshness_accuracy:.2f}")
+        retrieval_display = (
+            "Model gereksinimi nedeniyle bu koşuda ÖLÇÜLMEDİ"
+            if not report.retrieval_benchmark_executed
+            else "Ayrı retrieval test veri kümesi üzerinde ölçüldü"
+        )
         report_content = f"""# TarımDestekRAG — Benchmark v1 Değerlendirme Raporu
 
 **Rapor Tarihi:** {date.today().isoformat()}
@@ -274,6 +294,8 @@ class BenchmarkV1Runner:
 ---
 
 ## 2. Arama ve Bilgi Getirme Metrikleri (Retrieval Engine)
+
+**Ölçüm durumu:** {retrieval_display}
 
 | Yöntem | Hit@1 | Hit@3 | Hit@5 | MRR | Gecikme |
 |---|---|---|---|---|---|

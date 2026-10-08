@@ -24,8 +24,8 @@ SUPPORT_COEFFICIENTS_2026 = {
 }
 
 
-def seed_2026_support_data(session: Session) -> None:
-    """Türkiye 2026 Bitkisel Üretim Destekleri mevzuat verisini veritabanına yükler."""
+def seed_2026_support_data(session: Session, *, include_faqs: bool = True) -> None:
+    """Tarihsel örnek veri tohumlar; onaylı tutar üretmez ve var olan kayıtları değiştirmez."""
 
     # 1. Ana Kaynaklar
     rg_source = SourceModel(
@@ -37,7 +37,8 @@ def seed_2026_support_data(session: Session) -> None:
         active=True,
         priority=0,
     )
-    session.merge(rg_source)
+    if session.get(SourceModel, rg_source.source_id) is None:
+        session.add(rg_source)
 
     tob_source = SourceModel(
         source_id="TOB-2026-09-DUYURU",
@@ -48,7 +49,8 @@ def seed_2026_support_data(session: Session) -> None:
         active=True,
         priority=1,
     )
-    session.merge(tob_source)
+    if session.get(SourceModel, tob_source.source_id) is None:
+        session.add(tob_source)
     session.flush()
 
     # 2. Destekleme Programları
@@ -95,7 +97,7 @@ def seed_2026_support_data(session: Session) -> None:
 
     # 3. Birim Tutarlar (TL / dekar)
     amounts = [
-        # Temel Destek Birim Fiyatları (11781 sayılı Karar ile Doğrulanmış)
+        # Temel Destek: örnek tarihsel rakamlar; belge bileşenleri onaylı değildir.
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
             crop_name="BUĞDAY",
@@ -108,7 +110,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -122,7 +124,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -136,7 +138,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -150,7 +152,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -164,7 +166,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         SupportAmountModel(
             program_id="BASIC_SUPPORT_2026",
@@ -178,7 +180,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         # Planlı Üretim İlave Destek Birim Fiyatları
         SupportAmountModel(
@@ -193,7 +195,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         SupportAmountModel(
             program_id="PLANNED_PRODUCTION_2026",
@@ -207,7 +209,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         SupportAmountModel(
             program_id="PLANNED_PRODUCTION_2026",
@@ -221,7 +223,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         # Sertifikalı Tohum
         SupportAmountModel(
@@ -236,7 +238,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         SupportAmountModel(
             program_id="CERTIFIED_SEED_2026",
@@ -250,7 +252,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         # Sertifikalı Fidan
         SupportAmountModel(
@@ -265,7 +267,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         # Su Kısıtı İlave Destek
         SupportAmountModel(
@@ -280,7 +282,7 @@ def seed_2026_support_data(session: Session) -> None:
             effective_from="2026-09-08",
             effective_to=None,
             geographic_scope="GENEL",
-            verification_status="VERIFIED",
+            verification_status="DRAFT",
         ),
         # Tarihsel / Eski Sürüm Örneği (310 TL Ağustos katsayılı eski karar - SUPERSEDED)
         SupportAmountModel(
@@ -309,15 +311,9 @@ def seed_2026_support_data(session: Session) -> None:
             )
             .first()
         )
-        if existing_amt:
-            existing_amt.unit_amount = amt.unit_amount
-            existing_amt.category = amt.category
-            existing_amt.source_id = amt.source_id
-            existing_amt.legal_decision_number = amt.legal_decision_number
-            existing_amt.effective_from = amt.effective_from
-            existing_amt.effective_to = amt.effective_to
-            existing_amt.geographic_scope = amt.geographic_scope
-        else:
+        # Existing values and legal metadata remain immutable historical evidence.
+        # Never promote demonstration amounts or replace prior records on startup.
+        if existing_amt is None:
             session.add(amt)
 
     # 4. Havza-Ürün Planlı Üretim Kuralları (Örnek Karatay/Konya ve Çarşamba/Samsun)
@@ -455,10 +451,12 @@ def seed_2026_support_data(session: Session) -> None:
         else:
             session.add(win)
 
-    # 7. Tarımsal Soru-Cevap ve Sorun Kütüphanesini Tohumla
-    from tarim_destek_rag.scraper.faq_harvester import AgriculturalFAQHarvester
-    faq_harvester = AgriculturalFAQHarvester(session)
-    faq_harvester.seed_initial_knowledge()
+    # Separate unrelated FAQ bootstrap so rate migration tests stay lightweight.
+    if include_faqs:
+        from tarim_destek_rag.scraper.faq_harvester import AgriculturalFAQHarvester
+
+        faq_harvester = AgriculturalFAQHarvester(session)
+        faq_harvester.seed_initial_knowledge()
 
     session.commit()
 

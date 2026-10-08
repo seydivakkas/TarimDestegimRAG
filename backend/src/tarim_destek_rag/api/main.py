@@ -54,7 +54,11 @@ from tarim_destek_rag.scraper.registry import SourceRegistry, source_registry
 
 def seed_vector_store_data() -> None:
     """Mevzuat açıklamalarını vektör ve BM25 hibrit indeksine tohumlar."""
-    hybrid_retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
+    if not hybrid_retriever.bm25_retriever._chunks:
+        hybrid_retriever.bm25_retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
+    if not hybrid_retriever.dense_store._chunks:
+        # Dense model may require downloads; BM25 is ready even if this fails.
+        hybrid_retriever.dense_store.add_chunks(OFFICIAL_REGULATION_CHUNKS)
     logger.info(
         "2026 Resmî mevzuat bilgi tabanı indekslendi (%d parça)",
         len(OFFICIAL_REGULATION_CHUNKS),
@@ -196,7 +200,11 @@ def calculate_supports(
 
     calc_results: list[CalculationResult] = []
     for r in rule_results:
-        amt_rec = support_repo.get_amount(r.support_id, payload.parcel.crop)
+        amt_rec = support_repo.get_amount(
+            r.support_id, payload.parcel.crop,
+            production_year=payload.parcel.production_year,
+            province=payload.farmer.province, district=payload.farmer.district,
+        )
         unit_amt = amt_rec.unit_amount if amt_rec else None
         calc = SupportCalculator.calculate(r, payload.parcel.area_da, unit_amt)
         calc_results.append(calc)
@@ -217,7 +225,11 @@ def evaluate_all(
     total_amount = Decimal("0.00")
 
     for r in rule_results:
-        amt_rec = support_repo.get_amount(r.support_id, payload.parcel.crop)
+        amt_rec = support_repo.get_amount(
+            r.support_id, payload.parcel.crop,
+            production_year=payload.parcel.production_year,
+            province=payload.farmer.province, district=payload.farmer.district,
+        )
         unit_amt = amt_rec.unit_amount if amt_rec else None
         calc = SupportCalculator.calculate(r, payload.parcel.area_da, unit_amt)
         calc_results.append(calc)
@@ -240,7 +252,9 @@ def evaluate_all(
         rules=rule_results,
         calculations=calc_results,
         explanations=explanations,
-        total_estimated_amount=total_amount,
+        total_estimated_amount=(
+            None if any(calc.status == "REVIEW" for calc in calc_results) else total_amount
+        ),
     )
 
 
