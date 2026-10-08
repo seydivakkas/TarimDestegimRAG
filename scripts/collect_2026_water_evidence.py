@@ -16,9 +16,16 @@ from urllib.request import Request, urlopen
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
-from tarim_destek_rag.normalization.water_2026 import (
-    AMENDMENT_URL, PRIMARY_URL,
-)
+_catalog_path = Path(__file__).resolve().parents[1] / "configs/2026_water_restriction_52_draft.json"
+_source_data = json.loads(_catalog_path.read_text(encoding="utf-8"))
+PRIMARY_URL = _source_data["legal_basis"][0]["url"]
+AMENDMENT_URL = _source_data["legal_basis"][1]["url"]
+if (
+    not PRIMARY_URL.startswith("https://www.tarimorman.gov.tr/BUGEM/Belgeler/")
+    or "2024-39" not in PRIMARY_URL
+    or AMENDMENT_URL != "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm"
+):
+    raise ValueError("Invalid official legal source whitelist")
 
 MAX_BYTES = 12 * 1024 * 1024
 
