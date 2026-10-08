@@ -34,7 +34,8 @@ def test_benchmark_v1_execution():
     try:
         seed_2026_support_data(session, include_faqs=False)
         runner = BenchmarkV1Runner(session)
-        report = runner.run_all("data/benchmark/cases.jsonl")
+        # Decision/legal smoke suite is offline; retrieval quality is separately benchmarked.
+        report = runner.run_all("data/benchmark/cases.jsonl", include_retrieval=False)
 
         assert report.total_cases == 100
         # Historic cases were labeled using stale prices/assumed legal entitlement.
@@ -42,7 +43,8 @@ def test_benchmark_v1_execution():
         assert report.eligibility_accuracy < 100.0
         assert report.calculation_accuracy < 100.0
         assert report.rule_coverage == 100.0
-        assert 0 <= report.retrieval_hit1 <= 100
+        assert report.retrieval_benchmark_executed is False
+        assert report.retrieval_hit1 == 0.0  # unmeasured, not a retrieval-quality claim
         assert 0.0 <= report.citation_accuracy <= 100.0
         # Registry check only; semantic claim verification is not yet measured.
         assert abs(report.citation_accuracy + report.unsupported_claim_rate - 100.0) < 0.01
