@@ -1,0 +1,390 @@
+{
+  "catalog_id": "P0-6-2026-2024-39-2025-42-WATER-RESTRICTION-DRAFT-V1",
+  "schema_version": 1,
+  "production_year": 2026,
+  "approval": "DRAFT_REQUIRES_LEGAL_TWO_PERSON_SIGNOFF",
+  "recorded_on": "2026-10-08",
+  "district_count": 52,
+  "province_count": 11,
+  "legal_basis": [
+    {
+      "instrument": "2024/39",
+      "published_on": "2024-12-31",
+      "gazette_issue": "32769_5_MUKERRER",
+      "clause": "MADDE 6/3(a,b)",
+      "url": "https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/2024-39%20Bitkisel%20%C3%9Cretime%20Y%C3%B6nelik%20Desteklemeler%20ile%20Di%C4%9Fer%20Baz%C4%B1%20Tar%C4%B1msal%20Desteklemelere%20%C3%96deme%20Yap%C4%B1lmas%C4%B1na%20Dair%20Tebli%C4%9F%20%28Tebli%C4%9F%20No%202024-39%29.pdf",
+      "pdf_page_1_indexed": 9,
+      "content_sha256": null,
+      "role": "2026 52 districts explicit enumeration; irrigated parcels water-restriction supplemental support clause"
+    },
+    {
+      "instrument": "2025/42",
+      "published_on": "2025-12-30",
+      "effective_from": "2026-01-01",
+      "gazette_issue": "33123",
+      "clause": "MADDE 4, MADDE 12, MADDE 16, GECICI MADDE 2",
+      "url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "content_sha256": null,
+      "role": "Repeals 2024/39 m.6/3(c) drip-based maize exception; adds m.17/2(j) water-basin grain maize and potato exclusions; preserves 2025 pending payments under old terms"
+    }
+  ],
+  "secondary_crosscheck": {
+    "role": "EDUCATIONAL_NON_NORMATIVE",
+    "url": "https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/Tar%C4%B1msal%20Yeralt%C4%B1%20Su%20K%C4%B1s%C4%B1t%C4%B1%20Bilgi%20Notu.pdf",
+    "pdf_page_1_indexed": 2,
+    "note": "Info note describes 2020-2021 revisions and older drip rule; NOT sufficient for 2026 payment exceptions."
+  },
+  "rule_effective_from": "2026-01-01",
+  "rule_effective_to": "2026-12-31",
+  "exception_policies": {
+    "2026_2024_39_ART_6_3_C": "REPEALED_AS_OF_2026-01-01",
+    "2026_2024_39_ART_17_2_J": "MAIZE_GRAIN_AND_POTATO_EXCLUSION_IN_DECLARED_WATER_RESTRICTION_ZONES_FOR_SUPPORTS_UNDER_ARTICLES_5_6_7",
+    "2026_2024_39_ART_6_3_B": "ADDITIONAL_WATER_SUPPORT_FOR_TABLO_3_CROPS_ON_IRRIGATED_LAND_ONLY",
+    "2025_ALREADY_BEGUN_APPLICATIONS": "GRANDFATHER_PREVIOUS_2025_RULES_ONLY"
+  },
+  "excluded_from_official_52": [
+    {
+      "province": "HATAY",
+      "district": "KIRIKHAN"
+    },
+    {
+      "province": "HATAY",
+      "district": "HASSA"
+    },
+    {
+      "province": "HATAY",
+      "district": "PAYAS"
+    },
+    {
+      "province": "MARDİN",
+      "district": "NUSAYBİN"
+    }
+  ],
+  "disputed_or_not_listed": [
+    {
+      "province": "KONYA",
+      "district": "YALIHÜYÜK"
+    }
+  ],
+  "districts": [
+    {
+      "province": "AKSARAY",
+      "district": "MERKEZ",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "AKSARAY",
+      "district": "ESKİL",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "AKSARAY",
+      "district": "GÜLAĞAÇ",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "AKSARAY",
+      "district": "GÜZELYURT",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "AKSARAY",
+      "district": "SULTANHANI",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ANKARA",
+      "district": "BALA",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ANKARA",
+      "district": "GÖLBAŞI",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ANKARA",
+      "district": "HAYMANA",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ANKARA",
+      "district": "ŞEREFLİKOÇHİSAR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ESKİŞEHİR",
+      "district": "ALPU",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ESKİŞEHİR",
+      "district": "BEYLİKOVA",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ESKİŞEHİR",
+      "district": "ÇİFTELER",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ESKİŞEHİR",
+      "district": "MAHMUDİYE",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ESKİŞEHİR",
+      "district": "MİHALIÇÇIK",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ESKİŞEHİR",
+      "district": "SİVRİHİSAR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "HATAY",
+      "district": "KUMLU",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "HATAY",
+      "district": "REYHANLI",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KARAMAN",
+      "district": "AYRANCI",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KARAMAN",
+      "district": "KAZIMKARABEKİR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KARAMAN",
+      "district": "MERKEZ",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KIRŞEHİR",
+      "district": "BOZTEPE",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KIRŞEHİR",
+      "district": "MUCUR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "AKÖREN",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "AKŞEHİR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "ALTINEKİN",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "CİHANBEYLİ",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "ÇUMRA",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "DERBENT",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "DOĞANHİSAR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "EMİRGAZİ",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "EREĞLİ",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "GÜNEYSINIR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "HALKAPINAR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "KADINHANI",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "KARAPINAR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "KARATAY",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "KULU",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "MERAM",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "SARAYÖNÜ",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "SELÇUKLU",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "KONYA",
+      "district": "TUZLUKÇU",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "MARDİN",
+      "district": "ARTUKLU",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "MARDİN",
+      "district": "DERİK",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "MARDİN",
+      "district": "KIZILTEPE",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "NEVŞEHİR",
+      "district": "ACIGÖL",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "NEVŞEHİR",
+      "district": "DERİNKUYU",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "NEVŞEHİR",
+      "district": "GÜLŞEHİR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "NİĞDE",
+      "district": "ALTUNHİSAR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "NİĞDE",
+      "district": "BOR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "NİĞDE",
+      "district": "ÇİFTLİK",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "NİĞDE",
+      "district": "MERKEZ",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    },
+    {
+      "province": "ŞANLIURFA",
+      "district": "VİRANŞEHİR",
+      "review_status": "DRAFT",
+      "authoritative_membership_approved": false
+    }
+  ],
+  "constraints": {
+    "allow_false_negative_from_draft": false,
+    "allow_positive_payment_from_draft": false,
+    "coverage_complete": false,
+    "official_legal_clause_human_reviewed": false,
+    "legal_approval_signatures": 0
+  }
+}
