@@ -285,6 +285,17 @@ class BasinRepository:
         ):
             return BasinCropAssessment("UNKNOWN", "Ürün listesi bütünlük kontrolü başarısız.")
         crop = crop_code.strip().upper()
+        # Generic crop labels must not become false negatives for subtype lists.
+        # E.g. MISIR != MISIR_DANE and PAMUK != PAMUK_KÜTLÜ.
+        known_exact_codes = {
+            "ARPA", "ASPİR", "AYÇİÇEĞİ_YAĞLIK", "BUĞDAY", "FASULYE_KURU",
+            "KANOLA", "MERCİMEK", "MISIR_DANE", "NOHUT", "PAMUK_KÜTLÜ",
+            "PATATES", "SOĞAN_KURU", "SOYA", "YEM_BITKILERI_GROUP",
+        }
+        if crop not in known_exact_codes:
+            return BasinCropAssessment(
+                "UNKNOWN", "Ürün alt türü resmî listeyle kesin eşleştirilemiyor."
+            )
         if crop not in crops:
             return BasinCropAssessment(
                 "NOT_LISTED", "Onaylı eksiksiz ilçe ürün deseninde bu ürün bulunmuyor.",
