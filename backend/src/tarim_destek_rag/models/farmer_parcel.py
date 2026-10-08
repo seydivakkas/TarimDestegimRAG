@@ -29,7 +29,7 @@ class FarmerProfile(BaseModel):
     @field_validator("province", "district")
     @classmethod
     def uppercase_names(cls, v: str) -> str:
-        return v.strip().upper()
+        return v.strip().replace("i", "İ").replace("ı", "I").upper()
 
 
 class Parcel(BaseModel):
