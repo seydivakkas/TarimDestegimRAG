@@ -236,7 +236,10 @@ def two_person_approved(session: Session, subject: Subject) -> bool:
     # Never permit production activation with the old feature flag alone.
     profile = os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE")
     if profile != "production" and not (
-        profile == "isolated_test" and os.getenv("PYTEST_CURRENT_TEST")
+        profile == "isolated_test"
+        and os.getenv("PYTEST_CURRENT_TEST")
+        and session.bind is not None
+        and session.bind.dialect.name == "sqlite"
     ):
         return False
     keys = _trusted_public_keys()
