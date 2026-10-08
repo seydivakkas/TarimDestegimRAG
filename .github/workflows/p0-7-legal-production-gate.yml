@@ -6,6 +6,10 @@ on:
       - "backend/src/tarim_destek_rag/database/**"
       - "backend/tests/unit/test_p0_7_operator_worm.py"
       - "deployment/sql/p0_7_legal_role_grants.sql"
+      - "deployment/sql/p0_7_create_legal_audit_receipts.sql"
+      - "deployment/vault/**"
+      - "deployment/tests/verify_p0_7_postgres_roles.py"
+      - "docs/P0_7_PRODUCTION_SIGNOFF_RUNBOOK.md"
       - ".github/workflows/p0-7-legal-production-gate.yml"
       - "pyproject.toml"
   workflow_dispatch:
