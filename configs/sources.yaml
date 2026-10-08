@@ -1,0 +1,35 @@
+sources:
+  - id: "RG-2026-BITKISEL"
+    url: "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf"
+    authority: "OFFICIAL_GAZETTE"
+    title: "2024-2026 Yıllarında Yapılacak Bitkisel Üretime Yönelik Desteklemeler Kararı"
+    content_type: "PDF"
+    active: true
+
+  - id: "TOB-HAVZA-2026"
+    url: "https://www.tarimorman.gov.tr/BUGEM/Menu/14/Tarim-Havzalari-Uretim-Ve-Destekleme-Modeli"
+    authority: "MINISTRY"
+    title: "Türkiye Tarım Havzaları Üretim ve Destekleme Modeli Listesi"
+    content_type: "HTML"
+    active: true
+
+  - id: "TOB-TOHUM-2026"
+    url: "https://www.tarimorman.gov.tr/BUGEM/Menu/15/Sertifikali-Tohum-Kullanim-Destegi"
+    authority: "GENERAL_DIRECTORATE"
+    title: "BÜGEM Sertifikalı Tohum Kullanım Destekleme Talimatı"
+    content_type: "HTML"
+    active: true
+
+  - id: "TOB-FIDAN-2026"
+    url: "https://www.tarimorman.gov.tr/BUGEM/Menu/16/Sertifikali-Fidan-Kullanim-Destegi"
+    authority: "GENERAL_DIRECTORATE"
+    title: "BÜGEM Sertifikalı/Standart Fidan Destekleme Rehberi"
+    content_type: "HTML"
+    active: true
+
+  - id: "TOB-SU-KISITI-2026"
+    url: "https://www.tarimorman.gov.tr/BUGEM/Menu/17/Yeralti-Sularinin-Yetersiz-Oldugu-Havzalar"
+    authority: "MINISTRY"
+    title: "Yeraltı Su Kısıtı Olan Havzalar ve Ürün Tercih Listesi"
+    content_type: "HTML"
+    active: true

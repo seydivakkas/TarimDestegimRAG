@@ -1,0 +1,68 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+.env
+.venv
+venv/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
+.pytest_temp/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data & Indexes (keep directory structure via .gitkeep, ignore generated content)
+data/raw/*
+!data/raw/.gitkeep
+data/indexes/*
+!data/indexes/.gitkeep
+data/snapshots/*
+!data/snapshots/.gitkeep
+data/reports/*
+!data/reports/.gitkeep
+data/*.db
+data/*.sqlite
+
+# Flutter & Mobile
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+mobile/.pub-cache/
+mobile/.pub/
+
+# OS
+.DS_Store
+Thumbs.db
+
