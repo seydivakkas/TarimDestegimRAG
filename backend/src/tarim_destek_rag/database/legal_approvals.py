@@ -13,6 +13,7 @@ use of a legal amount or a district membership decision.
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import json
 import os
@@ -26,7 +27,7 @@ from sqlalchemy import event, select
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
-    LegalApprovalAttestationModel, ReviewedBasinSnapshotModel,
+    LegalApprovalAttestationModel, LegalApprovalRevocationModel, ReviewedBasinSnapshotModel,
     VerifiedSupportRateModel,
 )
 
@@ -135,7 +136,7 @@ def _trusted_public_keys() -> dict:
                 return {}
             keys[principal] = (metadata["role"], Ed25519PublicKey.from_public_bytes(key))
         return keys
-    except (TypeError, ValueError, KeyError, AttributeError):
+    except (TypeError, ValueError, KeyError, AttributeError, binascii.Error):
         return {}
 
 
@@ -190,7 +191,7 @@ def _validate_signature(
             principal_id=signed.principal_id, signed_at=signed.signed_at,
         ))
         return True
-    except (InvalidSignature, ValueError, TypeError):
+    except (InvalidSignature, ValueError, TypeError, binascii.Error):
         return False
 
 
@@ -200,6 +201,13 @@ def two_person_approved(session: Session, subject: Subject) -> bool:
     if len(keys) < 2:
         return False
     if getattr(subject, "review_status", None) != "VERIFIED":
+        return False
+    # Revocation is an append-only tombstone: even a source reactivation or a
+    # second approval cannot silently restore authority for the same record ID.
+    if session.scalars(select(LegalApprovalRevocationModel.id).where(
+        LegalApprovalRevocationModel.subject_type == _subject_kind(subject),
+        LegalApprovalRevocationModel.subject_id == subject.id,
+    )).first() is not None:
         return False
     try:
         digest = subject_digest(subject)
@@ -266,3 +274,79 @@ def _reject_attestation_update(_mapper, _connection, _target):
 @event.listens_for(LegalApprovalAttestationModel, "before_delete")
 def _reject_attestation_delete(_mapper, _connection, _target):
     raise ValueError("Signed legal attestations cannot be deleted via the ORM")
+
+
+def revocation_message(
+    *,
+    kind: str, record_id: int, digest: str, source_sha256: str,
+    principal_id: str, signed_at: str, reason: str,
+) -> bytes:
+    return json.dumps({
+        "context": CONTEXT + "/revoke/v1",
+        "kind": kind, "record_id": record_id, "digest": digest,
+        "source_sha256": source_sha256, "principal_id": principal_id,
+        "signed_at": signed_at, "reason": reason,
+    }, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
+def register_detached_revocation(
+    session: Session, subject: Subject, envelope: dict
+) -> LegalApprovalRevocationModel:
+    """Authenticated approver-signed, irreversible-for-this-ID deny event.
+
+    A DB administrator can still bypass ORM protections; use append-only/WORM
+    external audit archival in the production deployment.
+    """
+    kind = _subject_kind(subject)
+    digest = subject_digest(subject)
+    source_sha = subject.source_version.content_hash
+    principal_id = envelope["principal_id"]
+    keys = _trusted_public_keys()
+    configured = keys.get(principal_id)
+    if configured is None or configured[0] != "APPROVER":
+        raise ValueError("A trusted independent approver must sign revocations")
+    reason = envelope["reason"]
+    signed_at = envelope["signed_at"]
+    if (
+        envelope["subject_digest"] != digest
+        or envelope["source_sha256"] != source_sha
+        or not isinstance(reason, str) or not reason.strip()
+        or session.scalars(select(LegalApprovalRevocationModel.id).where(
+            LegalApprovalRevocationModel.subject_type == kind,
+            LegalApprovalRevocationModel.subject_id == subject.id,
+        )).first() is not None
+    ):
+        raise ValueError("Revocation is duplicate or does not match the current subject")
+    try:
+        created = datetime.fromisoformat(signed_at.replace("Z", "+00:00"))
+        if created.tzinfo is None or created.astimezone(timezone.utc) > datetime.now(timezone.utc):
+            raise ValueError("Revocation timestamp is invalid")
+        configured[1].verify(
+            base64.b64decode(envelope["signature_b64"], validate=True),
+            revocation_message(
+                kind=kind, record_id=subject.id, digest=digest,
+                source_sha256=source_sha, principal_id=principal_id,
+                signed_at=signed_at, reason=reason,
+            ),
+        )
+    except (InvalidSignature, ValueError, TypeError, binascii.Error) as exc:
+        raise ValueError("Invalid authenticated revocation signature") from exc
+    row = LegalApprovalRevocationModel(
+        subject_type=kind, subject_id=subject.id, subject_digest=digest,
+        source_sha256=source_sha, principal_id=principal_id,
+        signed_at=signed_at, reason=reason,
+        signature_b64=envelope["signature_b64"],
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+@event.listens_for(LegalApprovalRevocationModel, "before_update")
+def _reject_revocation_update(_mapper, _connection, _target):
+    raise ValueError("Signed revocations cannot be updated via the ORM")
+
+
+@event.listens_for(LegalApprovalRevocationModel, "before_delete")
+def _reject_revocation_delete(_mapper, _connection, _target):
+    raise ValueError("Signed revocations cannot be deleted via the ORM")
