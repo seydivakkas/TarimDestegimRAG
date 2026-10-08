@@ -159,6 +159,50 @@ class VerifiedSupportRateModel(Base):
     )
 
 
+
+class ReviewedBasinSnapshotModel(Base):
+    """Complete, versioned province/district crop set; NOT the old demo basin rows.
+
+    Only a reviewed, explicitly complete snapshot is eligible to provide
+    either positive or negative product membership evidence.
+    """
+
+    __tablename__ = "reviewed_basin_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    province: Mapped[str] = mapped_column(String(64), nullable=False)
+    district: Mapped[str] = mapped_column(String(64), nullable=False)
+    production_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    crop_codes_json: Mapped[str] = mapped_column(Text, nullable=False)
+    drip_required_for_grain_maize: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
+    document_page: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="DRAFT")
+    coverage_complete: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    reviewed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    review_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_version: Mapped["SourceVersionModel"] = relationship()
+
+    __table_args__ = (
+        CheckConstraint("document_page > 0", name="ck_basin_snapshot_page"),
+        CheckConstraint(
+            "review_status IN ('DRAFT','VERIFIED','REVOKED')",
+            name="ck_basin_snapshot_review_status",
+        ),
+        UniqueConstraint(
+            "province", "district", "production_year", "source_version_id",
+            name="uq_basin_district_source_version",
+        ),
+    )
+
+
 class BasinCropRuleModel(Base):
     """Tarım havzaları bazında desteklenen ürün kuralları (Planlı Üretim)."""
 
