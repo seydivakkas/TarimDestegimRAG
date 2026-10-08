@@ -439,7 +439,7 @@ class SourceDocumentModel(Base):
         Integer, ForeignKey("source_versions.id"), nullable=True
     )
     production_year: Mapped[int] = mapped_column(Integer, nullable=False)
-    document_sha256: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    document_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     original_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     archive_relative_path: Mapped[str] = mapped_column(String(256), nullable=False)
     content_type: Mapped[str] = mapped_column(String(32), nullable=False, default="application/pdf")
