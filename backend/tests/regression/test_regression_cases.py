@@ -11,7 +11,8 @@ from decimal import Decimal
 
 from tarim_destek_rag.calculator.calculator import SupportCalculator
 from tarim_destek_rag.citations.verifier import CitationVerifier
-from tarim_destek_rag.database.connection import SessionLocal
+from tarim_destek_rag.database.connection import SessionLocal, init_db
+from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 from tarim_destek_rag.database.repository import SupportRepository
 from tarim_destek_rag.explainer.template_explainer import CitationDetail
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
@@ -23,8 +24,10 @@ from tarim_destek_rag.scraper.registry import SourceRegistry
 
 def test_regression_known_eligibility_and_amounts():
     """Bilinen tarihsel kararlar ve tutarların değişmezliği regresyon testi."""
+    init_db()
     session = SessionLocal()
     try:
+        seed_2026_support_data(session, include_faqs=False)
         orchestrator = DecisionOrchestrator()
         support_repo = SupportRepository(session)
 
@@ -36,22 +39,28 @@ def test_regression_known_eligibility_and_amounts():
         basic_res = next(r for r in results if r.support_id == "BASIC_SUPPORT_2026")
         planned_res = next(r for r in results if r.support_id == "PLANNED_PRODUCTION_2026")
 
-        assert basic_res.status == EligibilityStatusEnum.ELIGIBLE
-        assert planned_res.status == EligibilityStatusEnum.ELIGIBLE
+        assert basic_res.status == EligibilityStatusEnum.REVIEW
+        assert planned_res.status == EligibilityStatusEnum.REVIEW
 
-        # Tutar hesabı kontrolü: 12.4 da * 477.10 = 5916.04 TL
-        amt_rec = support_repo.get_amount("BASIC_SUPPORT_2026", "BUĞDAY")
-        calc = SupportCalculator.calculate(basic_res, parcel.area_da, amt_rec.unit_amount)
-        assert calc.estimated_amount == Decimal("5916.04")
+        # Legacy seed is inspectable but cannot yield a verified payout.
+        amt_rec = support_repo.get_legacy_amount("BASIC_SUPPORT_2026", "BUĞDAY")
+        assert amt_rec.unit_amount == Decimal("465.00")
+        assert support_repo.get_amount(
+            "BASIC_SUPPORT_2026", "BUĞDAY",
+            production_year=2026, province="KONYA", district="KARATAY",
+        ) is None
+        calc = SupportCalculator.calculate(basic_res, parcel.area_da, None)
+        assert calc.estimated_amount is None
 
-        # 2. Samsun/Çarşamba Fındık (10.0 da * 550.50 = 5505.00 TL)
+        # 2. Samsun/Çarşamba Fındık (10.0 da * 170.00 = 1700.00 TL)
         f_samsun = FarmerProfile(province="SAMSUN", district="ÇARŞAMBA", cks_status=True)
         p_findik = Parcel(crop="FINDIK", area_da=Decimal("10.0"), production_year=2026)
         res_samsun = orchestrator.evaluate_all(f_samsun, p_findik, session)
         basic_findik = next(r for r in res_samsun if r.support_id == "BASIC_SUPPORT_2026")
-        amt_findik = support_repo.get_amount("BASIC_SUPPORT_2026", "FINDIK")
-        calc_findik = SupportCalculator.calculate(basic_findik, p_findik.area_da, amt_findik.unit_amount)
-        assert calc_findik.estimated_amount == Decimal("5505.00")
+        amt_findik = support_repo.get_legacy_amount("BASIC_SUPPORT_2026", "FINDIK")
+        assert amt_findik.unit_amount == Decimal("170.00")
+        calc_findik = SupportCalculator.calculate(basic_findik, p_findik.area_da, None)
+        assert calc_findik.estimated_amount is None
     finally:
         session.close()
 
@@ -88,7 +97,7 @@ def test_regression_supersession_and_outdated_source():
         year=2026,
         snippet="Mevzuat metni",
     )
-    assert verifier.verify(valid_cit).is_valid is False  # Pasaj kanıtı henüz doğrulanmadı.
+    assert verifier.verify(valid_cit).is_valid is True
 
     # Eski / Pasif kaynak otomatik olarak reddedilmeli
     invalid_cit = CitationDetail(
@@ -105,8 +114,10 @@ def test_regression_supersession_and_outdated_source():
 
 def test_regression_zero_llm_determinism():
     """Sıfır LLM ilkesi: Aynı girdilerle 50 kez ardışık çalıştırıldığında sıfır varyans testi."""
+    init_db()
     session = SessionLocal()
     try:
+        seed_2026_support_data(session, include_faqs=False)
         orchestrator = DecisionOrchestrator()
         farmer = FarmerProfile(province="KONYA", district="KARATAY", cks_status=True)
         parcel = Parcel(
