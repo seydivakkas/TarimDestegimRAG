@@ -6,6 +6,10 @@ from datetime import date
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
+from tarim_destek_rag.normalization.basin_2026 import (
+    BASIN_SOURCE_ID, BASIN_SOURCE_URL, PINNED_BASIN_PDF_SHA256,
+)
+
 from tarim_destek_rag.database.models import (
     ApplicationWindowModel,
     BasinCropRuleModel,
@@ -267,7 +271,10 @@ class BasinRepository:
             or not snapshot.review_reference
             or snapshot.document_page < 1
             or not version
-            or not re.fullmatch(r"[0-9a-f]{64}", version.content_hash or "")
+            or version.source_id != BASIN_SOURCE_ID
+            or version.content_hash != PINNED_BASIN_PDF_SHA256
+            or version.source is None
+            or version.source.url != BASIN_SOURCE_URL
             or not version.effective_from
             or version.effective_from > f"{year}-12-31"
             or (version.effective_to and version.effective_to < f"{year}-01-01")
