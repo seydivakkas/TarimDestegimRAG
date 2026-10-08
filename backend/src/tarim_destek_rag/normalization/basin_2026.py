@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -81,12 +83,21 @@ def stage_basin_districts(
     path: str | Path,
     *,
     apply: bool = False,
+    pdf_path: str | Path | None = None,
 ) -> int:
     """Explicitly stage full PDF extraction as DRAFT. Caller controls transaction."""
     catalog = json.loads(Path(path).read_text(encoding="utf-8"))
     rows = validate_basin_catalog(catalog)
     if not apply:
         return len(rows)
+    if pdf_path is None:
+        raise ValueError("Official PDF bytes are mandatory to stage an extraction")
+    raw_pdf = Path(pdf_path).read_bytes()
+    if (
+        not raw_pdf.startswith(b"%PDF-")
+        or hashlib.sha256(raw_pdf).hexdigest() != catalog["original_pdf_sha256"]
+    ):
+        raise ValueError("Official PDF bytes do not match the extracted source hash")
     source = session.get(SourceModel, BASIN_SOURCE_ID)
     if source is None:
         source = SourceModel(
@@ -111,7 +122,7 @@ def stage_basin_districts(
             source_id=BASIN_SOURCE_ID,
             content_hash=checksum,
             version=0,  # Imported but not authorized.
-            detected_at="2026-10-08T00:00:00+00:00",
+            detected_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
             superseded=False, effective_from="2026-01-01",
             effective_to="2027-12-31",
         )
