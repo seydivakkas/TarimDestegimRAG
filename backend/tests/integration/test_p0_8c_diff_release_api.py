@@ -82,6 +82,12 @@ def test_admin_year_diff_is_exactly_sourced_and_review_only(app_fixture):
     assert result["summary"]["TEXT_CHANGED"] == 1
     assert result["changes"][0]["numeric_change_needs_review"] is True
     assert result["changes"][0]["current"]["evidence_id"] == ids[1]
+    assert result["changes"][0]["current"]["bounding_boxes"]
+    assert result["changes"][0]["current"]["normalized_quads"]
+    assert result["changes"][0]["current"]["highlighted_page_url"].startswith(
+        f"/api/v1/grounding/image/{ids[1]}/page/1?year=2030"
+    )
+    assert result["legal_continuity_independently_verified"] is False
     assert result["changes"][0]["repeal_effect_confirmed"] is False
     assert result["legal_status"] == "REVIEW_REQUIRED"
     assert result["publication_activated"] is False
