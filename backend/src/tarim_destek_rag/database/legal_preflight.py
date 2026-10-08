@@ -29,6 +29,7 @@ RESTRICTED_SOURCE = (
     "verified_support_rates",
     "reviewed_basin_snapshots",
     "reviewed_water_restriction_scopes",
+    "legal_release_snapshots",
 )
 
 

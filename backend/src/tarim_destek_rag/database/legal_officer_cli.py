@@ -33,7 +33,7 @@ def _sensitive_file(path: Path) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--kind", required=True, choices=("RATE", "BASIN", "WATER"))
+    parser.add_argument("--kind", required=True, choices=("RATE", "BASIN", "WATER", "RELEASE"))
     parser.add_argument("--id", type=int, required=True)
     parser.add_argument("--role", required=True, choices=("REVIEWER", "APPROVER"))
     parser.add_argument("--action", choices=("approve", "revoke"), default="approve")

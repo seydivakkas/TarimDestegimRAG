@@ -5,12 +5,14 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square)
 ![Flutter](https://img.shields.io/badge/Flutter-Source%20Incomplete-grey?style=flat-square)
 ![Gradio](https://img.shields.io/badge/Gradio-PC%20Dashboard-orange?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-87%20passed%20(100%25)-brightgreen?style=flat-square)
+![Tests](https://img.shields.io/badge/CI-See%20current%20PR%20checks-grey?style=flat-square)
 ![Benchmark](https://img.shields.io/badge/benchmark%20v1-100%20cases-success?style=flat-square)
 ![Research](https://img.shields.io/badge/TÜBİTAK%202242-RQ1--RQ4%20PASS-blueviolet?style=flat-square)
 
 Türkiye bitkisel üretim destekleri için geliştirilmekte olan deterministik ön değerlendirme, tutar hesaplama ve kaynaklı açıklama prototipi (FastAPI + Gradio; Flutter istemcisi tamamlanmamış).
-\n> **ANA ÜRÜN HEDEFİ — 2029/2030+ TEK TIK MEVZUAT GÜNCELLEME:** Projeyi GitHub'dan indiren bir kullanıcı, yeni üretim yılı için resmî mevzuat, fiyat/katsayı, ürün/havza, başvuru ve istisna değişikliklerini tek işlemle keşfedebilmeli; eski yılların snapshot'larını koruyabilmeli; her koşulun ve tutarın dayandığı **özgün PDF'nin tam sayfasındaki gerçek cümleyi sarı işaretle** görebilmelidir. **Bu hedefin tamamı henüz bitmedi.** [P0-8A taslak PR #21](https://github.com/seydivakkas/TarimDestegimRAG/pull/21) yıl bağımsız DRAFT kaynak taraması ve sayfa-cümle kanıt prototipi sağlar; tam mevzuat keşfi, değişiklik diff'i, yıl bağımsız DSL ve onaylı atomik kural yayını [Issue #22](https://github.com/seydivakkas/TarimDestegimRAG/issues/22) kapsamındadır.\n
+
+> **ANA ÜRÜN HEDEFİ — 2029/2030+ TEK TIK MEVZUAT GÜNCELLEME:** Projeyi GitHub'dan indiren bir kullanıcı, yeni üretim yılı için resmî mevzuat, fiyat/katsayı, ürün/havza, başvuru ve istisna değişikliklerini tek işlemle keşfedebilmeli; eski yılların snapshot'larını koruyabilmeli; her koşulun ve tutarın dayandığı **özgün PDF'nin tam sayfasındaki gerçek cümleyi sarı işaretle** görebilmelidir. **Bu hedefin tamamı henüz bitmedi.** [P0-8A taslak PR #21](https://github.com/seydivakkas/TarimDestegimRAG/pull/21) yıl bağımsız DRAFT kaynak taraması ve sayfa-cümle kanıt prototipi sağlar; [PR #23](https://github.com/seydivakkas/TarimDestegimRAG/pull/23) gerçek PDF sayfa işaretlemesi ve yıl bağımsız tutar adaylarını, [PR #24](https://github.com/seydivakkas/TarimDestegimRAG/pull/24) ise metin diff raporu ile çift imzalı dönem manifestinin **üretime kapalı temelini** ekler. **Resmî 2030 veri seti, eksiksiz keşif, gerçek imzalar ve güvenilir çiftçi hak edişi henüz yoktur.** Tam otomatik hukukî kapsam, yürürlük ayrıştırma ve atomik yayın [Issue #22](https://github.com/seydivakkas/TarimDestegimRAG/issues/22) kapsamındadır.
+
 > **Güncellik ve resmîlik uyarısı (8 Ekim 2026):** Bu depodaki birim destek tutarları ve havza verileri 8 Eylül 2026 tarihli 11781 sayılı düzenlemeye göre henüz tam güncellenmedi. Hesaplamalar kişisel hak sahipliği veya resmî ödeme kararı değildir. Sürüm kayıtları ve atıf-kanıt tutarlılığı bağımsız olarak doğrulanmadıkça eski performans tabloları kanıtlanmış doğruluk olarak yorumlanmamalıdır. `mobile/lib/` kaynakları bulunmadığından Flutter uygulaması henüz çalıştırılamaz. Dosya bazlı sorun listesi: [8 Ekim kod denetimi](docs/AUDIT_2026-10-08.md).
 
 ---

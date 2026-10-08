@@ -30,10 +30,10 @@ from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
     LegalApprovalAttestationModel, LegalApprovalRevocationModel, ReviewedBasinSnapshotModel,
-    VerifiedSupportRateModel, ReviewedWaterRestrictionScopeModel,
+    VerifiedSupportRateModel, ReviewedWaterRestrictionScopeModel, LegalReleaseModel,
 )
 
-Subject = VerifiedSupportRateModel | ReviewedBasinSnapshotModel | ReviewedWaterRestrictionScopeModel
+Subject = VerifiedSupportRateModel | ReviewedBasinSnapshotModel | ReviewedWaterRestrictionScopeModel | LegalReleaseModel
 
 CONTEXT = "TarimDestegimRAG/P0-5/legal-attestation/v1"
 TRUST_ENV = "TARIM_RAG_LEGAL_TRUSTED_KEYS_JSON"
@@ -47,13 +47,15 @@ def _normalize(value):
     return value
 
 
-def _subject_kind(subject: Subject) -> Literal["RATE", "BASIN", "WATER"]:
+def _subject_kind(subject: Subject) -> Literal["RATE", "BASIN", "WATER", "RELEASE"]:
     if isinstance(subject, VerifiedSupportRateModel):
         return "RATE"
     if isinstance(subject, ReviewedBasinSnapshotModel):
         return "BASIN"
     if isinstance(subject, ReviewedWaterRestrictionScopeModel):
         return "WATER"
+    if isinstance(subject, LegalReleaseModel):
+        return "RELEASE"
     raise TypeError("Unexpected legal approval subject")
 
 
@@ -101,6 +103,29 @@ def subject_payload(subject: Subject) -> dict:
             "document_page": subject.document_page,
             "review_status": subject.review_status,
             "coverage_complete": subject.coverage_complete,
+            "reviewed_by": subject.reviewed_by,
+            "reviewed_at": subject.reviewed_at,
+            "review_reference": subject.review_reference,
+        }
+    elif isinstance(subject, LegalReleaseModel):
+        # The full canonical manifest and its digest are both signed.
+        # A modified rate, source hash, clause, year, rule or evidence link
+        # changes the subject digest and invalidates both approvals.
+        manifest = json.loads(subject.manifest_json)
+        canonical = json.dumps(
+            manifest, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
+            allow_nan=False,
+        ).encode("utf-8")
+        if hashlib.sha256(canonical).hexdigest() != subject.manifest_sha256:
+            raise ValueError("Signed release manifest does not match content")
+        fields = {
+            "year": subject.production_year,
+            "manifest": manifest,
+            "manifest_sha256": subject.manifest_sha256,
+            "effective_from": subject.effective_from.isoformat(),
+            "effective_to": subject.effective_to.isoformat() if subject.effective_to else None,
+            "coverage_complete": subject.coverage_complete,
+            "review_status": subject.review_status,
             "reviewed_by": subject.reviewed_by,
             "reviewed_at": subject.reviewed_at,
             "review_reference": subject.review_reference,

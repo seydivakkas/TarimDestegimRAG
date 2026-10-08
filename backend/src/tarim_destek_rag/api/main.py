@@ -5,6 +5,7 @@ from urllib.parse import quote as url_quote
 import json
 import os
 from contextlib import asynccontextmanager
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -587,5 +588,63 @@ def get_grounding_by_program(
             f"/api/v1/grounding/image/{record.id}/page/{grounded.page_number}?year={year}"
         ),
         "legal_approval": False,
+        "payable_amount": None,
+    }
+
+
+# P0-8C: compare ONLY exact original-PDF source sentences. This is a
+# textual review report: never a determination of what is legally repealed.
+from pydantic import BaseModel, Field
+
+
+class LegalDiffRequest(BaseModel):
+    previous_year: int = Field(ge=2020, le=2100)
+    target_year: int = Field(ge=2020, le=2100)
+    previous_sentence_ids: list[int] = Field(min_length=1, max_length=300)
+    current_sentence_ids: list[int] = Field(min_length=1, max_length=300)
+
+
+@app.post("/admin/legal-updates/diff", tags=["Mevzuat Metin Farkı"])
+def inspect_registered_legal_diff(
+    request: LegalDiffRequest,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    from tarim_destek_rag.auto_updater.legal_diff_repository import report_from_evidence
+
+    try:
+        return report_from_evidence(
+            session,
+            archive_root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
+            previous_year=request.previous_year, target_year=request.target_year,
+            previous_sentence_ids=request.previous_sentence_ids,
+            current_sentence_ids=request.current_sentence_ids,
+        )
+    except (ValueError, LookupError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/legal-releases/{year}", tags=["Onaylı Mevzuat Sürümleri"])
+def inspect_signed_year_release(
+    year: int,
+    as_of: date | None = None,
+    session: Session = Depends(get_db_session),
+) -> dict[str, Any]:
+    """Read-only release-status proof. Not a farmer eligibility decision."""
+    from tarim_destek_rag.auto_updater.release import resolve_active_release
+
+    evaluation_date = as_of or date.today()
+    result, _manifest = resolve_active_release(
+        session, year=year, when=evaluation_date,
+        archive_root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
+    )
+    return {
+        "year": year,
+        "as_of": evaluation_date.isoformat(),
+        "status": result.status,
+        "reason": result.reason,
+        "release_id": result.release_id,
+        "manifest_sha256": result.manifest_sha256,
+        "farmer_eligibility_verified": False,
         "payable_amount": None,
     }
