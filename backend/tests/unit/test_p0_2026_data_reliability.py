@@ -89,7 +89,7 @@ def test_registered_source_is_not_accepted_as_passage_proof():
     registry.register(
         SourceDefinition(
             id="RG-TEST",
-            url="https://www.resmigazete.gov.tr",
+            url="https://www.resmigazete.gov.tr/",
             authority=AuthorityEnum.OFFICIAL_GAZETTE,
             title="Kayıtlı fakat pasajı kontrol edilmemiş kaynak",
             active=True,
