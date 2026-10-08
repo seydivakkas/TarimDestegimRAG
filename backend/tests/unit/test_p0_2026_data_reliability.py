@@ -44,10 +44,21 @@ def session():
     ],
 )
 def test_seed_2026_amended_unit_rates(session, support_id, crop, expected):
-    amount = SupportRepository(session).get_amount(support_id, crop)
-    assert amount is not None
-    assert amount.unit_amount == Decimal(expected)
-    assert amount.source_id == "TOB-2026-09-08"
+    """Former expected 2026 amounts are NOT approved by a seed and cannot pay.
+
+    Historical seed amounts and the estimated amendment figures are distinct
+    from cryptographically reviewed legal components. No signature fixture
+    here: the repository must fail closed even if a demo number is present.
+    """
+    repo = SupportRepository(session)
+    historic = repo.get_legacy_amount(support_id, crop)
+    assert historic is not None
+    assert historic.verification_status in ("DRAFT", "SUPERSEDED")
+    assert historic.unit_amount > Decimal("0")
+    assert repo.get_amount(
+        support_id, crop, production_year=2026,
+        province="KONYA", district="KARATAY",
+    ) is None
 
 
 @pytest.mark.parametrize(
@@ -70,7 +81,10 @@ def test_groundwater_extra_only_on_irrigated_land(session):
     irrigated = rule.evaluate(farmer, Parcel(**base, irrigation=IrrigationStatusEnum.IRRIGATED), session)
     dry = rule.evaluate(farmer, Parcel(**base, irrigation=IrrigationStatusEnum.DRY), session)
     unknown = rule.evaluate(farmer, Parcel(**base, irrigation=IrrigationStatusEnum.UNKNOWN), session)
-    assert irrigated.status == EligibilityStatusEnum.ELIGIBLE
+    # Irrigation is necessary but not sufficient: water district and rate
+    # still require independently signed original legal PDF evidence.
+    assert irrigated.status == EligibilityStatusEnum.REVIEW
+    assert "verified_water_provenance" in irrigated.missing_fields
     assert dry.status == EligibilityStatusEnum.NOT_ELIGIBLE
     assert unknown.status == EligibilityStatusEnum.REVIEW
     assert "irrigation" in unknown.missing_fields
@@ -80,8 +94,11 @@ def test_maize_is_not_granted_basic_support_in_restricted_basin(session):
     farmer = FarmerProfile(province="KONYA", district="KARATAY", cks_status=True)
     parcel = Parcel(crop="MISIR", area_da=Decimal("15.0"), production_year=2026)
     result = BasicSupportRule().evaluate(farmer, parcel, session)
-    assert result.status == EligibilityStatusEnum.NOT_ELIGIBLE
-    assert any("su kısıtı" in check for check in result.failed_checks)
+    # MISIR is an ambiguous label: cannot presume grain maize or a verified
+    # district restriction from a demo fixture. Unknown => REVIEW/null.
+    assert result.status == EligibilityStatusEnum.REVIEW
+    assert "verified_support_rate" in result.missing_fields
+    assert result.metadata["unit_amount"] is None
 
 
 def test_registered_source_is_not_accepted_as_passage_proof():
