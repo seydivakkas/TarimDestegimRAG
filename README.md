@@ -1,6 +1,6 @@
 # TarımDesteğimRAG
 
-> **P0 uyarısı — 08.10.2026:** 2026 katsayı ve güvenilirlik düzeltmeleri sürmektedir. Bu README'de önceki sürümden kalan başarı, %0 desteksiz iddia, resmî atıf doğrulama ve Flutter hazır olma ifadeleri yeni sürüm için kanıtlanmış değildir. Bkz. [P0 doğrulama notu](docs/P0_DATA_RELIABILITY_2026_10_08.md). Yeni bir test koşusu yapılmadan finansal ya da hukuki kesinlik iddia edilmez.
+> **P1 arayüz düzenlemesi:** Ayrı `Destek Detay` ve `Neden?` sekmeleri kaldırılarak `Desteklerim` içinde açılır bölümler haline getirildi. Tematik mevzuat özeti gerçek belgeden doğrulanmış alıntı olarak gösterilmez. Bu dal P0 taslak PR'ı üzerine kuruludur.\n\n> **P0 uyarısı — 08.10.2026:** 2026 katsayı ve güvenilirlik düzeltmeleri sürmektedir. Bu README'de önceki sürümden kalan başarı, %0 desteksiz iddia, resmî atıf doğrulama ve Flutter hazır olma ifadeleri yeni sürüm için kanıtlanmış değildir. Bkz. [P0 doğrulama notu](docs/P0_DATA_RELIABILITY_2026_10_08.md). Yeni bir test koşusu yapılmadan finansal ya da hukuki kesinlik iddia edilmez.
 
 ![License](https://img.shields.io/badge/license-All%20Rights%20Reserved-red?style=flat-square)
 ![Python](https://img.shields.io/badge/python-3.12%20%7C%203.14-blue?style=flat-square)
@@ -32,11 +32,9 @@ Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar He
 4. **Resmî Atıf ve Kanıt Koruması (Citation Verification Guard):**
    - Atıf kayıt ve yıl alanları kontrol edilir; doğrudan belge/pasaj doğrulaması henüz tamamlanmamıştır.
 
-5. **Zengin PC Arayüzü (Gradio 8 Sekmeli Panel):**
+5. **Zengin PC Arayüzü (Gradio 6 Sekmeli Panel):**
    - **Profil & Parsel Girişi:** İl, ilçe, ÇKS durumu, parsel alanı ve ürün seçimi.
-   - **Desteklerim:** Durum rozetleri (UYGUN, İNCELEME, UYGUN DEĞİL), KPI kartları ve toplam tutar.
-   - **Destek Detay:** Birim fiyat (TL/da), dekar, hak ediş ve başvuru takvimi tablosu.
-   - **Neden? (Gerekçe & Atıf):** `TemplateExplainer` açıklamaları, eksik belgeler ve Resmî Gazete madde alıntıları.
+   - **Desteklerim (tek sayfa):** Durum rozetleri, KPI ve tahmini tutar kartları; açılır panellerde birim fiyat, başvuru listesi, kural gerekçeleri ve kaynak yönlendirmeleri. Aynı sonuç API değerlendirmesinden gelir.
    - **Soru-Cevap Asistanı:** Semantik FAQ & mevzuat arama chatbotu.
    - **Mevzuat & Scraper Paneli:** Takip edilen kaynakların durumları ve kontrol mekanizması.
    - **Doğrulama & Benchmark:** 100 örnek senaryo ve yeniden ölçülecek başarı metrikleri.
