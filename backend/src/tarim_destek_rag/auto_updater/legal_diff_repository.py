@@ -57,6 +57,12 @@ def report_from_evidence(
                 evidence_id=record.id,
                 production_year=year,
                 source_id=doc.source_id,
+                highlighted_page_url=(
+                    f"/api/v1/grounding/image/{record.id}/page/{grounded.page_number}"
+                    f"?year={year}&fmt=png"
+                ),
+                bounding_boxes=grounded.to_dict()["bounding_boxes"],
+                normalized_quads=grounded.normalized_quads,
             ))
         return found
 
