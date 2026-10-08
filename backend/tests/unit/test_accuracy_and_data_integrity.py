@@ -316,7 +316,7 @@ def test_citation_missing_or_wrong_quote_fails():
     assert not v3.is_valid
     assert v3.status == "MISSING_SECTION"
 
-    # 4. Geçerli atıf
+    # 4. Kayıtlı kaynak, orijinal PDF metni olmadan doğrulanmış atıf değildir.
     cit_valid = CitationDetail(
         source_id="RG-2026-BITKISEL",
         title="2026 Kararı",
@@ -325,8 +325,8 @@ def test_citation_missing_or_wrong_quote_fails():
         snippet="Resmî gazete maddesi geçerli uzunlukta tam mevzuat alıntısı.",
     )
     v4 = verifier.verify(cit_valid)
-    assert v4.is_valid
-    assert v4.status == "VERIFIED"
+    assert v4.is_valid is False
+    assert v4.status in ("SOURCE_URL_MISMATCH", "EVIDENCE_NOT_INDEXED")
 
 
 def test_calculation_official_wheat_2026_updated_coefficient():
