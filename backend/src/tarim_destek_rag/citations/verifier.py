@@ -56,13 +56,19 @@ class CitationVerifier:
                 message=f"Atıf yapılan mevzuat yılı 2026 değil: {citation.year}",
             )
 
+        # Kayıtta bulunması, belgenin doğru maddesini ve alıntısını kanıtlamaz.
+        # İçerik hash'i, sürüm ve madde/pasaj eşleşmesi uygulanana kadar
+        # iddiayı belge ile doğrulanmış saymıyoruz (fail closed).
         return VerificationResult(
-            is_valid=True,
+            is_valid=False,
             source_exists=True,
             source_active=True,
             year_valid=True,
-            status="VERIFIED",
-            message="Kaynak resmî, aktif ve 2026 yılı için geçerlidir.",
+            status="INSUFFICIENT_EVIDENCE",
+            message=(
+                "Kaynak meta verisi eşleşti; fakat belge sürümü, madde ve alıntı "
+                "içeriği doğrulanmadığı için resmî kanıt sayılmaz."
+            ),
         )
 
 
