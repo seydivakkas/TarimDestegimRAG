@@ -8,24 +8,34 @@
   "source_version": {
     "source_id": "RG-2026-11781",
     "content_hash": null,
-    "content_hash_status": "PRIMARY_PDF_NOT_INDEPENDENTLY_HASHED",
-    "effective_from": "2026-01-01"
+    "content_hash_status": "PDF_BYTES_FETCHED_SHA256_RECORDED_BUT_NOT_LEGALLY_APPROVED",
+    "effective_from": "2026-01-01",
+    "primary_pdf_sha256_observed": "732048cbed664faabc15ad20a6a86427af7881acde24a88adf81007b79479e80"
   },
   "citations": [
     {
       "id": "RG-2024-8859",
       "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
-      "role": "original law"
+      "role": "original law",
+      "sha256_of_fetched_pdf_bytes": "89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f",
+      "sha256_evidence_url": "https://github.com/seydivakkas/TarimDestegimRAG/actions/runs/37805521090",
+      "byte_evidence_status": "FETCHED_AND_PARSED_PDF_NOT_HUMAN_LEGAL_REVIEWED"
     },
     {
       "id": "RG-2025-10394",
       "url": "https://www.resmigazete.gov.tr/eskiler/2025/09/20250914-6.pdf",
-      "role": "2026 category multipliers"
+      "role": "2026 category multipliers",
+      "sha256_of_fetched_pdf_bytes": "cc2598be4128db1d84cef20232b107f19fcd86ae430fda07933ab47b711940d9",
+      "sha256_evidence_url": "https://github.com/seydivakkas/TarimDestegimRAG/actions/runs/37805521090",
+      "byte_evidence_status": "FETCHED_AND_PARSED_PDF_NOT_HUMAN_LEGAL_REVIEWED"
     },
     {
       "id": "RG-2026-11781",
       "url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
-      "role": "2026 coefficient 367 TL, retroactive 2026-01-01"
+      "role": "2026 coefficient 367 TL, retroactive 2026-01-01",
+      "sha256_of_fetched_pdf_bytes": "732048cbed664faabc15ad20a6a86427af7881acde24a88adf81007b79479e80",
+      "sha256_evidence_url": "https://github.com/seydivakkas/TarimDestegimRAG/actions/runs/37805521090",
+      "byte_evidence_status": "FETCHED_AND_PARSED_PDF_NOT_HUMAN_LEGAL_REVIEWED"
     },
     {
       "id": "TOB-2026-ANNOUNCEMENT",
@@ -40,7 +50,7 @@
   ],
   "validation_gate": {
     "approval": false,
-    "primary_pdf_byte_hash_verified": false,
+    "primary_pdf_byte_hash_verified": true,
     "source_excerpt_human_reviewed": false,
     "basin_matrix_verified": false
   },
