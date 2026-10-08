@@ -185,7 +185,11 @@ def test_pdf_ambiguous_sentence_cannot_create_unique_citation():
 
 
 def test_legacy_2026_preview_does_not_fabricate_quote_as_law():
-    from tarim_destek_rag.citations.document_links import render_document_viewer_html
+    # Import this pure renderer in isolation; citations.__init__ otherwise eagerly
+    # loads the unrelated LLM/RAG stack (rank_bm25, sentence-transformers).
+    import runpy
+    source = Path(__file__).resolve().parents[2] / "src/tarim_destek_rag/citations/document_links.py"
+    render_document_viewer_html = runpy.run_path(str(source))["render_document_viewer_html"]
     output = render_document_viewer_html("MADDE 1")
     assert "Mevzuat cümlesi doğrulanmadı" in output
     assert "Önceki örnek önizlemeler" in output
