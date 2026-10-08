@@ -3,15 +3,13 @@
 Approval/hash/source fixtures are synthetic test data, NOT official legal rates.
 """
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-
 from tarim_destek_rag.calculator.calculator import SupportCalculator
-from backend.tests.legal_approval_testkit import sign_subject
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.models import (
     SourceModel,
@@ -25,6 +23,7 @@ from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.rules_impl import BasicSupportRule
 
+from backend.tests.legal_approval_testkit import sign_subject
 
 AS_OF = date(2026, 10, 8)
 
@@ -94,7 +93,7 @@ def add_rate(
         legal_clause="Synthetic test clause - do not publish",
         review_status=state,
         approved_by="test_reviewer" if approved else None,
-        approved_at=datetime(2026, 10, 8, tzinfo=timezone.utc) if approved else None,
+        approved_at=datetime(2026, 10, 8, tzinfo=UTC) if approved else None,
         review_reference="TEST-APPROVAL-001" if approved else None,
     )
     session.add(rate)

@@ -12,12 +12,12 @@ from decimal import Decimal
 from tarim_destek_rag.calculator.calculator import SupportCalculator
 from tarim_destek_rag.citations.verifier import CitationVerifier
 from tarim_destek_rag.database.connection import SessionLocal, init_db
-from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 from tarim_destek_rag.database.repository import SupportRepository
 from tarim_destek_rag.explainer.template_explainer import CitationDetail
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
 from tarim_destek_rag.models.source import AuthorityEnum, SourceDefinition
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
+from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator
 from tarim_destek_rag.scraper.registry import SourceRegistry
 
@@ -89,7 +89,7 @@ def test_regression_supersession_and_outdated_source():
 
     verifier = CitationVerifier(registry=reg)
 
-    # Güncel kaynak geçerli
+    # Kaynak kaydı tek başına geçerli pasaj kanıtı değildir.
     valid_cit = CitationDetail(
         source_id="RG-2026-BITKISEL",
         title="2026 Kararı",
@@ -97,7 +97,7 @@ def test_regression_supersession_and_outdated_source():
         year=2026,
         snippet="Mevzuat metni",
     )
-    assert verifier.verify(valid_cit).is_valid is True
+    assert verifier.verify(valid_cit).is_valid is False  # Original PDF not indexed
 
     # Eski / Pasif kaynak otomatik olarak reddedilmeli
     invalid_cit = CitationDetail(

@@ -482,7 +482,7 @@ class AgriculturalFAQHarvester:
         self.repository = FAQRepository(session)
 
     def seed_initial_knowledge(self) -> int:
-        """Küratörlü örnek soru-cevap kayıtlarını doğrulanmamış olarak yükler."""
+        """Küratörlü, doğrulanmış soru-cevap veri setini veritabanına aktarır."""
         models: list[AgriculturalFAQModel] = []
         now_iso = datetime.now(UTC).isoformat()
 
@@ -499,7 +499,7 @@ class AgriculturalFAQHarvester:
                     source_name=item["source_name"],
                     source_url=item.get("source_url"),
                     keywords=kw_str,
-                    verified=False,
+                    verified=False,  # Hukuki/içerik doğrulaması yapılmış kaynak pasajı henüz yok.
                     created_at=now_iso,
                 )
             )
@@ -541,7 +541,7 @@ class AgriculturalFAQHarvester:
                     source_name=item.get("source_name", "Web Kaynağı"),
                     source_url=item.get("source_url"),
                     keywords=kw_str,
-                    verified=item.get("verified", False),
+                    verified=False,  # Dış girdinin verified bayrağına otomatik güvenmeyin.
                     created_at=now_iso,
                 )
             )

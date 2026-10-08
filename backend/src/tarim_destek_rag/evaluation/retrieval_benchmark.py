@@ -102,6 +102,7 @@ def evaluate_retriever(
     hits_at_3 = 0
     hits_at_5 = 0
     reciprocal_ranks = []
+    ndcg_list = []
     latencies = []
 
     for item in test_queries:
@@ -122,8 +123,12 @@ def evaluate_retriever(
             hits_at_1 += 1
         if 1 <= found_rank <= 3:
             hits_at_3 += 1
+        import math
         if 1 <= found_rank <= 5:
             hits_at_5 += 1
+            ndcg_list.append(1.0 / math.log2(found_rank + 1))
+        else:
+            ndcg_list.append(0.0)
 
         if found_rank > 0:
             reciprocal_ranks.append(1.0 / found_rank)
@@ -136,6 +141,7 @@ def evaluate_retriever(
         "hit@3": round(hits_at_3 / n, 4),
         "hit@5": round(hits_at_5 / n, 4),
         "mrr": round(sum(reciprocal_ranks) / n, 4),
+        "ndcg@5": round(sum(ndcg_list) / n, 4),
         "avg_latency_ms": round(sum(latencies) / n, 2),
     }
 

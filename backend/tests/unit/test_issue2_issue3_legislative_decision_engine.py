@@ -18,11 +18,9 @@ from decimal import Decimal
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from tarim_destek_rag.calculator.calculator import SupportCalculator
 from tarim_destek_rag.database.connection import Base
-from tarim_destek_rag.database.models import SupportAmountModel
-from tarim_destek_rag.database.repository import BasinRepository, SupportRepository
+from tarim_destek_rag.database.repository import SupportRepository
 from tarim_destek_rag.models.farmer_parcel import (
     FarmerProfile,
     IrrigationStatusEnum,
@@ -35,7 +33,6 @@ from tarim_destek_rag.normalization.seed_data import (
 )
 from tarim_destek_rag.rules.base import RuleResult
 from tarim_destek_rag.rules.rules_impl import (
-    BasicSupportRule,
     PlannedProductionRule,
     WaterRestrictionRule,
 )

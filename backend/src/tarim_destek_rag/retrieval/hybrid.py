@@ -33,11 +33,20 @@ class HybridRetriever:
         """Parçacıkları hem vektör deposuna hem de BM25 indeksine ekler."""
         if not chunks:
             return
-        self.dense_store.add_chunks(chunks)
-        self.bm25_retriever.add_chunks(chunks)
+        # Tekrarlanan seed/harvest çağrıları aynı chunk'ı iki kez indekslemesin.
+        existing = {c.chunk_id for c in self.bm25_retriever._chunks}
+        unique_chunks: list[DocumentChunk] = []
+        for chunk in chunks:
+            if chunk.chunk_id not in existing:
+                existing.add(chunk.chunk_id)
+                unique_chunks.append(chunk)
+        if not unique_chunks:
+            return
+        self.dense_store.add_chunks(unique_chunks)
+        self.bm25_retriever.add_chunks(unique_chunks)
         logger.info(
-            "Hibrit motora %d parça eklendi",
-            len(chunks),
+            "Hibrit motora %d yeni parça eklendi",
+            len(unique_chunks),
             extra={"component": "HybridRetriever"},
         )
 

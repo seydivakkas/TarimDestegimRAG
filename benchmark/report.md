@@ -1,52 +1,19 @@
-# TarımDestekRAG — Benchmark v1 Değerlendirme Raporu
+# TarımDestekRAG — Benchmark Durumu (P0 2026 Güncellemesi)
 
-**Rapor Tarihi:** 2026-10-08
-**Test Edilen Vaka Sayısı:** 100
-**Lisans:** Özel Lisans — Tüm Hakları Saklıdır (c) 2026 Seydi Eryılmaz (@seydivakkas)
+**Durum: Henüz bu sürümde yeniden çalıştırılmadı.**
 
----
+Bu dosyadaki önceki **%100 karar, %100 atıf, %100 güncellik, %0 desteksiz iddia** ve gecikme değerleri mevcut P0 sürümünü temsil etmediği için kaldırılmıştır. Değişen katsayılar ve beklenen test çıktıları için yeni bir koşu gerekir.
 
-## 1. Karar ve Hesaplama Metrikleri (Decision & Calculation)
+Gerçek ortamda:
 
-| Metrik | Hedef | Ölçülen Sonuç | Durum |
-|---|---|---|---|
-| **Uygunluk Karar Doğruluğu (Eligibility Accuracy)** | %100 | **%100.00** | Vaka verisine göre |
-| **Kural Kapsamı (Rule Coverage)** | %100 | **%100.00** | Vaka verisine göre |
-| **Tutar Hesaplama Doğruluğu (Decimal Exact Match)** | %100 | **%100.00** | Vaka verisine göre |
+```bash
+uv sync --extra dev
+uv run pytest backend/tests -q
+uv run python -m tarim_destek_rag.evaluation.benchmark_runner_v1
+```
 
-> *Bu metrikler depo içindeki beklenen sonuçlara karşı ölçülür; güncel mevzuatla bağımsız karşılaştırma değildir.*
+Koşucu bu dosyayı yalnızca yürütüldüğünde gerçek raporla değiştirecektir. Atıf pasaj doğrulaması ve kaynak sürüm güncelliği henüz uygulanmadığı için atıf/güncellik başarı garantisi verilmez.
 
----
-
-## 2. Arama ve Bilgi Getirme Metrikleri (Retrieval Engine)
-
-| Yöntem | Hit@1 | Hit@3 | Hit@5 | MRR | Gecikme |
-|---|---|---|---|---|---|
-| **Hibrit (BM25 + FAISS + RRF)** | **%100.00** | **%100.00** | **%100.00** | **1.0000** | **43.96 ms** |
-
----
-
-## 3. RAG Açıklama ve Atıf Doğrulama (Citation & Guardrails)
-
-| Metrik | Hedef | Ölçülen Sonuç | Açıklama |
-|---|---|---|---|
-| **Atıf Kayıt Geçerliliği (Citation Registry Validity)** | >= %98 | **%100.00** | Tüm atıflarda kayıt, aktiflik ve yıl kontrolü; metinsel kanıt doğrulaması değil |
-| **Atıfsız veya Geçersiz Atıflı Açıklama Oranı (Proxy)** | %0.00 | **%0.00** | Anlamsal desteksiz iddia oranı henüz ölçülmüyor |
-| **Mevzuat Tazeliği (Freshness Accuracy)** | %100 | **Ölçülmedi** | Kaynak sürümü, yürürlük ve değişiklik kontrolü henüz yok |
-
----
-
-## 4. Sistem Gecikme Profili (Latency Benchmark)
-
-| Bileşen | Ortalama Süre (ms) |
-|---|---|
-| **Rule Engine Değerlendirmesi** | 4.74 ms |
-| **Hibrit Arama (RRF Retrieval)** | 43.96 ms |
-| **Deterministik Açıklama Üretimi** | 0.03 ms |
-| **Uçtan Uca (End-to-End Latency)** | **5.45 ms** |
-
----
-
-## 5. Sonuç
-
-**Sınırlamalar:** Ölçümler depo içi test vakalarına göredir. Atıf kontrolü sadece kaynak kaydı/aktiflik/yıl denetimidir. Mevzuat tazeliği ve iddia-kanıt uyumu ölçülmediği için genel doğruluk veya sıfır halüsinasyon garantisi verilemez.
+2026 rakamları için kaynaklar:
+- [BÜGEM 2026 birim fiyat katsayı cetveli](https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/2026%20Y%C4%B1l%C4%B1%20Destekleme%20Birim%20Fiyatlar%C4%B1.pdf)
+- [Bakanlık 8 Eylül 2026 katsayı güncellemesi](https://www.tarimorman.gov.tr/Haber/7258/Bitkisel-Ve-Hayvansal-Uretimde-Destek-Tutarlari-Artirildi)

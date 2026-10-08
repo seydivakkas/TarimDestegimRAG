@@ -8,15 +8,18 @@ from decimal import Decimal
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
-
 from tarim_destek_rag.calculator.calculator import SupportCalculator
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.models import SupportProgramModel
 from tarim_destek_rag.models.farmer_parcel import (
-    FarmerProfile, IrrigationStatusEnum, Parcel,
+    FarmerProfile,
+    IrrigationStatusEnum,
+    Parcel,
 )
 from tarim_destek_rag.normalization.legal_components_2026 import (
-    PROGRAMS, load_component_catalog, stage_component_rates,
+    PROGRAMS,
+    load_component_catalog,
+    stage_component_rates,
 )
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator

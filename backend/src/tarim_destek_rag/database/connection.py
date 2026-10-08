@@ -1,5 +1,5 @@
-from collections.abc import Generator
 import sqlite3
+from collections.abc import Generator
 from pathlib import Path
 
 from sqlalchemy import create_engine, event
@@ -56,10 +56,9 @@ def init_db(target_engine: Engine | None = None) -> None:
     Base.metadata.create_all(bind=eng)
 
     # Non-destructive compatibility for databases created before the extended
-    # support_amounts ORM model. SQLAlchemy create_all does not add columns to
-    # an existing table. No legacy row is promoted to VERIFIED.
+    # support_amounts and agricultural_faqs ORM models.
     if eng.dialect.name == "sqlite":
-        ddl = {
+        support_ddl = {
             "production_year": "INTEGER DEFAULT 2026",
             "legal_decision_number": "VARCHAR(64)",
             "effective_from": "VARCHAR(10)",
@@ -67,16 +66,40 @@ def init_db(target_engine: Engine | None = None) -> None:
             "geographic_scope": "VARCHAR(64) DEFAULT 'GENEL'",
             "verification_status": "VARCHAR(32) DEFAULT 'DRAFT'",
         }
+        faq_ddl = {
+            "content_hash": "VARCHAR(64) DEFAULT NULL",
+            "effective_date": "VARCHAR(32) DEFAULT NULL",
+            "legal_span": "VARCHAR(256) DEFAULT NULL",
+            "moderation_status": "VARCHAR(32) DEFAULT 'APPROVED'",
+            "harvested_at": "VARCHAR(32) DEFAULT NULL",
+            "source_domain": "VARCHAR(128) DEFAULT NULL",
+            "version": "INTEGER DEFAULT 1",
+        }
         with eng.begin() as connection:
-            existing = {
-                row[1] for row in connection.exec_driver_sql(
+            support_existing = {
+                row[1]
+                for row in connection.exec_driver_sql(
                     "PRAGMA table_info('support_amounts')"
                 ).all()
             }
-            if existing:
-                for name, definition in ddl.items():
-                    if name not in existing:
+            if support_existing:
+                for name, definition in support_ddl.items():
+                    if name not in support_existing:
                         connection.exec_driver_sql(
                             f"ALTER TABLE support_amounts ADD COLUMN {name} {definition}"
                         )
+
+            faq_existing = {
+                row[1]
+                for row in connection.exec_driver_sql(
+                    "PRAGMA table_info('agricultural_faqs')"
+                ).all()
+            }
+            if faq_existing:
+                for name, definition in faq_ddl.items():
+                    if name not in faq_existing:
+                        connection.exec_driver_sql(
+                            f"ALTER TABLE agricultural_faqs ADD COLUMN {name} {definition}"
+                        )
+
 

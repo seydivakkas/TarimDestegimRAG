@@ -8,9 +8,7 @@ import json
 from pathlib import Path
 
 import pytest
-
 from tarim_destek_rag.normalization.basin_2026 import validate_basin_catalog
-
 
 CATALOG = (
     Path(__file__).resolve().parents[3]

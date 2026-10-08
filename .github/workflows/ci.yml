@@ -1,0 +1,40 @@
+name: CI - TarımDesteğimRAG
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  test:
+    name: Lint, Unit Tests & Retrieval Benchmark Smoke
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Code Quality & Lint Check
+        run: |
+          ruff check backend/src backend/tests
+
+      - name: Run Unit & Integration Test Suites
+        run: |
+          python -m pytest backend/tests/unit/ -v --no-cov
+
+      - name: Run Retrieval Benchmark Smoke Test
+        env:
+          PYTHONPATH: backend/src
+        run: |
+          python -m tarim_destek_rag.evaluation.retrieval_benchmark

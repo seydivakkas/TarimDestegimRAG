@@ -20,6 +20,8 @@ from tarim_destek_rag.api.schemas import (
     AskQuestionResponse,
     FullEvaluationRequest,
     FullEvaluationResponse,
+    HarvestLiveRequest,
+    ModerationRejectRequest,
     SupportProgramDTO,
 )
 from tarim_destek_rag.calculator.calculator import (
@@ -50,6 +52,7 @@ from tarim_destek_rag.retrieval.vector_store import vector_store
 from tarim_destek_rag.rules.base import RuleResult
 from tarim_destek_rag.rules.orchestrator import decision_orchestrator
 from tarim_destek_rag.scraper.faq_harvester import AgriculturalFAQHarvester
+from tarim_destek_rag.scraper.pipeline import HarvestModerationService
 from tarim_destek_rag.scraper.registry import SourceRegistry, source_registry
 
 
@@ -358,6 +361,114 @@ def harvest_faqs(
     }
 
 
+@app.post("/faqs/harvest-live", tags=["Chatbot / Semantik Arama"])
+def harvest_live_faqs(
+    payload: HarvestLiveRequest,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """İzinli resmî adresten canlı tarama yapar, diff hesaplar ve PENDING inceleme kuyruğuna ekler."""
+    service = HarvestModerationService(session)
+    try:
+        result = service.harvest_from_source(
+            url=payload.source_url,
+            admin_user="admin",
+            source_name=payload.source_name,
+        )
+        return result
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve)) from ve
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Canlı tarama başarısız: {e}") from e
+
+
+@app.get("/faqs/moderation-queue", tags=["Yönetim ve Moderasyon"])
+def list_moderation_queue(
+    status: str = "PENDING",
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> list[dict[str, Any]]:
+    """İnceleme kuyruğundaki kayıtları listeler."""
+    repo = FAQRepository(session)
+    items = repo.list_moderation_queue(status=status)
+    return [
+        {
+            "id": item.id,
+            "question": item.question,
+            "answer": item.answer,
+            "legal_citation": item.legal_citation,
+            "legal_span": item.legal_span,
+            "source_url": item.source_url,
+            "source_domain": item.source_domain,
+            "moderation_status": item.moderation_status,
+            "version": item.version,
+            "created_at": item.created_at,
+        }
+        for item in items
+    ]
+
+
+@app.post("/faqs/{faq_id}/approve", tags=["Yönetim ve Moderasyon"])
+def approve_faq(
+    faq_id: str,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Moderatör onayı ile kaydı yayına alır ve retriever indeksine ekler."""
+    service = HarvestModerationService(session)
+    try:
+        approved = service.approve_item(faq_id, admin_user="admin", retriever=hybrid_retriever)
+        return {
+            "status": "APPROVED",
+            "id": approved.id,
+            "verified": approved.verified,
+            "moderation_status": approved.moderation_status,
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve)) from ve
+
+
+@app.post("/faqs/{faq_id}/reject", tags=["Yönetim ve Moderasyon"])
+def reject_faq(
+    faq_id: str,
+    payload: ModerationRejectRequest,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Moderatör tarafından kaydı gerekçeli olarak reddeder."""
+    service = HarvestModerationService(session)
+    try:
+        rejected = service.reject_item(faq_id, reason=payload.reason, admin_user="admin")
+        return {
+            "status": "REJECTED",
+            "id": rejected.id,
+            "verified": rejected.verified,
+            "moderation_status": rejected.moderation_status,
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve)) from ve
+
+
+@app.get("/faqs/moderation-logs", tags=["Yönetim ve Moderasyon"])
+def get_moderation_logs(
+    limit: int = 100,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> list[dict[str, Any]]:
+    """Denetim günlüğü kayıtlarını döner."""
+    repo = FAQRepository(session)
+    logs = repo.get_audit_logs(limit=limit)
+    return [
+        {
+            "id": record.id,
+            "action": record.action,
+            "faq_id": record.faq_id,
+            "performed_by": record.performed_by,
+            "timestamp": record.timestamp,
+            "details": record.details,
+        }
+        for record in logs
+    ]
 
 
 @app.get("/supports", response_model=list[SupportProgramDTO], tags=["Destekler"])
