@@ -28,7 +28,7 @@ from tarim_destek_rag.evaluation.benchmark_runner import load_cases_from_jsonl
 from tarim_destek_rag.evaluation.retrieval_benchmark import run_retrieval_benchmark
 from tarim_destek_rag.explainer.template_explainer import TemplateExplainer
 from tarim_destek_rag.logging.logger import logger
-from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
+from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator
 from tarim_destek_rag.scraper.registry import SourceRegistry, source_registry
 
@@ -47,7 +47,7 @@ class BenchmarkV1Report(BaseModel):
     retrieval_mrr: float
     citation_accuracy: float
     unsupported_claim_rate: float
-    freshness_accuracy: float
+    freshness_accuracy: float | None
     rule_latency_ms: float
     retrieval_latency_ms: float
     generation_latency_ms: float
@@ -77,6 +77,9 @@ class BenchmarkV1Runner:
 
         # 1. Decision & Calculation & Latency Run
         passed_cases = 0
+        status_matches = 0
+        amount_matches = 0
+        amount_compared = 0
         rule_latencies = []
         gen_latencies = []
         e2e_latencies = []
@@ -99,6 +102,7 @@ class BenchmarkV1Runner:
                 crop=case.crop,
                 area_da=case.area_da,
                 production_year=case.production_year,
+                irrigation=case.irrigation,
                 seed_certificate_available=case.seed_certificate_available,
                 sapling_certificate_available=case.sapling_certificate_available,
             )
@@ -126,24 +130,29 @@ class BenchmarkV1Runner:
             t_gen_end = time.perf_counter()
             gen_latencies.append((t_gen_end - t_gen_start) * 1000)
 
-            citation_valid = True
-            if exp.citations:
-                v_report = verifier.verify(exp.citations[0])
-                citation_valid = v_report.is_valid
-                if not citation_valid:
-                    unsupported_claims += 1
+            # Kaynak olmadan başarılı atıf sayılamaz; tüm atıflar kontrol edilir.
+            citation_valid = bool(exp.citations) and all(
+                verifier.verify(citation).is_valid for citation in exp.citations
+            )
             if citation_valid:
                 verified_citations += 1
+            else:
+                unsupported_claims += 1
 
             t_total_end = time.perf_counter()
             e2e_latencies.append((t_total_end - t0) * 1000)
 
             status_ok = target_res.status == case.expected_status
-            amount_ok = True
+            if status_ok:
+                status_matches += 1
+            amount_ok = None
             if case.expected_amount is not None:
+                amount_compared += 1
                 amount_ok = calc_res.estimated_amount == case.expected_amount
+                if amount_ok:
+                    amount_matches += 1
 
-            case_passed = status_ok and amount_ok
+            case_passed = status_ok and amount_ok is not False
             if case_passed:
                 passed_cases += 1
 
@@ -154,8 +163,8 @@ class BenchmarkV1Runner:
                 "area_da": str(case.area_da),
                 "expected_status": case.expected_status.value,
                 "actual_status": target_res.status.value,
-                "expected_amount": str(case.expected_amount) if case.expected_amount else "",
-                "actual_amount": str(calc_res.estimated_amount) if calc_res.estimated_amount else "",
+                "expected_amount": str(case.expected_amount) if case.expected_amount is not None else "",
+                "actual_amount": str(calc_res.estimated_amount) if calc_res.estimated_amount is not None else "",
                 "status_match": status_ok,
                 "amount_match": amount_ok,
                 "citation_valid": citation_valid,
@@ -167,12 +176,12 @@ class BenchmarkV1Runner:
         hybrid_metrics = retrieval_res.get("Hybrid", {})
 
         # 3. Metriklerin Derlenmesi
-        eligibility_acc = round((passed_cases / total_cases) * 100, 2)
-        calc_acc = round((passed_cases / total_cases) * 100, 2)
+        eligibility_acc = round((status_matches / total_cases) * 100, 2)
+        calc_acc = round((amount_matches / amount_compared) * 100, 2) if amount_compared else 0.0
         rule_cov = 100.0 if len(rules_evaluated) >= 5 else (len(rules_evaluated) / 5) * 100
         cit_acc = round((verified_citations / total_cases) * 100, 2)
         unsupp_rate = round((unsupported_claims / total_cases) * 100, 2)
-        freshness_acc = 100.0  # Aktif 2026 Resmî Gazete kaynağı ile %100 güncel
+        freshness_acc = None  # Kaynak sürümü ve yürürlük kontrolü henüz ölçülmüyor.
 
         report = BenchmarkV1Report(
             total_cases=total_cases,
@@ -180,15 +189,15 @@ class BenchmarkV1Runner:
             eligibility_accuracy=eligibility_acc,
             rule_coverage=rule_cov,
             calculation_accuracy=calc_acc,
-            retrieval_hit1=hybrid_metrics.get("hit@1", 1.0) * 100,
-            retrieval_hit3=hybrid_metrics.get("hit@3", 1.0) * 100,
-            retrieval_hit5=hybrid_metrics.get("hit@5", 1.0) * 100,
-            retrieval_mrr=hybrid_metrics.get("mrr", 1.0),
+            retrieval_hit1=hybrid_metrics.get("hit@1", 0.0) * 100,
+            retrieval_hit3=hybrid_metrics.get("hit@3", 0.0) * 100,
+            retrieval_hit5=hybrid_metrics.get("hit@5", 0.0) * 100,
+            retrieval_mrr=hybrid_metrics.get("mrr", 0.0),
             citation_accuracy=cit_acc,
             unsupported_claim_rate=unsupp_rate,
             freshness_accuracy=freshness_acc,
             rule_latency_ms=round(sum(rule_latencies) / len(rule_latencies), 2),
-            retrieval_latency_ms=round(hybrid_metrics.get("avg_latency_ms", 15.0), 2),
+            retrieval_latency_ms=round(hybrid_metrics.get("avg_latency_ms", 0.0), 2),
             generation_latency_ms=round(sum(gen_latencies) / len(gen_latencies), 2),
             e2e_latency_ms=round(sum(e2e_latencies) / len(e2e_latencies), 2),
         )
@@ -218,7 +227,7 @@ class BenchmarkV1Runner:
         md_path = bench_dir / "report.md"
         report_content = f"""# TarımDestekRAG — Benchmark v1 Değerlendirme Raporu
 
-**Rapor Tarihi:** 2026-10-06
+**Rapor Türü:** Yerel kod sürümü bazında ölçülmüş değerlendirme; bağımsız mevzuat sertifikası değildir.
 **Test Edilen Vaka Sayısı:** {report.total_cases} (100% Tamamlandı)
 **Lisans:** Özel Lisans — Tüm Hakları Saklıdır (c) 2026 Seydi Eryılmaz (@seydivakkas)
 
@@ -228,9 +237,9 @@ class BenchmarkV1Runner:
 
 | Metrik | Hedef | Ölçülen Sonuç | Durum |
 |---|---|---|---|
-| **Uygunluk Karar Doğruluğu (Eligibility Accuracy)** | %100 | **%{report.eligibility_accuracy:.2f}** | ✅ PASS |
-| **Kural Kapsamı (Rule Coverage)** | %100 | **%{report.rule_coverage:.2f}** | ✅ PASS |
-| **Tutar Hesaplama Doğruluğu (Decimal Exact Match)** | %100 | **%{report.calculation_accuracy:.2f}** | ✅ PASS |
+| **Uygunluk Karar Doğruluğu (Eligibility Accuracy)** | %100 | **%{report.eligibility_accuracy:.2f}** | Gerçek ölçüm |
+| **Kural Kapsamı (Rule Coverage)** | %100 | **%{report.rule_coverage:.2f}** | Gerçek ölçüm |
+| **Tutar Hesaplama Doğruluğu (Decimal Exact Match)** | %100 | **%{report.calculation_accuracy:.2f}** | Yalnız tutar beklenen vakalar |
 
 > *Tüm tutar hesaplamaları Python `decimal.Decimal` hassasiyetinde kuruşu kuruşuna doğrulanmıştır.*
 
@@ -250,9 +259,9 @@ class BenchmarkV1Runner:
 
 | Metrik | Hedef | Ölçülen Sonuç | Açıklama |
 |---|---|---|---|
-| **Atıf Doğruluğu (Citation Accuracy)** | >= %98 | **%{report.citation_accuracy:.2f}** | Resmî Gazete madde numarası ve link doğrulaması |
-| **Desteksiz İddia Oranı (Unsupported Claim Rate)** | %0.00 | **%{report.unsupported_claim_rate:.2f}** | Zero-LLM deterministik şablon kural koruması |
-| **Mevzuat Tazeliği (Freshness Accuracy)** | %100 | **%{report.freshness_accuracy:.2f}** | Mülga ve yürürlükteki mevzuat ayrımı |
+| **Atıf Kayıt Kontrolü (Citation Registry Check)** | >= %98 | **%{report.citation_accuracy:.2f}** | Kaynak kayıtları ve yıl alanı kontrolü; belge metniyle içerik doğrulaması henüz yapılmadı |
+| **Doğrulanamayan Atıf Oranı (Unverified Citation Rate)** | %0.00 | **%{report.unsupported_claim_rate:.2f}** | Eksik veya doğrulanamayan atıflar; içerik iddiasının bağımsız doğrulaması değil |
+| **Mevzuat Tazeliği (Freshness Accuracy)** | %100 | **{"Ölçülmedi" if report.freshness_accuracy is None else f"%{report.freshness_accuracy:.2f}"}** | Mülga ve yürürlükteki mevzuat ayrımı |
 
 ---
 
@@ -269,7 +278,7 @@ class BenchmarkV1Runner:
 
 ## 5. Sonuç
 
-TarımDestekRAG sistemi, Master Plan TD-P17 standartlarında tanımlanan tüm başarı kapılarını **%100 doğruluk ve sıfır halüsinasyon** garantisiyle geçmiştir.
+Bu rapor, mevcut test vakalarıyla ölçülen sonuçları gösterir. Gerçek mevzuat doğruluğu, kaynak güncelliği ve sıfır desteksiz iddia henüz bağımsız olarak kanıtlanmış değildir.
 """
         md_path.write_text(report_content, encoding="utf-8")
         logger.info(
