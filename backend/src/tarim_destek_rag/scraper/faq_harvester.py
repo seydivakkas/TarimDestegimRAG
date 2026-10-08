@@ -499,7 +499,7 @@ class AgriculturalFAQHarvester:
                     source_name=item["source_name"],
                     source_url=item.get("source_url"),
                     keywords=kw_str,
-                    verified=True,
+                    verified=False,  # Hukuki/içerik doğrulaması yapılmış kaynak pasajı henüz yok.
                     created_at=now_iso,
                 )
             )
@@ -541,7 +541,7 @@ class AgriculturalFAQHarvester:
                     source_name=item.get("source_name", "Web Kaynağı"),
                     source_url=item.get("source_url"),
                     keywords=kw_str,
-                    verified=item.get("verified", True),
+                    verified=False,  # Dış girdinin verified bayrağına otomatik güvenmeyin.
                     created_at=now_iso,
                 )
             )
