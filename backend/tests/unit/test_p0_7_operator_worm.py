@@ -25,10 +25,14 @@ from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.legal_audit import (
     _ensure_exact_locked_version, archive_signed_event, production_audit_valid,
 )
-from tarim_destek_rag.database.legal_approvals import two_person_approved
+from tarim_destek_rag.database.legal_approvals import (
+    register_detached_approval, register_detached_revocation,
+    subject_digest, two_person_approved,
+)
 from tarim_destek_rag.database.legal_operator import (
     OFFICERS_ENV, OIDC_TRUST_ENV, VAULT_ADDR_ENV,
     authenticate_legal_officer, build_vault_signed_envelope,
+    build_vault_revocation_envelope,
 )
 from tarim_destek_rag.database.models import (
     LegalApprovalAttestationModel, LegalAuditReceiptModel,
@@ -288,3 +292,72 @@ def test_production_flag_alone_does_not_activate_without_security_profile(
     assert two_person_approved(session, rate)
     monkeypatch.delenv("TARIM_RAG_LEGAL_SECURITY_PROFILE", raising=False)
     assert two_person_approved(session, rate) is False
+
+
+def test_end_to_end_oidc_vault_dual_sign_worm_activate_revoke_to_review(
+    session, monkeypatch
+):
+    """Synthetic complete protocol, not live IdP, Vault, AWS or government signoff."""
+    rsa_signer, keys = oidc_fixture(monkeypatch)
+    rate = add_rate(session)
+    digest = subject_digest(rate)
+    reviewer = authenticate_legal_officer(id_token(rsa_signer), "REVIEWER")
+    approver = authenticate_legal_officer(
+        id_token(rsa_signer, sub="issuer-subject-approver"), "APPROVER"
+    )
+
+    def respond(request):
+        key_name = request.url.path.rsplit("/", 1)[-1]
+        role = {"legal-reviewer": "REVIEWER", "legal-approver": "APPROVER"}[key_name]
+        data = base64.b64decode(json.loads(request.content)["input"])
+        signed = keys[role][1].sign(data)
+        return httpx.Response(200, json={"data": {
+            "signature": "vault:v1:" + base64.b64encode(signed).decode()
+        }})
+
+    fake_s3 = FakeS3()
+    with httpx.Client(transport=httpx.MockTransport(respond)) as vault:
+        signed = [
+            build_vault_signed_envelope(
+                rate, officer, vault_token="short-lived-operator-vault-token",
+                acknowledged_subject_digest=digest, client=vault,
+            )
+            for officer in (reviewer, approver)
+        ]
+        assert signed[0]["principal_id"] != signed[1]["principal_id"]
+        for envelope in signed:
+            register_detached_approval(session, rate, envelope)
+        session.flush()
+        assert two_person_approved(session, rate)
+
+        monkeypatch.setenv("TARIM_RAG_LEGAL_SECURITY_PROFILE", "production")
+        monkeypatch.setenv("TARIM_RAG_WORM_BUCKET", "legal-immutable-test-bucket")
+        monkeypatch.setenv("TARIM_RAG_WORM_RETENTION_DAYS", "3650")
+        from tarim_destek_rag.database import legal_audit
+        monkeypatch.setattr(legal_audit, "_client", lambda: fake_s3)
+        proxy = PostgresSessionProxy(session)
+        # Signature without WORM objects MUST NOT become production eligible.
+        assert two_person_approved(proxy, rate) is False
+        original_events = session.scalars(select(LegalApprovalAttestationModel)).all()
+        held = [
+            archive_signed_event(proxy, "RATE", rate.id, e.role, e, s3=fake_s3)
+            for e in original_events
+        ]
+        assert len(held) == 2
+        assert two_person_approved(proxy, rate) is True
+        fake_s3.outage = True
+        assert two_person_approved(proxy, rate) is False
+        fake_s3.outage = False
+
+        revoked = build_vault_revocation_envelope(
+            rate, approver, reason="Synthetic amended law - revoke",
+            vault_token="short-lived-operator-vault-token",
+            acknowledged_subject_digest=digest, client=vault,
+        )
+        record = register_detached_revocation(session, rate, revoked)
+        held.append(archive_signed_event(
+            proxy, "RATE", rate.id, "REVOCATION", record, s3=fake_s3
+        ))
+        assert len(held) == 3
+        # Tombstone is permanent for this ID even while original WORM proofs exist.
+        assert two_person_approved(proxy, rate) is False
