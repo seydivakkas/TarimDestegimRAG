@@ -179,3 +179,11 @@ def test_pdf_ambiguous_sentence_cannot_create_unique_citation():
             contents, expected_sha256=hashlib.sha256(contents).hexdigest(),
             page_1_indexed=1, exact_quote=sentence,
         )
+
+
+def test_legacy_2026_preview_does_not_fabricate_quote_as_law():
+    from tarim_destek_rag.citations.document_links import render_document_viewer_html
+    output = render_document_viewer_html("MADDE 1")
+    assert "Mevzuat cümlesi doğrulanmadı" in output
+    assert "Önceki örnek önizlemeler" in output
+    assert "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan" not in output
