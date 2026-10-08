@@ -20,7 +20,8 @@ from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel, Irrigat
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.normalization.water_2026 import (
     AMENDMENT_ID, AMENDMENT_URL, CATALOG, PINNED_DISTRICTS,
-    PRIMARY_ID, PRIMARY_URL, load_water_catalog, stage_water_scope,
+    PRIMARY_ID, PRIMARY_URL, PRIMARY_SHA256, AMENDMENT_SHA256,
+    load_water_catalog, stage_water_scope,
 )
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator
 
@@ -52,7 +53,8 @@ def synthetic_scope(session, *, reviewed=True):
     versions = []
     for i, source in enumerate(sources):
         version = SourceVersionModel(
-            source_id=source.source_id, content_hash=str(i + 1) * 64,
+            source_id=source.source_id,
+            content_hash=PRIMARY_SHA256 if i == 0 else AMENDMENT_SHA256,
             version=1, detected_at="2026-10-08T00:00:00+00:00",
             superseded=False, effective_from="2026-01-01", effective_to="2026-12-31",
         )
@@ -96,6 +98,7 @@ def test_source_legal_52_is_explicit_2026_draft():
     lambda d: d["legal_basis"][1].update(effective_from="2027-01-01"),
     lambda d: d["exception_policies"].update({"2026_2024_39_ART_6_3_C": "DRIP_EXCEPTION_ACTIVE"}),
     lambda d: d["constraints"].update(coverage_complete=True),
+    lambda d: d["legal_basis"][1].update(content_sha256="f" * 64),
 ])
 def test_source_tampering_is_rejected(tmp_path, tamper):
     d = json.loads(CATALOG.read_text(encoding="utf-8"))
@@ -180,7 +183,7 @@ def test_reread_requires_valid_original_pdf_and_amendment(session, tmp_path):
         stage_water_scope(session, apply=True)
     pdf.write_bytes(b"not-a-pdf")
     amendment.write_bytes(b"2025/42 MADDE 16")
-    with pytest.raises(ValueError, match="published PDF"):
+    with pytest.raises(ValueError, match="Original legal source"):
         stage_water_scope(
             session, apply=True, original_pdf_path=pdf, amendment_html_path=amendment
         )
