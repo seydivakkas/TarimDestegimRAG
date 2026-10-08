@@ -1269,6 +1269,69 @@ def build_ui() -> gr.Blocks:
                     on_legal_update_scan, inputs=[update_year], outputs=[update_result],
                 )
 
+                gr.Markdown(
+                    "#### PDF üzerinde birebir mevzuat cümlesini göster (DRAFT kanıt)"
+                )
+                gr.Markdown(
+                    "Bu önizleme yalnız özgün PDF'deki doğrulanmış metnin yerini gösterir. "
+                    "Bir hukuki kararın yürürlükte/ödenebilir olduğunu doğrulamaz. "
+                    "Şimdilik gerçek kaynak cümlesi kayıt numarası gerektirir."
+                )
+                with gr.Row():
+                    pdf_evidence_id = gr.Number(
+                        label="Kaydedilmiş kaynak cümlesi ID", value=1,
+                        minimum=1, precision=0,
+                    )
+                    show_pdf_proof = gr.Button(
+                        "PDF Sayfasındaki Cümleyi Sarı İşaretle", variant="secondary"
+                    )
+                pdf_proof_note = gr.Markdown(
+                    "Belge kanıtı bulunamadığında yanlış sayfa veya metin gösterilmez."
+                )
+                pdf_proof_image = gr.Image(
+                    label="Orijinal PDF sayfası — doğrulanan cümle sarı işaretli",
+                    interactive=False, type="pil",
+                )
+
+                def on_show_pdf_proof(sentence_id: float, target_year: float):
+                    from io import BytesIO
+                    from PIL import Image
+
+                    item = api_client.get_grounding_evidence(
+                        int(sentence_id), int(target_year)
+                    )
+                    if item.get("status") != "DRAFT_NEEDS_HUMAN_LEGAL_REVIEW":
+                        return (
+                            "**Kanıt bulunamadı veya doğrulanamadı.** "
+                            "Kaynak PDF, yıl ve cümle eşleşmesi kontrol edilmeli.",
+                            None,
+                        )
+                    payload = api_client.get_grounding_page_bytes(
+                        int(sentence_id), int(item["page_number"]), int(target_year)
+                    )
+                    if not payload:
+                        return "**PDF sayfa görüntüsü doğrulanamadı.**", None
+                    with Image.open(BytesIO(payload)) as screenshot:
+                        screenshot.load()
+                        view = screenshot.copy()
+                    safe_url = html.escape(str(item["source_url"]), quote=True)
+                    safe_quote = html.escape(str(item["exact_quote"]))
+                    safe_sha = html.escape(str(item["original_pdf_sha256"]))
+                    summary = (
+                        f"**DRAFT / Hukukî onay bekleniyor** — Üretim yılı: {int(target_year)}, "
+                        f"PDF sayfası: {item['page_number']}. "
+                        f"Kaynak SHA-256: {safe_sha}. "
+                        f"\n\n**Gerçek PDF cümlesi:** {safe_quote}"
+                        f"\n\nResmî adres: {safe_url}"
+                    )
+                    return summary, view
+
+                show_pdf_proof.click(
+                    on_show_pdf_proof,
+                    inputs=[pdf_evidence_id, update_year],
+                    outputs=[pdf_proof_note, pdf_proof_image],
+                )
+
                 gr.Markdown("""
                 #### 🔄 Otomatik Değişiklik Algılama & Hash Sistemi
                 - Her resmî kaynak URL'si düzenli aralıklarla kontrol edilir.
