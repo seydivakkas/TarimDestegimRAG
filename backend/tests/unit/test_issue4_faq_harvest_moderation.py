@@ -300,7 +300,7 @@ def test_moderation_reject_flow(session):
 
     # Denetim günlüğünde işlem kaydedilmiş olmalı
     logs = repo.get_audit_logs()
-    assert any(l.action == "REJECT" and l.faq_id == item.id for l in logs)
+    assert any(entry.action == "REJECT" and entry.faq_id == item.id for entry in logs)
 
 
 # ==============================================================================
