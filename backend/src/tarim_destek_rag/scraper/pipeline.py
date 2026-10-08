@@ -36,7 +36,7 @@ class AllowlistedFetcher:
 
     def fetch(self, url: str, override_html: str | None = None) -> tuple[str, str, str]:
         """URL içeriğini çeker, güvenlik kontrollerini yapar ve SHA-256 parmak izini hesaplar.
-        
+
         Döner: (raw_text, sha256_hash, source_domain)
         """
         is_allowed, reason = self.registry.validate_url(url)
