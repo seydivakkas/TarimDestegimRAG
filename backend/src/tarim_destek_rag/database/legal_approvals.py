@@ -229,6 +229,10 @@ def _validate_signature(
 
 def two_person_approved(session: Session, subject: Subject) -> bool:
     """Independent signed reviewer+approver evidence, freshly checked every read."""
+    # Production-wide release gate defaults OFF even with two valid signatures.
+    # A deployment operator must explicitly authorize live legal activation.
+    if os.getenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED") != "true":
+        return False
     keys = _trusted_public_keys()
     if len(keys) < 2:
         return False
