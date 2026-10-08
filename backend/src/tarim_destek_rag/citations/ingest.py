@@ -1,8 +1,8 @@
 """Kontrollü resmî belge indirimi ve gerçek atıf pasajı sorgulaması.
 
 Kullanım:
-python -m tarim_destek_rag.citations.ingest --source-id TOB-2026-KATSAYI
-python -m tarim_destek_rag.citations.ingest --source-id TOB-2026-KATSAYI --section "DESTEK TUTARLARI" --snippet "DESTEK KATSAYI DEĞERİ 367 TL OLARAK GÜNCELLENDİ"
+python -m tarim_destek_rag.citations.ingest --source-id TOB-2026-09-08
+python -m tarim_destek_rag.citations.ingest --source-id TOB-2026-09-08 --section "DESTEK TUTARLARI" --snippet "DESTEK KATSAYI DEĞERİ 367 TL OLARAK GÜNCELLENDİ"
 """
 from __future__ import annotations
 
