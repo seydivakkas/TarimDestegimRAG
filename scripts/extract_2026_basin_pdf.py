@@ -156,6 +156,10 @@ def fetch_official_bytes() -> bytes:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default="data/2026_basin_review")
+    parser.add_argument(
+        "--emit-log-bundle", action="store_true",
+        help="Emit chunked PUBLIC draft JSON for an explicit, reviewed repository commit"
+    )
     args = parser.parse_args()
     folder = Path(args.out_dir)
     folder.mkdir(parents=True, exist_ok=True)
@@ -173,6 +177,12 @@ def main() -> int:
     (folder / "2026_2027_basin_crop_draft.json").write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
+    if args.emit_log_bundle:
+        compact = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
+        print("BASIN_DRAFT_JSON_BEGIN")
+        for index in range(0, len(compact), 1500):
+            print(f"BASIN_DRAFT_JSON_CHUNK:{index // 1500:05d}:{compact[index:index+1500]}")
+        print("BASIN_DRAFT_JSON_END")
     print(
         f"PARSED_DRAFT: {result['district_count']} districts, "
         f"{result['province_count']} provinces, {result['page_count']} pages; "
