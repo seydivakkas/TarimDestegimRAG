@@ -1,0 +1,44 @@
+name: P0-6 Effective 2026 Water Legal Scope
+
+on:
+  pull_request:
+    paths:
+      - "configs/2026_water_restriction_52_draft.json"
+      - "backend/src/tarim_destek_rag/database/**"
+      - "backend/src/tarim_destek_rag/rules/rules_impl.py"
+      - "backend/src/tarim_destek_rag/normalization/water_2026.py"
+      - "backend/tests/unit/test_p0_6_2026_water_scope.py"
+      - "backend/tests/unit/test_p0_4_basin_review.py"
+      - ".github/workflows/p0-6-water-2026.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legal-scope-and-exception-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install deterministic legal and approval dependencies
+        run: python -m pip install "pytest>=8,<10" "sqlalchemy>=2.0.35,<3" "pydantic>=2.9,<3" "pydantic-settings>=2.5,<3" "pyyaml>=6,<7" "cryptography>=43,<47" "pypdf>=5,<7"
+      - name: Compile model, source gate, and rule changes
+        run: |
+          python -m compileall -q backend/src/tarim_destek_rag/database
+          python -m compileall -q backend/src/tarim_destek_rag/normalization/water_2026.py
+          python -m compileall -q backend/src/tarim_destek_rag/rules
+      - name: Run 2026 legal source/exception and existing safety cases
+        env:
+          PYTHONPATH: "backend/src:."
+          DATABASE_URL: "sqlite:///:memory:"
+        run: |
+          python -m pytest \
+            backend/tests/unit/test_p0_6_2026_water_scope.py \
+            backend/tests/unit/test_p0_5_signed_approval.py \
+            backend/tests/unit/test_p0_4_basin_review.py \
+            backend/tests/unit/test_issue2_issue3_legislative_decision_engine.py \
+            -q
