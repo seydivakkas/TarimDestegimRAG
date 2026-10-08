@@ -17,6 +17,8 @@ import binascii
 import hashlib
 import json
 import os
+import re
+from urllib.parse import urlsplit
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal
@@ -63,6 +65,8 @@ def subject_payload(subject: Subject) -> dict:
         "source_id": version.source_id,
         "source_url": source.url,
         "source_authority": source.authority,
+        "source_active": source.active,
+        "source_superseded": version.superseded,
         "source_sha256": version.content_hash,
         "source_effective_from": version.effective_from,
         "source_effective_to": version.effective_to,
@@ -201,6 +205,20 @@ def two_person_approved(session: Session, subject: Subject) -> bool:
     if len(keys) < 2:
         return False
     if getattr(subject, "review_status", None) != "VERIFIED":
+        return False
+    version = subject.source_version
+    source = version.source if version is not None else None
+    if version is None or source is None or not source.active or version.superseded:
+        return False
+    parsed = urlsplit(source.url)
+    host = (parsed.hostname or "").lower()
+    if (
+        parsed.scheme != "https"
+        or not (host == "resmigazete.gov.tr" or host.endswith(".resmigazete.gov.tr")
+                or host == "tarimorman.gov.tr" or host.endswith(".tarimorman.gov.tr"))
+        or source.authority not in ("OFFICIAL_GAZETTE", "MINISTRY_OF_AGRICULTURE")
+        or not re.fullmatch(r"[0-9a-fA-F]{64}", version.content_hash or "")
+    ):
         return False
     # Revocation is an append-only tombstone: even a source reactivation or a
     # second approval cannot silently restore authority for the same record ID.
