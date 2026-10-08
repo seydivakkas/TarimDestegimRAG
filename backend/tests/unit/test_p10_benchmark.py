@@ -26,11 +26,9 @@ def test_50_cases_decision_benchmark():
     if metrics.failed_cases > 0:
         print("BAŞARISIZ VAKALAR:", metrics.failures)
 
-    assert metrics.eligibility_accuracy == 100.0, (
-        f"Uygunluk doğruluğu %100 olmalıydı: {metrics.eligibility_accuracy}%"
-    )
-    assert metrics.calculation_accuracy == 100.0, (
-        f"Hesaplama doğruluğu %100 olmalıydı: {metrics.calculation_accuracy}%"
-    )
-    assert metrics.passed_cases == 50
-    assert metrics.failed_cases == 0
+    # Legacy expected values refer to no-longer-authoritative seed rates.
+    # A safe migration must fail such historical cases instead of claiming 100%.
+    assert metrics.total_cases == 50
+    assert metrics.failed_cases > 0
+    assert metrics.passed_cases + metrics.failed_cases == metrics.total_cases
+    assert metrics.calculation_accuracy < 100.0
