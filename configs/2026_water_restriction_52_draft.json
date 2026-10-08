@@ -14,8 +14,10 @@
       "clause": "MADDE 6/3(a,b)",
       "url": "https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/2024-39%20Bitkisel%20%C3%9Cretime%20Y%C3%B6nelik%20Desteklemeler%20ile%20Di%C4%9Fer%20Baz%C4%B1%20Tar%C4%B1msal%20Desteklemelere%20%C3%96deme%20Yap%C4%B1lmas%C4%B1na%20Dair%20Tebli%C4%9F%20%28Tebli%C4%9F%20No%202024-39%29.pdf",
       "pdf_page_1_indexed": 9,
-      "content_sha256": null,
-      "role": "2026 52 districts explicit enumeration; irrigated parcels water-restriction supplemental support clause"
+      "content_sha256": "8b8b0785e2692268a60a0931f54aa36783ca32d80aea12800b66b25ea0d71612",
+      "role": "2026 52 districts explicit enumeration; irrigated parcels water-restriction supplemental support clause",
+      "byte_provenance_status": "FETCHED_FROM_OFFICIAL_HOST_AND_SHA256_RECORDED_NOT_LEGALLY_APPROVED",
+      "evidence_url": "https://github.com/seydivakkas/TarimDestegimRAG/actions/runs/37824333841"
     },
     {
       "instrument": "2025/42",
@@ -24,8 +26,10 @@
       "gazette_issue": "33123",
       "clause": "MADDE 4, MADDE 12, MADDE 16, GECICI MADDE 2",
       "url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
-      "content_sha256": null,
-      "role": "Repeals 2024/39 m.6/3(c) drip-based maize exception; adds m.17/2(j) water-basin grain maize and potato exclusions; preserves 2025 pending payments under old terms"
+      "content_sha256": "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269",
+      "role": "Repeals 2024/39 m.6/3(c) drip-based maize exception; adds m.17/2(j) water-basin grain maize and potato exclusions; preserves 2025 pending payments under old terms",
+      "byte_provenance_status": "FETCHED_FROM_OFFICIAL_HOST_AND_SHA256_RECORDED_NOT_LEGALLY_APPROVED",
+      "evidence_url": "https://github.com/seydivakkas/TarimDestegimRAG/actions/runs/37824333841"
     }
   ],
   "secondary_crosscheck": {
