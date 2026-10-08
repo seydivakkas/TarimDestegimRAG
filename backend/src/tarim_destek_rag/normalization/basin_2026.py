@@ -15,6 +15,7 @@ from tarim_destek_rag.database.models import (
 )
 
 BASIN_SOURCE_ID = "TOB-2026-2027-BASIN-DESENI"
+PINNED_BASIN_PDF_SHA256 = "60263e83a953659ecc4f581bcd1ef1a921cf397bc5b4469869852470473f0b21"
 BASIN_SOURCE_URL = (
     "https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/"
     "2026%20Y%C4%B1l%C4%B1%20Planlamaya%20Konu%20Havza%20%C3%9Cr%C3%BCn"
@@ -37,7 +38,7 @@ def validate_basin_catalog(
         or data.get("production_years") != [2026, 2027]
         or data.get("source_url") != BASIN_SOURCE_URL
         or data.get("approval") != "DRAFT_REQUIRES_HUMAN_ROW_AND_FOOTNOTE_REVIEW"
-        or not re.fullmatch(r"[0-9a-f]{64}", data.get("original_pdf_sha256", ""))
+        or data.get("original_pdf_sha256") != PINNED_BASIN_PDF_SHA256
     ):
         raise ValueError("Incorrect source, years, checksum, or draft approval gate")
     pages = data.get("page_count")
