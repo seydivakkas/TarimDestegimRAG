@@ -238,6 +238,46 @@ class LegalApprovalAttestationModel(Base):
 
 
 
+
+class LegalAuditReceiptModel(Base):
+    """Evidence receipt for remote Object Lock COMPLIANCE WORM object versions.
+
+    Signed legal records alone are not production approval until their exact
+    immutable audit objects are read back and checked on every decision.
+    """
+
+    __tablename__ = "legal_audit_receipts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subject_type: Mapped[str] = mapped_column(String(16), nullable=False)
+    subject_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    event_role: Mapped[str] = mapped_column(String(16), nullable=False)
+    object_bucket: Mapped[str] = mapped_column(String(255), nullable=False)
+    object_key: Mapped[str] = mapped_column(String(512), nullable=False)
+    object_version: Mapped[str] = mapped_column(String(255), nullable=False)
+    payload_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    retain_until: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    __table_args__ = (
+        CheckConstraint(
+            "subject_type IN ('RATE','BASIN','WATER')",
+            name="ck_audit_subject_kind",
+        ),
+        CheckConstraint(
+            "event_role IN ('REVIEWER','APPROVER','REVOCATION')",
+            name="ck_audit_event_role",
+        ),
+        UniqueConstraint(
+            "subject_type", "subject_id", "event_role",
+            name="uq_audit_subject_event_role",
+        ),
+        UniqueConstraint(
+            "object_bucket", "object_key", "object_version",
+            name="uq_audit_object_version",
+        ),
+    )
+
+
 class LegalApprovalRevocationModel(Base):
     """Append-only tombstone that blocks a subject from ever becoming active again."""
 
