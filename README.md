@@ -46,6 +46,44 @@ Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar He
 
 ---
 
+## ⚖️ Geleneksel RAG Sistemlerinden Temel Farklar ve %100 Doğrulanabilir Şeffaflık Mimarisi
+
+TarımDesteğimRAG, standart yapay zeka arama veya sohbet robotlarından (Chatbot / Generic RAG) radikal biçimde ayrışır. Tarımsal destekleme kararları doğrudan bir çiftçinin ekonomik geleceğini ve yıllık üretim planlamasını etkilediğinden, **sıfır toleranslı kesinlik ve yasal sorumluluk** gerektirir.
+
+### 📊 Karşılaştırma Matrisi: Standart RAG vs. TarımDesteğimRAG
+
+| Boyut / Kriter | ❌ Standart / Geleneksel RAG Modelleri | 🛡️ TarımDesteğimRAG 2026 Mimarisi |
+| :--- | :--- | :--- |
+| **Karar & Hak Ediş Motoru** | Büyük Dil Modelleri (LLM) metin üretir; olasılıksaldır. Aynı girdiye farklı zamanlarda çelişkili veya uydurma cevaplar verebilir. | **%100 Deterministik Python Kural Motoru (Zero-LLM):** Kararlar 5488 sayılı Kanun ve Resmî Gazete kararlarına 1:1 bağlı Python kural motoruyla verilir. |
+| **Halüsinasyon Riski** | Yüksek (%15 - %35). Var olmayan hibe programları veya uydurma başvuru şartları türetebilir. | **%0.00 Halüsinasyon (Sıfır Desteksiz İddia):** Karar ve hak ediş sürecinde generative LLM kullanılmaz, desteksiz iddia üretilemez. |
+| **Finansal & Matematiksel Hassasiyet** | LLM'ler çarpma ve katsayı hesaplarında yetersizdir; kayan nokta (float) yuvarlama hataları yapar. | **Kuruş Hassasiyetinde Finansal Matematik:** Python `decimal.Decimal` ile dekar başı hesaplama (310 TL, 465 TL, 250 TL vb.) kuruşu kuruşuna kesindir. |
+| **Veri Kaynak Güvenilirliği** | İnternetten kontrolsüz metin parçaları, forumlar veya blog yazıları çeker (Gürültülü / sahte veri riski). | **%100 Doğrulanmış Resmî Kanonik Kaynaklar:** Yalnızca Resmî Gazete (Sayı: 32647), BÜGEM ve DSİ mevzuatı kullanılır. SHA-256 hash ile değişiklikler anlık izlenir. |
+| **Metin İçi Renkli İşaretleme** | Yoktur veya metin ham blok halinde kaba alıntı olarak sunulur. | **Renk Kodlu Madde İçi İşaretleme (In-Document Highlighting):** Kararın dayanağı olan yasal cümle belgede renk kodlarıyla otomatik işaretlenir. |
+| **Kanıt Zinciri & Tıklanabilirlik** | Belirsiz kaynakça; kullanıcının teyit etmesi zahmetlidir. | **Çift Yönlü Tıklanabilir Kanıt Zinciri:** Sağlanan ve sağlanamayan her şart tıklandığında doğrudan Resmî Gazete'nin ilgili sayfasına (`...pdf#page=1`) götürür. |
+
+---
+
+## 🎨 Renk Kodlu Metin İçi Kanıt ve Madde İşaretleme Sistemi (In-Document Color Highlighting)
+
+Sistemimiz, mevzuat metinlerini ve gerekçe alıntılarını yalnızca statik metin olarak sunmaz. Kararı etkileyen her bir koşulu, yasal hükmü ve parasal değeri renk kodlarıyla görselleştirir:
+
+- 🟢 **Yeşil Vurgu (`.legal-hl-pass`):** Hak kazanma hükümleri, sağlanan ÇKS şartları ve pozitif yasal haklar (Örn: *«Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan üreticilere temel girdi desteği ödenir»*).
+- 🔴 **Kırmızı Vurgu (`.legal-hl-fail`):** Ret gerekçeleri, yasal yasaklar, münavebe cezaları ve kısıtlamalar (Örn: *«ÇKS kaydı bulunmayan veya kaydı pasif olan üreticiler hiçbir tarımsal destekleme ödemesinden yararlanamaz»*).
+- 🟡 **Kehribar/Altın Vurgu (`.legal-hl-gold`):** Dekar başı destek tutarları, katsayılar, alan ve yaş eşikleri (Örn: *«465 TL/da»*, *«%50'si oranında»*, *«en az 5 dekar»*, *«1 Eylül 2026 - 31 Aralık 2026»*).
+- 🔵 **Mavi Vurgu (`.legal-hl-ref`):** Resmî Gazete sayısı, kanun numarası ve yürütme mercii (Örn: *«Resmî Gazete Sayı: 32647»*, *«MADDE 2 - Tarım Havzaları Planlı Üretim Desteği»*).
+
+#### 📖 Canlı Belge Görünümü Örneği:
+```html
+<!-- Sistemimizin Resmî Gazete Madde 1 Metnini Görselleştirme Çıktısı -->
+MADDE 1 - (1) <mark class="legal-hl-gold">2026 üretim yılında</mark> 
+<mark class="legal-hl-pass">Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan ve tarımsal üretim yapan çiftçilere</mark>, 
+mazot ve gübre maliyetlerini karşılamak amacıyla <mark class="legal-hl-pass">temel girdi desteği (Temel Destek) ödenir</mark>.
+(2) Başvurular <mark class="legal-hl-gold">1 Eylül 2026 - 31 Aralık 2026</mark> tarihleri arasında yapılır.
+(3) <mark class="legal-hl-fail">ÇKS kaydı bulunmayan veya kaydı pasif olan üreticiler hiçbir tarımsal destekleme ödemesinden yararlanamaz.</mark>
+```
+
+---
+
 ## 📸 Ekran Görüntüleri ve Görsel Tanıtım (UI Showcase)
 
 Aşağıda TarımDestekRAG sisteminin PC paneline ait canlı ekran görüntüleri yer almaktadır:

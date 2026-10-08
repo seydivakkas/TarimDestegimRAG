@@ -121,3 +121,65 @@ def test_get_article_preview():
         assert "text" in data
         assert "source" in data
         assert len(data["text"]) > 20
+
+
+def test_highlight_legal_text_color_codes():
+    """highlight_legal_text'in şartları, retleri, tutarları ve referansları doğru renk etiketleriyle işaretlediğini test eder."""
+    from tarim_destek_rag.citations.document_links import highlight_legal_text
+
+    # 1. Yeşil vurgu (Hak kazanma / sağlanan şart)
+    text_pass = "2026 üretim yılında Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan üreticilere temel girdi desteği (Temel Destek) ödenir."
+    hl_pass = highlight_legal_text(text_pass)
+    assert '<mark class="legal-hl-pass">' in hl_pass
+    assert '<mark class="legal-hl-gold">2026 üretim yılında</mark>' in hl_pass
+
+    # 2. Kırmızı vurgu (Ret gerekçesi / yasaklama)
+    text_fail = "ÇKS kaydı bulunmayan veya kaydı pasif olan üreticiler hiçbir tarımsal destekleme ödemesinden yararlanamaz."
+    hl_fail = highlight_legal_text(text_fail)
+    assert '<mark class="legal-hl-fail">' in hl_fail
+
+    # 3. Kehribar/Altın vurgu (Tutarlar ve tarihler)
+    text_gold = "Buğday için 465 TL/da, su kısıtında ilave 250 TL verilir. Başvuru 1 Eylül 2026 - 31 Aralık 2026 arasındadır."
+    hl_gold = highlight_legal_text(text_gold)
+    assert '<mark class="legal-hl-gold">465 TL/da</mark>' in hl_gold
+    assert '<mark class="legal-hl-gold">250 TL</mark>' in hl_gold
+    assert '<mark class="legal-hl-gold">1 Eylül 2026 - 31 Aralık 2026</mark>' in hl_gold
+
+    # 4. Mavi vurgu (Mevzuat madde referansı)
+    text_ref = "MADDE 1 - (1) Resmî Gazete Sayı: 32647 uyarınca uygulanır."
+    hl_ref = highlight_legal_text(text_ref)
+    assert '<mark class="legal-hl-ref">' in hl_ref
+
+
+def test_format_highlighted_citation_card():
+    """format_highlighted_citation_card'ın geçerli kart HTML'i ve renkli alıntı ürettiğini test eder."""
+    from tarim_destek_rag.citations.document_links import format_highlighted_citation_card
+
+    citation = {
+        "title": "2026 Bitkisel Üretim Destekleme Kararı",
+        "section": "MADDE 1 - Temel Destek",
+        "year": 2026,
+        "snippet": "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan üreticilere temel girdi desteği (Temel Destek) ödenir.",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1",
+    }
+    card_html = format_highlighted_citation_card(citation, status="ELIGIBLE")
+    assert '<div class="legal-quote-card pass">' in card_html
+    assert 'class="legal-source-link"' in card_html
+    assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1"' in card_html
+    assert '<mark class="legal-hl-pass">' in card_html
+
+
+def test_render_document_viewer_html():
+    """render_document_viewer_html'in tam belge okuyucu, gösterge çubuğu ve paragrafları ürettiğini test eder."""
+    from tarim_destek_rag.citations.document_links import render_document_viewer_html
+
+    viewer_html = render_document_viewer_html("MADDE 1")
+    assert '<div class="legal-reader-container">' in viewer_html
+    assert '<div class="legal-legend-bar">' in viewer_html
+    assert '🟢 <b>Yeşil:</b>' in viewer_html
+    assert '🔴 <b>Kırmızı:</b>' in viewer_html
+    assert '🟡 <b>Kehribar:</b>' in viewer_html
+    assert '🔵 <b>Mavi:</b>' in viewer_html
+    assert '<p class="legal-reader-paragraph">' in viewer_html
+    assert '<mark class=' in viewer_html
+

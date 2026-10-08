@@ -369,6 +369,186 @@ body, .gradio-container {
     box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.15) !important;
     transform: translateX(2px) !important;
 }
+
+/* 🎨 Renkli Mevzuat ve Belge Metni Vurgulama Stilleri */
+.legal-hl-pass, mark.legal-hl-pass {
+    background: #dcfce7 !important;
+    color: #14532d !important;
+    padding: 2px 7px !important;
+    border-radius: 5px !important;
+    font-weight: 700 !important;
+    border-bottom: 2.5px solid #22c55e !important;
+    display: inline !important;
+}
+
+.legal-hl-fail, mark.legal-hl-fail {
+    background: #fee2e2 !important;
+    color: #7f1d1d !important;
+    padding: 2px 7px !important;
+    border-radius: 5px !important;
+    font-weight: 700 !important;
+    border-bottom: 2.5px solid #ef4444 !important;
+    display: inline !important;
+}
+
+.legal-hl-gold, mark.legal-hl-gold {
+    background: #fef3c7 !important;
+    color: #78350f !important;
+    padding: 2px 7px !important;
+    border-radius: 5px !important;
+    font-weight: 700 !important;
+    border-bottom: 2.5px solid #d97706 !important;
+    display: inline !important;
+}
+
+.legal-hl-ref, mark.legal-hl-ref {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+    padding: 2px 7px !important;
+    border-radius: 5px !important;
+    font-weight: 600 !important;
+    border-bottom: 2.5px solid #0284c7 !important;
+    display: inline !important;
+}
+
+/* 📖 Resmî Mevzuat Metni Belge Okuyucu & Kanıt Kartları */
+.legal-reader-container {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 14px !important;
+    padding: 22px 26px !important;
+    margin-top: 14px !important;
+    box-shadow: 0 4px 10px -2px rgba(15, 23, 42, 0.05) !important;
+}
+
+.legal-reader-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    padding-bottom: 12px !important;
+    margin-bottom: 14px !important;
+}
+
+.legal-reader-title {
+    margin: 0 0 4px 0 !important;
+    color: #0f172a !important;
+    font-size: 1.15rem !important;
+    font-weight: 800 !important;
+}
+
+.legal-source-sub {
+    font-size: 0.88rem !important;
+    color: #64748b !important;
+}
+
+.legal-legend-bar {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+    padding: 10px 16px !important;
+    background: #f8fafc !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    margin-bottom: 18px !important;
+    font-size: 0.86rem !important;
+}
+
+.legend-item {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    color: #334155 !important;
+}
+
+.legend-dot {
+    width: 10px !important;
+    height: 10px !important;
+    border-radius: 50% !important;
+    display: inline-block !important;
+}
+
+.dot-pass { background-color: #22c55e !important; }
+.dot-fail { background-color: #ef4444 !important; }
+.dot-gold { background-color: #d97706 !important; }
+.dot-ref  { background-color: #0284c7 !important; }
+
+.legal-reader-paragraph {
+    font-size: 0.98rem !important;
+    line-height: 1.75 !important;
+    color: #1e293b !important;
+    margin-bottom: 14px !important;
+    padding: 10px 14px !important;
+    background: #fdfdfd !important;
+    border-left: 3px solid #cbd5e1 !important;
+    border-radius: 0 6px 6px 0 !important;
+}
+
+/* 📜 Renkli Kanıt Kartı (.legal-quote-card) */
+.legal-quote-card {
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-left: 6px solid #16a34a !important;
+    border-radius: 10px !important;
+    padding: 14px 18px !important;
+    margin: 10px 0 14px 0 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03) !important;
+}
+
+.legal-quote-card.pass {
+    border-left-color: #16a34a !important;
+    background: #fcfdfc !important;
+}
+
+.legal-quote-card.fail {
+    border-left-color: #dc2626 !important;
+    background: #fffafa !important;
+}
+
+.legal-quote-card.warn {
+    border-left-color: #d97706 !important;
+    background: #fffdf5 !important;
+}
+
+.legal-quote-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    font-size: 0.88rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 8px !important;
+    color: #475569 !important;
+}
+
+.legal-doc-badge {
+    color: #0f172a !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+.legal-source-link {
+    color: #0284c7 !important;
+    text-decoration: none !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    background: #f0f9ff !important;
+    padding: 3px 8px !important;
+    border-radius: 4px !important;
+    border: 1px solid #bae6fd !important;
+    transition: all 0.2s ease !important;
+}
+
+.legal-source-link:hover {
+    background: #e0f2fe !important;
+    color: #0369a1 !important;
+}
+
+.legal-quote-body {
+    font-size: 0.94rem !important;
+    line-height: 1.65 !important;
+    color: #1e293b !important;
+}
 """
 
 

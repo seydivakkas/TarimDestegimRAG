@@ -10,6 +10,7 @@ Telif Hakkı (c) 2026 Seydi Eryılmaz (@seydivakkas)
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 DOCUMENT_LOCATIONS: dict[str, dict[str, str]] = {
@@ -300,3 +301,175 @@ def get_article_preview(article_key: str) -> dict[str, str]:
         if key.lower() in article_key.lower():
             return data
     return ARTICLE_PREVIEWS["MADDE 1"]
+
+
+def highlight_legal_text(text: str, status: str | None = None) -> str:
+    """Mevzuat ve alıntı metinlerindeki ilgili şartları, tutarları ve ret gerekçelerini renkli işaretler.
+
+    Renk Kodları:
+    - 🟢 Yeşil (.legal-hl-pass): Sağlanan şartlar, hak kazanma hükümleri, zorunluluklar
+    - 🔴 Kırmızı (.legal-hl-fail): Ret gerekçeleri, yasal yasaklar, kısıtlamalar
+    - 🟡 Kehribar (.legal-hl-gold): Dekar başı tutarlar, katsayılar, alan ve yaş kriterleri, başvuru tarihleri
+    - 🔵 Mavi (.legal-hl-ref): Resmî Gazete sayıları, madde numaraları, kanun ve kurum atıfları
+    """
+    if not text:
+        return ""
+
+    escaped = (
+        text.replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+    )
+
+    # 1. Kırmızı Vurgu: Ret, yasak ve kısıtlama cümleleri
+    fail_phrases = [
+        "ÇKS kaydı bulunmayan veya kaydı pasif olan üreticiler hiçbir tarımsal destekleme ödemesinden yararlanamaz",
+        "planlı üretim desteği ödenmez ve birim destek katsayısı uygulanmaz",
+        "Sertifikasız tohum kullanan veya faturası bulunmayan parsellere tohum desteği ödenmez",
+        "üçüncü yıl destekleme yapılmaz",
+        "yüksek su tüketen ürünlerin (dane mısır vb.) ekilmesi durumunda planlı destekler ödenmez",
+        "Münferit ağaç dikimlerine veya dağınık dikimlere fidan desteği ödenmez",
+        "hiçbir tarımsal destekleme ödemesinden yararlanamaz",
+        "destekten yararlanamaz",
+        "destek ödenmez",
+        "destekleme yapılmaz",
+        "destek verilmez",
+        "haczedilemez",
+    ]
+    for ph in fail_phrases:
+        if ph in escaped:
+            escaped = escaped.replace(
+                ph, f'<mark class="legal-hl-fail">{ph}</mark>'
+            )
+
+    # 2. Yeşil Vurgu: Hak kazanma, sağlanan şartlar ve pozitif yükümlülükler
+    pass_phrases = [
+        "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan ve tarımsal üretim yapan çiftçilere",
+        "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan üreticilere",
+        "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan",
+        "temel girdi desteği (Temel Destek) ödenir",
+        "Planlı Üretim Desteği ödenir",
+        "Yetkili tohumluk bayilerinden faturalı sertifikalı tohum satın alarak ekim yapan ÇKS kayıtlı üreticilere Sertifikalı Tohum Kullanım Desteği verilir",
+        "Sertifikalı Tohum Kullanım Desteği verilir",
+        "Tohum faturasının ve sertifika etiket kopyasının ÇKS başvuru dosyasına eklenmesi zorunludur",
+        "ilave Su Kısıtı Desteği verilir",
+        "ilave genç çiftçi desteği ödenir",
+        "temel destek tutarının %50'si oranında ilave destek ödenir",
+        "kapama meyve bahçesi tesis eden üreticilere fidan kullanım desteği verilir",
+        "fidan kullanım desteği verilir",
+        "Temel Destek ödenir",
+        "öncelikli stratejik ürünleri üreten üreticilere",
+        "her iki avantajdan birleşerek yararlanır",
+        "su tüketimi az olan münavebe ürünlerini",
+    ]
+    for ph in pass_phrases:
+        if ph in escaped and f'<mark class="legal-hl-pass">{ph}</mark>' not in escaped and f'<mark class="legal-hl-fail">{ph}</mark>' not in escaped:
+            escaped = escaped.replace(
+                ph, f'<mark class="legal-hl-pass">{ph}</mark>'
+            )
+
+    # 3. Kehribar/Altın Vurgu: Tutarlar, katsayılar, alanlar, yaş ve süreler
+    gold_patterns = [
+        r"(\b\d+\s*TL(?:/da)?\b)",
+        r"(%\s*50(?:'si)?(?:\s*oranında)?)",
+        r"(1\s+Eylül\s+2026\s*-\s*31\s+Aralık\s+2026)",
+        r"(\ben\s+az\s+5\s+dekar\b)",
+        r"(\b41\s+yaşından\s+gün\s+almamış\b)",
+        r"(\b2026\s+üretim\s+yılı(?:nda)?\b)",
+    ]
+    for pat in gold_patterns:
+        escaped = re.sub(
+            pat,
+            r'<mark class="legal-hl-gold">\1</mark>',
+            escaped,
+        )
+
+    # 4. Mavi Vurgu: Resmi Karar Başlıkları ve Kanun Referansları
+    ref_patterns = [
+        r"(MADDE\s+\d+\s*-\s*\(\d+\))",
+        r"(MADDE\s+\d+)",
+        r"(Resmî\s+Gazete\s+Sayı:\s*\d+)",
+        r"(5488\s+sayılı\s+Tarım\s+Kanunu)",
+        r"(Türkiye\s+Tarım\s+Havzaları\s+Üretim\s+ve\s+Destekleme\s+Modeli)",
+    ]
+    for pat in ref_patterns:
+        escaped = re.sub(
+            pat,
+            r'<mark class="legal-hl-ref">\1</mark>',
+            escaped,
+        )
+
+    return escaped
+
+
+def format_highlighted_citation_card(
+    citation: dict[str, Any],
+    status: str = "ELIGIBLE",
+    support_id: str | None = None,
+) -> str:
+    """Resmî mevzuat atfını ve metin içindeki işaret edilen kısmı renkli kart olarak biçimlendirir."""
+    title = citation.get("title", "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)")
+    sec = citation.get("section", "Madde")
+    year = citation.get("year", 2026)
+    snip = citation.get("snippet", "")
+    url = citation.get("url")
+
+    if not url:
+        loc = resolve_check_link(sec, support_id)
+        url = loc["url"]
+
+    card_class = "pass" if status == "ELIGIBLE" else ("warn" if status == "REVIEW" else "fail")
+    highlighted_snip = highlight_legal_text(snip, status)
+
+    return (
+        f'<div class="legal-quote-card {card_class}">\n'
+        f'  <div class="legal-quote-header">\n'
+        f'    <span class="legal-doc-badge">🏛️ {title} ({year}) — {sec}</span>\n'
+        f'    <a href="{url}" target="_blank" rel="noopener noreferrer" class="legal-source-link" '
+        f'title="Resmî Orijinal Belgeyi Aç">Resmî Belgede Gör ↗</a>\n'
+        f'  </div>\n'
+        f'  <div class="legal-quote-body">\n'
+        f'    📜 <i>"{highlighted_snip}"</i>\n'
+        f'  </div>\n'
+        f'</div>'
+    )
+
+
+def render_document_viewer_html(article_key: str) -> str:
+    """Seçilen maddenin renkli işaretlenmiş tam metnini ve doğrulama göstergelerini üretir."""
+    data = get_article_preview(article_key)
+    title = data["title"]
+    source = data["source"]
+    url = data["url"]
+    raw_text = data["text"]
+
+    highlighted_body = ""
+    for paragraph in raw_text.split("\n"):
+        p_clean = paragraph.strip()
+        if not p_clean:
+            continue
+        hl_p = highlight_legal_text(p_clean)
+        highlighted_body += f'<p class="legal-reader-paragraph">{hl_p}</p>\n'
+
+    return (
+        f'<div class="legal-reader-container">\n'
+        f'  <div class="legal-reader-header">\n'
+        f'    <div>\n'
+        f'      <h4 class="legal-reader-title">🏛️ {title}</h4>\n'
+        f'      <span class="legal-source-sub">📌 Resmî Dayanak: <b>{source}</b></span>\n'
+        f'    </div>\n'
+        f'    <a href="{url}" target="_blank" rel="noopener noreferrer" class="doc-badge-tag doc-badge-pass" '
+        f'style="padding: 6px 14px; font-size: 0.88rem;">Resmî Belgeyi Aç ↗</a>\n'
+        f'  </div>\n'
+        f'  <div class="legal-legend-bar">\n'
+        f'    <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil:</b> Sağlanan Şart / Hak Kazanma</span>\n'
+        f'    <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı:</b> Ret Gerekçesi / Yasaklama</span>\n'
+        f'    <span class="legend-item"><span class="legend-dot dot-gold"></span> 🟡 <b>Kehribar:</b> Destek Tutarı / Katsayı / Tarih</span>\n'
+        f'    <span class="legend-item"><span class="legend-dot dot-ref"></span> 🔵 <b>Mavi:</b> Resmî Merci / Madde No</span>\n'
+        f'  </div>\n'
+        f'  <div class="legal-reader-content">\n'
+        f'    {highlighted_body}\n'
+        f'  </div>\n'
+        f'</div>'
+    )
+

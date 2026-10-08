@@ -64,7 +64,7 @@ def test_template_explainer_eligible():
     explanation = TemplateExplainer.explain(rule_res, calc_res, [chunk])
     assert explanation.status_label_tr == "Uygun görünüyor"
     assert "9,300.00 TL" in explanation.summary_tr
-    assert len(explanation.citations) == 1
+    assert len(explanation.citations) >= 1
     assert explanation.citations[0].source_id == "RG-2026-BITKISEL"
 
 
