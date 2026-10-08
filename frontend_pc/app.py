@@ -18,7 +18,7 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 if hasattr(sys.stdout, "reconfigure"):
@@ -89,6 +89,18 @@ def parse_tri_state(val: str | bool | None) -> bool | None:
     return None
 
 
+def parse_irrigation_status(value: str | None) -> str:
+    """PC seçimini Parcel.irrigation alanının API enum değerine dönüştürür."""
+    raw = (value or "").strip().lower()
+    if "bilmiyorum" in raw or "emin değilim" in raw or "?" in raw or not raw:
+        return "UNKNOWN"
+    if "sulu" in raw:
+        return "IRRIGATED"
+    if "kuru" in raw:
+        return "DRY"
+    return "UNKNOWN"
+
+
 def load_benchmark_data() -> pd.DataFrame:
     """Benchmark veri setini okur ve 100 vakalık detaylı özet tablo oluşturur."""
     bench_file = Path("benchmark/cases.jsonl")
@@ -124,7 +136,7 @@ def load_benchmark_data() -> pd.DataFrame:
                     "Hedef Destek": item.get("support_id", "-"),
                     "Beklenen Karar": item.get("expected_status", "-"),
                     "Beklenen Tutar": amt_str,
-                    "Test Doğrulaması": "✅ %100 Uyum",
+                    "Test Doğrulaması": "Henüz çalıştırılmadı (beklenen vaka)",
                 }
             )
     return pd.DataFrame(records)
@@ -159,10 +171,7 @@ def evaluate_farmer_parcel(
     parsed_seed = parse_tri_state(seed_cert)
     parsed_sapling = parse_tri_state(sapling_cert)
     parsed_orchard = parse_tri_state(closed_orchard)
-    is_irrigated = None
-    irr_lower = str(irrigation_type).lower()
-    if "bilmiyorum" not in irr_lower and "?" not in irr_lower:
-        is_irrigated = "sulu" in irr_lower
+    irrigation = parse_irrigation_status(irrigation_type)
 
     farmer_data = {
         "farmer_id": "FARMER-DEMO-001",
@@ -179,7 +188,7 @@ def evaluate_farmer_parcel(
         "crop": crop.strip().upper(),
         "area_da": float(area_da),
         "production_year": 2026,
-        "is_irrigated": is_irrigated,
+        "irrigation": irrigation,
         "seed_certificate_available": parsed_seed,
         "sapling_certificate_available": parsed_sapling,
         "is_closed_orchard": parsed_orchard,
@@ -339,7 +348,7 @@ def evaluate_farmer_parcel(
                 "Alan (da)": f"{area_da:.1f}",
                 "Tahmini Tutar": format_currency(total_amt),
                 "Hesaplama Formülü": formula,
-                "Başvuru Dönemi": "01.09.2026 - 31.12.2026",
+                "Başvuru Dönemi": "Program takviminden teyit edilmeli",
                 "Dayanak": "RG-2026-BITKISEL",
             }
         )
@@ -432,10 +441,7 @@ def generate_evaluation_report(
     parsed_seed = parse_tri_state(seed_cert)
     parsed_sapling = parse_tri_state(sapling_cert)
     parsed_orchard = parse_tri_state(closed_orchard)
-    is_irrigated = None
-    irr_lower = str(irrigation_type).lower()
-    if "bilmiyorum" not in irr_lower and "?" not in irr_lower:
-        is_irrigated = "sulu" in irr_lower
+    irrigation = parse_irrigation_status(irrigation_type)
 
     farmer_data = {
         "farmer_id": "FARMER-REPORT-001",
@@ -451,7 +457,7 @@ def generate_evaluation_report(
         "crop": crop.strip().upper(),
         "area_da": float(area_da),
         "production_year": 2026,
-        "is_irrigated": is_irrigated,
+        "irrigation": irrigation,
         "seed_certificate_available": parsed_seed,
         "sapling_certificate_available": parsed_sapling,
         "is_closed_orchard": parsed_orchard,
@@ -491,8 +497,10 @@ def generate_evaluation_report(
     )
 
     report_lines = [
-        "# T.C. TARIM VE ORMAN BAKANLIĞI",
-        "## 2026 BİTKİSEL ÜRETİM DESTEKLERİ RESMÎ ÖN DEĞERLENDİRME RAPORU",
+        "# TarımDestekRAG — BAĞIMSIZ ÖN DEĞERLENDİRME",
+        "## 2026 Bitkisel Üretim Destekleri Tahmini Hesaplama Raporu",
+        "",
+        "**Önemli:** Bu belge bir Bakanlık veya başka bir kamu kurumu tarafından düzenlenmiş resmî belge değildir.",
         "",
         f"**Rapor Tarihi:** {now_str}",
         "**Doğrulama Motoru:** TarımDestekRAG Deterministik Kural Motoru (Zero-LLM)",
@@ -658,9 +666,21 @@ def get_application_windows_table() -> pd.DataFrame:
         rows.append(
             {
                 "Destek Programı": s.get("name", s.get("id")),
-                "Başlangıç Tarihi": s.get("application_start") or "01.09.2026",
-                "Bitiş Tarihi": s.get("application_end") or "31.12.2026",
-                "Durum": "🟢 BAŞVURUYA AÇIK" if s.get("active", True) else "🔴 KAPALI",
+                "Başlangıç Tarihi": s.get("application_start") or "Tarih doğrulanmadı",
+                "Bitiş Tarihi": s.get("application_end") or "Tarih doğrulanmadı",
+                "Durum": (
+                    "🔴 PASİF"
+                    if not s.get("active", False)
+                    else (
+                        "⚪ TAKVİM BİLİNMİYOR"
+                        if not s.get("application_start") or not s.get("application_end")
+                        else (
+                            "🟢 BAŞVURUYA AÇIK"
+                            if s["application_start"] <= date.today().isoformat() <= s["application_end"]
+                            else "🟡 TAKVİM DIŞI"
+                        )
+                    )
+                ),
                 "Açıklama": s.get("description", "-"),
             }
         )
@@ -861,11 +881,11 @@ def build_ui() -> gr.Blocks:
                 )
                 with gr.Row():
                     btn_report = gr.Button(
-                        "📄 Resmî Ön Değerlendirme Raporu Oluştur & İndir (.md)",
+                        "📄 Bağımsız Ön Değerlendirme Raporu Oluştur & İndir (.md)",
                         variant="secondary",
                         size="sm",
                     )
-                file_report = gr.File(label="İndirilebilir Resmî Rapor Dosyası", visible=False)
+                file_report = gr.File(label="İndirilebilir Ön Değerlendirme Raporu", visible=False)
                 out_disclaimer = gr.HTML("")
 
             # ================= SEKME 4: DESTEK DETAY TABLOSU =================
@@ -1105,19 +1125,12 @@ def build_ui() -> gr.Blocks:
             with gr.TabItem("📊 Doğrulama & Benchmark (100 Vaka)", id="tab_benchmark"):
                 gr.Markdown("""
                 ### 🧪 Deterministik Kural Motoru Benchmark Test Seti (100 Vaka)
-                100 farklı çiftçi/parsel senaryosunda (ÇKS eksikliği, havza uyumsuzluğu, sertifikasız tohum vb.)
-                sistem kararının resmî mevzuatla %100 uyumu doğrulanmıştır.
+                Aşağıdaki tablo *beklenen test senaryolarını* gösterir; başarı sonucu değildir.
+                Ölçülen başarı için benchmark koşucusunu çalıştırıp aynı sürümde üretilen raporu inceleyin.
+                Eski raporlar yeni kod sürümünün sonuçları sayılmaz.
                 """)
                 gr.DataFrame(value=load_benchmark_data(), interactive=False)
-                gr.HTML("""
-                <div class="kpi-container" style="margin-top: 16px;">
-                    <div class="kpi-card"><div class="kpi-title">Toplam Test Vakası</div><div class="kpi-value">100</div></div>
-                    <div class="kpi-card"><div class="kpi-title">Uygunluk Doğruluğu</div><div class="kpi-value green">%100</div></div>
-                    <div class="kpi-card"><div class="kpi-title">Tutar Doğruluğu</div><div class="kpi-value green">%100</div></div>
-                    <div class="kpi-card"><div class="kpi-title">Hibrit MRR</div><div class="kpi-value green">1.0000</div></div>
-                    <div class="kpi-card"><div class="kpi-title">Ortalama Gecikme</div><div class="kpi-value green">4.68 ms</div></div>
-                </div>
-                """)
+                gr.Markdown("**Metrik durumu:** Bu oturum için test çalıştırılmadı. Sonuçlar varsayılan olarak %100 gösterilmez.")
 
             # ================= SEKME 9: ADMIN & LİSANS =================
             with gr.TabItem("⚙️ Admin & Sistem Mimarisi", id="tab_admin"):
