@@ -30,10 +30,14 @@ from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.models import (
     LegalApprovalAttestationModel, LegalApprovalRevocationModel, ReviewedBasinSnapshotModel,
-    VerifiedSupportRateModel,
+    ReviewedWaterRestrictionDistrictModel, VerifiedSupportRateModel,
 )
 
-Subject = VerifiedSupportRateModel | ReviewedBasinSnapshotModel
+Subject = (
+    VerifiedSupportRateModel
+    | ReviewedBasinSnapshotModel
+    | ReviewedWaterRestrictionDistrictModel
+)
 
 CONTEXT = "TarimDestegimRAG/P0-5/legal-attestation/v1"
 TRUST_ENV = "TARIM_RAG_LEGAL_TRUSTED_KEYS_JSON"
@@ -47,11 +51,13 @@ def _normalize(value):
     return value
 
 
-def _subject_kind(subject: Subject) -> Literal["RATE", "BASIN"]:
+def _subject_kind(subject: Subject) -> Literal["RATE", "BASIN", "WATER"]:
     if isinstance(subject, VerifiedSupportRateModel):
         return "RATE"
     if isinstance(subject, ReviewedBasinSnapshotModel):
         return "BASIN"
+    if isinstance(subject, ReviewedWaterRestrictionDistrictModel):
+        return "WATER"
     raise TypeError("Unexpected legal approval subject")
 
 
@@ -89,7 +95,7 @@ def subject_payload(subject: Subject) -> dict:
             "approved_at": subject.approved_at,
             "review_reference": subject.review_reference,
         }
-    else:
+    elif isinstance(subject, ReviewedBasinSnapshotModel):
         fields = {
             "province": subject.province,
             "district": subject.district,
@@ -99,6 +105,21 @@ def subject_payload(subject: Subject) -> dict:
             "document_page": subject.document_page,
             "review_status": subject.review_status,
             "coverage_complete": subject.coverage_complete,
+            "reviewed_by": subject.reviewed_by,
+            "reviewed_at": subject.reviewed_at,
+            "review_reference": subject.review_reference,
+        }
+    else:
+        fields = {
+            "province": subject.province,
+            "district": subject.district,
+            "year": subject.production_year,
+            "restriction_status": subject.restriction_status,
+            "effective_from": subject.effective_from,
+            "effective_to": subject.effective_to,
+            "legal_clause": subject.legal_clause,
+            "document_page": subject.document_page,
+            "review_status": subject.review_status,
             "reviewed_by": subject.reviewed_by,
             "reviewed_at": subject.reviewed_at,
             "review_reference": subject.review_reference,

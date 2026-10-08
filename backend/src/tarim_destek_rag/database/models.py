@@ -225,7 +225,7 @@ class LegalApprovalAttestationModel(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "subject_type IN ('RATE','BASIN')", name="ck_approval_subject_type"
+            "subject_type IN ('RATE','BASIN','WATER')", name="ck_approval_subject_type"
         ),
         CheckConstraint(
             "role IN ('REVIEWER','APPROVER')", name="ck_approval_role"
@@ -317,6 +317,44 @@ class WaterRestrictionModel(Base):
 
     __table_args__ = (
         UniqueConstraint("province", "district", "year", name="uq_water_restriction"),
+    )
+
+
+class ReviewedWaterRestrictionDistrictModel(Base):
+    """Resmî kaynaklı, versiyonlu ve çift onaylı yeraltı su kısıtı ilçe kütüğü (Issue #17 / P0-5b)."""
+
+    __tablename__ = "reviewed_water_restriction_districts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    province: Mapped[str] = mapped_column(String(64), nullable=False)
+    district: Mapped[str] = mapped_column(String(64), nullable=False)
+    production_year: Mapped[int] = mapped_column(Integer, default=2026, nullable=False)
+    restriction_status: Mapped[str] = mapped_column(
+        String(32), default="UNDER_REVIEW", nullable=False
+    )  # RESTRICTED, NOT_RESTRICTED, UNDER_REVIEW
+    effective_from: Mapped[str] = mapped_column(String(10), default="2026-01-01", nullable=False)
+    effective_to: Mapped[str | None] = mapped_column(String(10), default="2026-12-31", nullable=True)
+    source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    document_page: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    legal_clause: Mapped[str] = mapped_column(
+        String(128), default="Madde 6/3(a,b,c)", nullable=False
+    )
+    conflict_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    review_status: Mapped[str] = mapped_column(
+        String(32), default="DRAFT", nullable=False
+    )  # DRAFT, VERIFIED, REJECTED
+    reviewed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    review_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
+
+    source_version: Mapped["SourceVersionModel"] = relationship()
+
+    __table_args__ = (
+        UniqueConstraint(
+            "province", "district", "production_year", name="uq_reviewed_water_district"
+        ),
     )
 
 

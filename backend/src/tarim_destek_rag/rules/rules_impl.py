@@ -344,19 +344,24 @@ class WaterRestrictionRule(BaseRule):
             passed.append("ÇKS kaydı aktif.")
 
         water_repo = WaterRestrictionRepository(session)
-        restriction = water_repo.get_restriction(
+        assessment = water_repo.evaluate_official_water_restriction(
             farmer.province, farmer.district, parcel.production_year
         )
 
         loc = f"{farmer.province}/{farmer.district}"
-        if not restriction:
-            missing.append("verified_water_restriction")
-            trace.append("Su kısıtı kaydı yokluğu resmî ret anlamına gelmez.")
+        if assessment.outcome == "NOT_RESTRICTED":
+            failed.append(
+                f"{loc} resmî karara göre yeraltı su kısıtı bölgesinde yer almamaktadır."
+            )
+            trace.append(assessment.reason)
+        elif assessment.outcome == "RESTRICTED":
+            passed.append(
+                f"{loc} onaylı resmî mevzuata göre yeraltı su kısıtı bölgesindedir."
+            )
+            trace.append(assessment.reason)
         else:
-            passed.append(f"{loc} yeraltı su kısıtı bölgesindedir.")
-
-        # Örnek coğrafi seed verisi resmî kararı ispatlamaz.
-        missing.append("verified_water_provenance")
+            missing.append("verified_water_provenance")
+            trace.append(f"{loc} su kısıtı resmî dayanağı: {assessment.reason}")
 
         # Su kısıtında desteklenen münavebe ürünü mü?
         support_repo = SupportRepository(session)

@@ -10,6 +10,9 @@ from tarim_destek_rag.database.models import (
     SupportProgramModel,
     WaterRestrictionModel,
 )
+from tarim_destek_rag.normalization.water_restriction_2026 import (
+    stage_water_restriction_districts,
+)
 
 
 # 2026 Destekleme Katsayı ve Birim Fiyat Tablosu (8 Eylül 2026 Güncellemesi)
@@ -450,6 +453,9 @@ def seed_2026_support_data(session: Session, *, include_faqs: bool = True) -> No
             existing_win.source_id = win.source_id
         else:
             session.add(win)
+
+    # 7. Resmî 2026 Yeraltı Su Kısıtı İlçe Kütüğü (Issue #17 / P0-5b - DRAFT)
+    stage_water_restriction_districts(session)
 
     # Separate unrelated FAQ bootstrap so rate migration tests stay lightweight.
     if include_faqs:

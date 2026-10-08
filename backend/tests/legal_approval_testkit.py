@@ -8,10 +8,11 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from tarim_destek_rag.database.legal_approvals import (
-    TRUST_ENV, attestation_message, register_detached_approval, subject_digest,
+    TRUST_ENV, _subject_kind, attestation_message, register_detached_approval, subject_digest,
 )
 from tarim_destek_rag.database.models import (
-    ReviewedBasinSnapshotModel, VerifiedSupportRateModel,
+    ReviewedBasinSnapshotModel, ReviewedWaterRestrictionDistrictModel,
+    VerifiedSupportRateModel,
 )
 
 
@@ -33,7 +34,7 @@ def trust_pair(monkeypatch):
 
 def detached_envelope(subject, role, signers):
     principal, key = signers[role]
-    kind = "RATE" if isinstance(subject, VerifiedSupportRateModel) else "BASIN"
+    kind = _subject_kind(subject)
     digest = subject_digest(subject)
     sha = subject.source_version.content_hash
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -48,8 +49,9 @@ def detached_envelope(subject, role, signers):
     }
 
 
-def sign_subject(session, subject, monkeypatch):
-    signers = trust_pair(monkeypatch)
+def sign_subject(session, subject, monkeypatch, signers=None):
+    if signers is None:
+        signers = trust_pair(monkeypatch)
     for role in ("REVIEWER", "APPROVER"):
         register_detached_approval(session, subject, detached_envelope(subject, role, signers))
     session.commit()

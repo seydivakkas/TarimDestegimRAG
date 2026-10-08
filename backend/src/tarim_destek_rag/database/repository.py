@@ -21,6 +21,7 @@ from tarim_destek_rag.database.models import (
     SupportAmountModel,
     SupportProgramModel,
     WaterRestrictionModel,
+    ReviewedWaterRestrictionDistrictModel,
     VerifiedSupportRateModel,
 )
 
@@ -348,6 +349,17 @@ class BasinRepository:
         return rule is not None
 
 
+@dataclass(frozen=True)
+class WaterRestrictionAssessment:
+    """Evidence-backed tri-state outcome for water restriction district status."""
+
+    outcome: str  # RESTRICTED, NOT_RESTRICTED, UNKNOWN
+    reason: str
+    source_version_id: int | None = None
+    document_page: int | None = None
+    legal_clause: str | None = None
+
+
 class WaterRestrictionRepository:
     """Yeraltı su kısıtı veri erişim katmanı."""
 
@@ -357,7 +369,7 @@ class WaterRestrictionRepository:
     def get_restriction(
         self, province: str, district: str, year: int = 2026
     ) -> WaterRestrictionModel | None:
-        """Konumun su kısıtı bölgesinde olup olmadığını sorgular."""
+        """Legacy helper for backwards compatibility. Do NOT use for verified decisions."""
         stmt = select(WaterRestrictionModel).where(
             WaterRestrictionModel.province == province.upper(),
             WaterRestrictionModel.district == district.upper(),
@@ -365,3 +377,89 @@ class WaterRestrictionRepository:
             WaterRestrictionModel.is_water_restricted.is_(True),
         )
         return self.session.scalars(stmt).first()
+
+    def evaluate_official_water_restriction(
+        self,
+        province: str,
+        district: str,
+        year: int = 2026,
+        as_of: date | None = None,
+    ) -> WaterRestrictionAssessment:
+        """Fail closed on unreviewed, conflict, missing or unsigned water restriction records.
+
+        Old WaterRestrictionModel seed rows have NO legal authority here.
+        A reviewed, verified and dual-signed record allows positive or negative determination.
+        Unreviewed or conflicting records return UNKNOWN.
+        """
+        evaluation_date = as_of if as_of is not None else date.today()
+        stmt = (
+            select(ReviewedWaterRestrictionDistrictModel)
+            .join(
+                SourceVersionModel,
+                ReviewedWaterRestrictionDistrictModel.source_version_id == SourceVersionModel.id,
+            )
+            .join(SourceModel, SourceVersionModel.source_id == SourceModel.source_id)
+            .where(
+                ReviewedWaterRestrictionDistrictModel.province == province.strip().upper(),
+                ReviewedWaterRestrictionDistrictModel.district == district.strip().upper(),
+                ReviewedWaterRestrictionDistrictModel.production_year == year,
+                ReviewedWaterRestrictionDistrictModel.review_status == "VERIFIED",
+                SourceModel.active.is_(True),
+                SourceVersionModel.superseded.is_(False),
+            )
+        )
+        candidates = list(self.session.scalars(stmt).all())
+        if len(candidates) != 1:
+            return WaterRestrictionAssessment(
+                outcome="UNKNOWN",
+                reason=f"İlçe için onaylı tekil resmî su kısıtı kaydı bulunamadı (kayıt sayısı: {len(candidates)}).",
+            )
+
+        rec = candidates[0]
+        version = rec.source_version
+        if (
+            not rec.reviewed_by
+            or not rec.reviewed_at
+            or not rec.review_reference
+            or version is None
+            or not re.fullmatch(r"[0-9a-fA-F]{64}", version.content_hash or "")
+            or not version.detected_at
+            or (version.effective_from and version.effective_from > evaluation_date.isoformat())
+            or (version.effective_to and version.effective_to < evaluation_date.isoformat())
+            or (rec.effective_to and rec.effective_to < rec.effective_from)
+        ):
+            return WaterRestrictionAssessment(
+                outcome="UNKNOWN",
+                reason="Mevzuat versiyonu veya tarih aralığı geçersiz/doğrulanmamış.",
+            )
+
+        if not two_person_approved(self.session, rec):
+            return WaterRestrictionAssessment(
+                outcome="UNKNOWN",
+                reason="İki yetkili bağımsız Ed25519 imzası bulunmuyor (fail-closed onay bekliyor).",
+            )
+
+        if rec.restriction_status == "RESTRICTED":
+            return WaterRestrictionAssessment(
+                outcome="RESTRICTED",
+                reason=f"{rec.province}/{rec.district} resmî karara göre yeraltı su kısıtı bölgesindedir.",
+                source_version_id=rec.source_version_id,
+                document_page=rec.document_page,
+                legal_clause=rec.legal_clause,
+            )
+        elif rec.restriction_status == "NOT_RESTRICTED":
+            return WaterRestrictionAssessment(
+                outcome="NOT_RESTRICTED",
+                reason=f"{rec.province}/{rec.district} resmî karara göre yeraltı su kısıtı bölgesinde yer almamaktadır.",
+                source_version_id=rec.source_version_id,
+                document_page=rec.document_page,
+                legal_clause=rec.legal_clause,
+            )
+        else:
+            return WaterRestrictionAssessment(
+                outcome="UNKNOWN",
+                reason=f"{rec.province}/{rec.district} su kısıtı durumu resmî inceleme / çelişki sürecindedir ({rec.conflict_notes or 'UNDER_REVIEW'}).",
+                source_version_id=rec.source_version_id,
+                document_page=rec.document_page,
+                legal_clause=rec.legal_clause,
+            )
