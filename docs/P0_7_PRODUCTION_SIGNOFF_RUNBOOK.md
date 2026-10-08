@@ -94,3 +94,17 @@ Her imza/iptal olayı için ayrı benzersiz nesne anahtarı ve S3 Object Lock **
 - Hukukî metinlerin bağımsız inceleme kaydı ve gerçek 2026 uygulama/parsel verisiyle gold-test doğrulaması.
 
 **Yalnız kod, geçici RSA/Ed25519 test anahtarları ve emüle edilmiş S3 ile yapılan CI hiçbir biçimde yukarıdaki canlı kabulü yerine getirmez. Gerçek ödemeler kapalıdır.**
+
+
+## 7. Hazır üretim belgeleri, kaynak ayırma ve son ön kontrol
+
+- `deployment/sql/p0_7_create_legal_audit_receipts.sql`: üretim için yeni denetim makbuzlarının **ayrı DBA imzalı DDL migrasyonu** (önceki PR #12–18 tabloları önceden kurulmuş olmalıdır).
+- `deployment/sql/p0_7_legal_role_grants.sql`: DBA'nın kontrollü GRANT/REVOKE şablonu. Rutin `init_db()` üretimde kullanılmaz.
+- `deployment/vault/p0_7_reviewer_transit_policy.hcl` ve `p0_7_approver_transit_policy.hcl`: ayrı Transit imza key'lerine ayrık UPDATE izni; private key export/config/key rotation yoktur. **Gerçek anahtarlar ve OIDC entity-policy ataması hâlâ kurum tarafından yapılmalıdır.**
+- `python -m tarim_destek_rag.database.legal_preflight`: **salt okunur canlı uygunluk kontrolü**. Payout switch kapalı değilse veya IdP/MFA/görevli sicili, iki ayrı DB rolü, S3 Versioning/Object Lock COMPLIANCE, PublicAccessBlock ya da bucket `aws:kms` şifreleme kontrollerinden biri başarısızsa hemen hata verir. Bu komut hiçbir altyapı oluşturmadan mevcut kurumsal hesabı denetler.
+- `legal_runtime.legal_session`, `isolated_test` dışında **üretim profilini ve PostgreSQL'i zorunlu kılar**. `legal_approval_cli inspect` dahi üretimde otomatik SQLite şema oluşturamaz.
+- Gerçek AWS bucket için önce kontrollü `PutObject(COMPLIANCE)` + `GetObject(VersionId)` testi, retention son tarihini doğrulayan gerçek bir **canary**, Vault iki görevli ayrı token sign testi ve PostgreSQL gerçek oturum rollback/commit + revocation testleri uygulanmalıdır. Mevcut CI **yalnız protokol ve PostgreSQL izinlerini** test eder; gerçek cloud hizmeti canlı denenmemiştir.
+
+**Uyarı:** Bir Vault Transit Ed25519 yazılım anahtarı kurmak, otomatik olarak *kurumsal HSM sertifikalı anahtar* sağlamak anlamına gelmez. Gerçek fiziksel HSM/FIPS zorunluluğu varsa kurum, anahtar destek durumunu doğrulayıp gerekirse farklı algoritma ve verifier tasarımını ayrı değişiklikle değerlendirmelidir.
+
+**Üretim kabul kararı:** Her adımın ayrı sorumlusu, onay tutanağı, kaynak hash'i, gerçek KMS/HSM kimliği, DB rol testleri, WORM canary kanıtı ve rollback protokolü tamamlanmadan bu PR **DRAFT** kalmalıdır.
