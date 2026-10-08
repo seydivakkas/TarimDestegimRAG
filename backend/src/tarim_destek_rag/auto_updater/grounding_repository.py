@@ -67,7 +67,11 @@ def stage_evidence(
         clause=clause,
     )
     document = session.scalar(
-        select(SourceDocumentModel).where(SourceDocumentModel.document_sha256 == sha256)
+        select(SourceDocumentModel).where(
+            SourceDocumentModel.document_sha256 == sha256,
+            SourceDocumentModel.production_year == production_year,
+            SourceDocumentModel.source_id == source_id,
+        )
     )
     if document is None:
         document = SourceDocumentModel(
