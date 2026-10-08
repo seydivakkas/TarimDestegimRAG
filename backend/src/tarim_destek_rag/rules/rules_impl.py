@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from sqlalchemy.orm import Session
 
 from tarim_destek_rag.database.repository import (
@@ -5,7 +7,7 @@ from tarim_destek_rag.database.repository import (
     SupportRepository,
     WaterRestrictionRepository,
 )
-from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
+from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.base import BaseRule, RuleResult
 
@@ -54,10 +56,10 @@ class BasicSupportRule(BaseRule):
         else:
             failed.append(f"{parcel.crop} ürünü için 2026 temel destek birim fiyatı bulunamadı.")
 
-        if missing:
-            status = EligibilityStatusEnum.REVIEW
-        elif failed:
+        if failed:
             status = EligibilityStatusEnum.NOT_ELIGIBLE
+        elif missing:
+            status = EligibilityStatusEnum.REVIEW
         else:
             status = EligibilityStatusEnum.ELIGIBLE
 
@@ -100,19 +102,27 @@ class PlannedProductionRule(BaseRule):
 
         # 2. Havza ürün uygunluğu
         basin_repo = BasinRepository(session)
-        is_supported = basin_repo.is_crop_supported_in_basin(
-            farmer.province, farmer.district, parcel.crop, parcel.production_year
-        )
-
         loc = f"{farmer.province}/{farmer.district}"
-        if is_supported:
-            passed.append(
-                f"{parcel.crop} ürünü, {loc} havzasında desteklenen öncelikli ürünlerdendir."
+        has_basin_data = basin_repo.has_basin_records(
+            farmer.province, farmer.district, parcel.production_year
+        )
+        if not has_basin_data:
+            missing.append("basin_data")
+            trace.append(
+                f"{loc} için 2026 yılı havza planlı üretim mevzuat verisi henüz kütüğe işlenmemiştir (DOĞRULAMA GEREKLİ)."
             )
         else:
-            failed.append(
-                f"{parcel.crop} ürünü, {loc} havzasında planlı üretim kapsamında yer almamaktadır."
+            is_supported = basin_repo.is_crop_supported_in_basin(
+                farmer.province, farmer.district, parcel.crop, parcel.production_year
             )
+            if is_supported:
+                passed.append(
+                    f"{parcel.crop} ürünü, {loc} havzasında desteklenen öncelikli ürünlerdendir."
+                )
+            else:
+                failed.append(
+                    f"{parcel.crop} ürünü, {loc} havzasında planlı üretim kapsamında yer almamaktadır."
+                )
 
         # 3. Birim Tutar Kontrolü
         support_repo = SupportRepository(session)
@@ -122,10 +132,10 @@ class PlannedProductionRule(BaseRule):
         else:
             failed.append(f"{parcel.crop} için planlı üretim destek tutarı bulunamadı.")
 
-        if missing:
-            status = EligibilityStatusEnum.REVIEW
-        elif failed:
+        if failed:
             status = EligibilityStatusEnum.NOT_ELIGIBLE
+        elif missing:
+            status = EligibilityStatusEnum.REVIEW
         else:
             status = EligibilityStatusEnum.ELIGIBLE
 
@@ -179,10 +189,10 @@ class CertifiedSeedRule(BaseRule):
         else:
             failed.append("Sertifikalı tohum kullanılmamış.")
 
-        if missing:
-            status = EligibilityStatusEnum.REVIEW
-        elif failed:
+        if failed:
             status = EligibilityStatusEnum.NOT_ELIGIBLE
+        elif missing:
+            status = EligibilityStatusEnum.REVIEW
         else:
             status = EligibilityStatusEnum.ELIGIBLE
 
@@ -234,10 +244,27 @@ class CertifiedSaplingRule(BaseRule):
         else:
             failed.append("Sertifikalı fidan kullanılmamış.")
 
-        if missing:
-            status = EligibilityStatusEnum.REVIEW
-        elif failed:
+        # Kapama meyve bahçesi şartı
+        if parcel.is_closed_orchard is False:
+            failed.append("Sertifikalı fidan desteği sadece kapama meyve bahçesi tesisinde verilir.")
+        elif parcel.is_closed_orchard is True:
+            passed.append("Kapama meyve bahçesi şartı sağlandı.")
+        elif parcel.is_closed_orchard is None:
+            missing.append("is_closed_orchard")
+            trace.append("Kapama meyve bahçesi durumu beyan edilmemiş (REVIEW).")
+
+        # Asgari alan kontrolü (en az 5 dekar)
+        if parcel.area_da < Decimal("5.0"):
+            failed.append(
+                f"Sertifikalı fidan desteği için asgari kapama bahçe alanı 5 dekardır (Parsel alanı: {parcel.area_da} da)."
+            )
+        else:
+            passed.append(f"Asgari alan şartı (en az 5 da) sağlandı ({parcel.area_da} da).")
+
+        if failed:
             status = EligibilityStatusEnum.NOT_ELIGIBLE
+        elif missing:
+            status = EligibilityStatusEnum.REVIEW
         else:
             status = EligibilityStatusEnum.ELIGIBLE
 
@@ -300,10 +327,21 @@ class WaterRestrictionRule(BaseRule):
                 f"{parcel.crop} ürünü su kısıtı bölgesinde ilave destekleme kapsamında değildir."
             )
 
-        if missing:
-            status = EligibilityStatusEnum.REVIEW
-        elif failed:
+        # 4. Sulama Durumu Kontrolü (Sulu tarım arazisi şartı)
+        if parcel.irrigation == IrrigationStatusEnum.UNKNOWN:
+            missing.append("irrigation")
+            trace.append("Sulama durumu bilinmiyor (REVIEW).")
+        elif parcel.irrigation == IrrigationStatusEnum.DRY:
+            failed.append(
+                "Yeraltı su kısıtı desteği sadece sulu tarım arazilerinde su tasarrufu sağlayan münavebe ürünlerine verilir (Kuru tarım arazileri bu ilave desteğe uygun değildir)."
+            )
+        elif parcel.irrigation == IrrigationStatusEnum.IRRIGATED:
+            passed.append("Parsel sulu tarım arazisi statüsündedir (Sulu arazi şartı sağlandı).")
+
+        if failed:
             status = EligibilityStatusEnum.NOT_ELIGIBLE
+        elif missing:
+            status = EligibilityStatusEnum.REVIEW
         else:
             status = EligibilityStatusEnum.ELIGIBLE
 

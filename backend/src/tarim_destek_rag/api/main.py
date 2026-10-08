@@ -49,7 +49,6 @@ from tarim_destek_rag.scraper.registry import SourceRegistry, source_registry
 
 def seed_vector_store_data() -> None:
     """Mevzuat açıklamalarını vektör ve BM25 hibrit indeksine tohumlar."""
-    vector_store.add_chunks(OFFICIAL_REGULATION_CHUNKS)
     hybrid_retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
     logger.info(
         "2026 Resmî mevzuat bilgi tabanı indekslendi (%d parça)",
@@ -316,6 +315,7 @@ def harvest_faqs(session: Session = Depends(get_db_session)) -> dict[str, Any]:
         "message": f"Tarımsal soru-cevap veritabanı güncellendi ({count} kayıt)",
         "harvested_count": count,
         "total_faqs": count,
+        "total_faqs_in_db": count,
         "indexed_chunks": len(new_chunks),
     }
 

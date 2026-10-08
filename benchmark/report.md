@@ -24,7 +24,7 @@
 |---|---|---|---|---|---|
 | **BM25 Sözcüksel (Lexical)** | %87.50 | %100.00 | %100.00 | 0.9375 | 0.35 ms |
 | **Dense (FAISS Vector)** | %100.00 | %100.00 | %100.00 | 1.0000 | 15.20 ms |
-| **Hibrit (BM25 + FAISS + RRF)** | **%100.00** | **%100.00** | **%100.00** | **1.0000** | **45.35 ms** |
+| **Hibrit (BM25 + FAISS + RRF)** | **%100.00** | **%100.00** | **%100.00** | **1.0000** | **15.42 ms** |
 
 ---
 
@@ -42,10 +42,10 @@
 
 | Bileşen | Ortalama Süre (ms) |
 |---|---|
-| **Rule Engine Değerlendirmesi** | 4.46 ms |
-| **Hibrit Arama (RRF Retrieval)** | 45.35 ms |
-| **Deterministik Açıklama Üretimi** | 0.03 ms |
-| **Uçtan Uca (End-to-End Latency)** | **5.17 ms** |
+| **Rule Engine Değerlendirmesi** | 2.69 ms |
+| **Hibrit Arama (RRF Retrieval)** | 15.42 ms |
+| **Deterministik Açıklama Üretimi** | 0.02 ms |
+| **Uçtan Uca (End-to-End Latency)** | **3.07 ms** |
 
 ---
 

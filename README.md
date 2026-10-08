@@ -5,7 +5,7 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=flat-square)
 ![Flutter](https://img.shields.io/badge/Flutter-Mobile%20Ready-02569B?style=flat-square)
 ![Gradio](https://img.shields.io/badge/Gradio-PC%20Dashboard-orange?style=flat-square)
-![Tests](https://img.shields.io/badge/tests-55%20passed%20(100%25)-brightgreen?style=flat-square)
+![Tests](https://img.shields.io/badge/tests-87%20passed%20(100%25)-brightgreen?style=flat-square)
 ![Benchmark](https://img.shields.io/badge/benchmark%20v1-100%20cases%20(100%25)-success?style=flat-square)
 ![Research](https://img.shields.io/badge/TÜBİTAK%202242-RQ1--RQ4%20PASS-blueviolet?style=flat-square)
 
@@ -30,15 +30,13 @@ Türkiye 2026 Bitkisel Üretim Destekleri için Deterministik Uygunluk, Tutar He
 4. **Resmî Atıf ve Kanıt Koruması (Citation Verification Guard):**
    - Her gerekçe 2026 Resmî Gazete maddesi ve BÜGEM havza kararlarıyla çapraz doğrulanır; desteksiz iddialar engellenir (%0 halüsinasyon).
 
-5. **Zengin PC Arayüzü (Gradio 9 Sekmeli Panel):**
-   - **Profil & Parsel Girişi:** İl, ilçe, ÇKS durumu, parsel alanı ve ürün seçimi.
-   - **Desteklerim:** Durum rozetleri (UYGUN, İNCELEME, UYGUN DEĞİL), KPI kartları ve toplam tutar.
-   - **Destek Detay:** Birim fiyat (TL/da), dekar, hak ediş ve başvuru takvimi tablosu.
-   - **Neden? (Gerekçe & Atıf):** `TemplateExplainer` açıklamaları, eksik belgeler ve Resmî Gazete madde alıntıları.
-   - **Soru-Cevap Asistanı:** Semantik FAQ & mevzuat arama chatbotu.
-   - **Mevzuat & Scraper Paneli:** Takip edilen kaynakların durumları ve kontrol mekanizması.
-   - **Doğrulama & Benchmark:** 100 resmi doğrulama vakası tablosu ve %100 başarı metrikleri.
-   - **Admin & Sistem Mimarisi:** 2026 destek parametreleri, birim fiyatlar ve yasal dayanaklar.
+5. **Bütünleşik & Sadeleştirilmiş PC Arayüzü (Gradio 6 Bütünleşik Panel):**
+   - **🌱 Profil & Parsel Girişi:** 81 il ve ilçeler, ÇKS durumu, parsel alanı, sulama ve ürün girdisi, hızlı senaryolar ve anlık özet.
+   - **📋 Desteklerim:** Tek hesaplama sonucu üzerinden toplam hak ediş KPI kartları, destek kartları, kalem kalem formül detay tablosu ve renkli yasal gerekçeler (Neden?).
+   - **📁 Başvuru & Belgelerim:** 2026 başvuru takvimi, açık pencereler, gerekli evraklar kontrol listesi ve eksik beyan kılavuzu.
+   - **💬 Mevzuat Asistanı:** Doğrulanmış RAG soru-cevap chatbotu ve 2026 Resmî Çiftçi Sıkça Sorulan Sorular (SSS) kütüphanesi.
+   - **📑 Raporlarım & Simülasyon:** Bağımsız ön değerlendirme raporu oluşturma (.md indirme) ve yasal bilgilendirme notu.
+   - **⚙️ Yönetici & Benchmark:** Resmî mevzuat kazıyıcı (scraper), SSS harvesteri, 100 vakalık dinamik benchmark ve mimari/lisans alanı.
 
 6. **Flutter Mobil İstemcisi (`mobile/`):**
    - Temiz mimari (Clean Architecture) ile geliştirilmiş, Android emülatör ve iOS uyumlu mobil uygulama.

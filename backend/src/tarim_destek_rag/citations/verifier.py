@@ -56,13 +56,35 @@ class CitationVerifier:
                 message=f"Atıf yapılan mevzuat yılı 2026 değil: {citation.year}",
             )
 
+        snippet_clean = citation.snippet.strip() if getattr(citation, "snippet", None) else ""
+        if not snippet_clean or len(snippet_clean) < 10:
+            return VerificationResult(
+                is_valid=False,
+                source_exists=True,
+                source_active=True,
+                year_valid=True,
+                status="EMPTY_OR_SHORT_SNIPPET",
+                message="Atıf metni (snippet) boş veya geçersiz uzunlukta (<10 karakter).",
+            )
+
+        section_clean = citation.section.strip() if getattr(citation, "section", None) else ""
+        if not section_clean:
+            return VerificationResult(
+                is_valid=False,
+                source_exists=True,
+                source_active=True,
+                year_valid=True,
+                status="MISSING_SECTION",
+                message="Atıf yapılan mevzuat maddesi/bölümü belirtilmemiş.",
+            )
+
         return VerificationResult(
             is_valid=True,
             source_exists=True,
             source_active=True,
             year_valid=True,
             status="VERIFIED",
-            message="Kaynak resmî, aktif ve 2026 yılı için geçerlidir.",
+            message="Kaynak resmî, aktif ve 2026 yılı için doğrulanmış mevzuat maddesidir.",
         )
 
 

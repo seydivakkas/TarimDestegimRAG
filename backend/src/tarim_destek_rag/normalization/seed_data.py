@@ -12,10 +12,22 @@ from tarim_destek_rag.database.models import (
 )
 
 
+# 2026 Destekleme Katsayı ve Birim Fiyat Tablosu (8 Eylül 2026 Güncellemesi)
+SUPPORT_COEFFICIENTS_2026 = {
+    "BASE_COEFFICIENT_AUGUST": Decimal("310.00"),
+    "BASE_COEFFICIENT_SEPTEMBER": Decimal("367.00"),  # 8 Eylül 2026 Bakanlık duyurusu
+    "WHEAT_BARLEY_MULTIPLIER": Decimal("1.30"),
+    # Güncel resmi toplam: 1.30 * 367 = 477.10 TL temel + 477.10 TL planlı = 954.20 TL/da (~954 TL/da)
+    "WHEAT_UPDATED_BASIC": Decimal("477.10"),
+    "WHEAT_UPDATED_PLANNED": Decimal("477.10"),
+    "WHEAT_UPDATED_TOTAL": Decimal("954.20"),
+}
+
+
 def seed_2026_support_data(session: Session) -> None:
     """Türkiye 2026 Bitkisel Üretim Destekleri mevzuat verisini veritabanına yükler."""
 
-    # 1. Ana Kaynak
+    # 1. Ana Kaynaklar
     rg_source = SourceModel(
         source_id="RG-2026-BITKISEL",
         url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
@@ -26,6 +38,17 @@ def seed_2026_support_data(session: Session) -> None:
         priority=0,
     )
     session.merge(rg_source)
+
+    tob_source = SourceModel(
+        source_id="TOB-2026-09-DUYURU",
+        url="https://www.tarimorman.gov.tr/Haber/7258/Bitkisel-Ve-Hayvansal-Uretimde-Destek-Tutarlari-Artirildi",
+        authority="MINISTRY_OF_AGRICULTURE",
+        title="Tarım ve Orman Bakanlığı 2026 Yılı Destekleme Katsayısı Artış Tebliği (8 Eylül 2026 - Katsayı: 367 TL)",
+        content_type="HTML",
+        active=True,
+        priority=1,
+    )
+    session.merge(tob_source)
     session.flush()
 
     # 2. Destekleme Programları
@@ -220,6 +243,24 @@ def seed_2026_support_data(session: Session) -> None:
             district="ÇARŞAMBA",
             basin_name="YEŞİLIRMAK HAVZASI",
             crop_name="FINDIK",
+            is_supported=True,
+            year=2026,
+            source_id="RG-2026-BITKISEL",
+        ),
+        BasinCropRuleModel(
+            province="ANKARA",
+            district="POLATLI",
+            basin_name="SAKARYA HAVZASI",
+            crop_name="SOĞAN",
+            is_supported=True,
+            year=2026,
+            source_id="RG-2026-BITKISEL",
+        ),
+        BasinCropRuleModel(
+            province="KONYA",
+            district="SELÇUKLU",
+            basin_name="KONYA KAPALI HAVZASI",
+            crop_name="YONCA",
             is_supported=True,
             year=2026,
             source_id="RG-2026-BITKISEL",

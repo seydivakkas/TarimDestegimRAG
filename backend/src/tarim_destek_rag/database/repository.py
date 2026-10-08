@@ -112,6 +112,17 @@ class BasinRepository:
     def __init__(self, session: Session) -> None:
         self.session = session
 
+    def has_basin_records(
+        self, province: str, district: str, year: int = 2026
+    ) -> bool:
+        """İl ve ilçe için sisteme işlenmiş havza kuralı kaydı bulunup bulunmadığını kontrol eder."""
+        stmt = select(BasinCropRuleModel).where(
+            BasinCropRuleModel.province == province.upper(),
+            BasinCropRuleModel.district == district.upper(),
+            BasinCropRuleModel.year == year,
+        )
+        return self.session.scalars(stmt).first() is not None
+
     def is_crop_supported_in_basin(
         self, province: str, district: str, crop_name: str, year: int = 2026
     ) -> bool:
