@@ -12,6 +12,9 @@ on:
       - "backend/src/tarim_destek_rag/models/farmer_parcel.py"
       - "backend/src/tarim_destek_rag/normalization/basin_2026.py"
       - "backend/tests/unit/test_p0_4_basin_review.py"
+      - "backend/tests/unit/test_p0_6_2026_water_scope.py"
+      - "backend/src/tarim_destek_rag/normalization/water_2026.py"
+      - "configs/2026_water_restriction_52_draft.json"
       - "backend/tests/unit/test_official_basin_catalog_2026.py"
       - "configs/2026_2027_basin_crop_draft.json"
       - ".github/workflows/decision-suite-revalidation.yml"
@@ -50,6 +53,7 @@ jobs:
             backend/tests/unit/test_p0_2_verified_rates.py \
             backend/tests/unit/test_legal_components_2026.py \
             backend/tests/unit/test_p0_4_basin_review.py \
+            backend/tests/unit/test_p0_6_2026_water_scope.py \
             backend/tests/unit/test_official_basin_catalog_2026.py \
             backend/tests/unit/test_decision_2026_matrix.py \
             backend/tests/regression/test_regression_cases.py \
