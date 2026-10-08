@@ -305,7 +305,7 @@ def get_faq_stats(session: Session = Depends(get_db_session)) -> dict[str, Any]:
     if stats["total_count"] == 0:
         return {
             "total_count": len(FARMER_FAQ_LIST),
-            "verified_count": len(FARMER_FAQ_LIST),
+            "verified_count": 0,
             "category_counts": {c: 1 for c in {f["category"] for f in FARMER_FAQ_LIST}},
         }
     return stats
