@@ -25,7 +25,9 @@ def seed_2026_support_data(session: Session) -> None:
         active=True,
         priority=0,
     )
-    session.merge(rg_source)
+    # Do not rewrite an existing source URL/status used for historical provenance.
+    if session.get(SourceModel, rg_source.source_id) is None:
+        session.add(rg_source)
     session.flush()
 
     # 2. Destekleme Programları
