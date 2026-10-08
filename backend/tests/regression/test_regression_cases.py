@@ -89,7 +89,7 @@ def test_regression_supersession_and_outdated_source():
 
     verifier = CitationVerifier(registry=reg)
 
-    # Güncel kaynak geçerli
+    # Kaynak kaydı tek başına geçerli pasaj kanıtı değildir.
     valid_cit = CitationDetail(
         source_id="RG-2026-BITKISEL",
         title="2026 Kararı",
@@ -97,7 +97,7 @@ def test_regression_supersession_and_outdated_source():
         year=2026,
         snippet="Mevzuat metni",
     )
-    assert verifier.verify(valid_cit).is_valid is True
+    assert verifier.verify(valid_cit).is_valid is False  # Original PDF not indexed
 
     # Eski / Pasif kaynak otomatik olarak reddedilmeli
     invalid_cit = CitationDetail(
