@@ -9,6 +9,8 @@ P0-2 ve P0-4 kapsamında `review_status="VERIFIED"`, `approved_by`, `reviewed_by
 - **REVIEWER** ve **APPROVER**, birbirinden farklı `principal_id` değerlerine ve haricî Ed25519 açık anahtarlarına sahip olmalıdır.
 - `TARIM_RAG_LEGAL_TRUSTED_KEYS_JSON` **deploy secrets/anahtar yönetiminde** sağlanır; üretim özel anahtarları repoya veya veritabanına konulmaz.
 - Her imza, kanonik SHA-256 kaydına bağlıdır: program/ürün/yıl/yer/tutar/koşul/metin, ilgili kaynak sürümü, belge hash'i, resmi URL, sayfa ve havza listesi gibi alanlar.
+- **Resmî yayıncı zorunluluğu**: kaynak aktif olacak, HTTPS üzerinden `resmigazete.gov.tr` veya `tarimorman.gov.tr` alanındaki Bakanlık/Resmî Gazete hostuna ait olacak ve kaynağın `authority` alanı bu resmî kaynak türüyle tutarlı olacak. Sahte veya taklit alan adı iki imzayla bile geçerli olamaz.
+- Kaynağın `active` ve belge sürümünün `superseded` durumu da imzalanan kanonik içerikte yer alır.
 - Bir kimlik veya rol eksikse, ikisi aynı kişiyse, anahtar değiştiyse, kaynak revize edildiyse, kayıt uyuşmuyorsa veya imza doğrulanmıyorsa sistem **fail-closed** davranır.
 - Kaynak `superseded` veya `active=False` ise imza olsa bile onay geçmez. Birden fazla geçerli fiyat çakışması hâlinde P0-2 de hesabı engeller.
 - Bir **APPROVER** tarafından haricî anahtarla imzalanmış iptal bildirimi `legal_approval_revocations` tablosuna eklendiğinde aynı konu kimliği yeni veri kabul edemez; yeni mevzuat sürümü/konu kaydı gerekir.
