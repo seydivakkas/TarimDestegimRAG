@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from tarim_destek_rag.calculator.calculator import SupportCalculator
 from tarim_destek_rag.database.repository import SupportRepository
 from tarim_destek_rag.logging.logger import logger
-from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
+from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.orchestrator import DecisionOrchestrator
 
@@ -27,6 +27,7 @@ class BenchmarkCase(BaseModel):
     seed_certificate_available: bool | None = None
     sapling_certificate_available: bool | None = None
     production_year: int = 2026
+    irrigation: IrrigationStatusEnum = IrrigationStatusEnum.DRY
     expected_status: EligibilityStatusEnum
     expected_amount: Decimal | None = None
     notes: str = ""
@@ -62,6 +63,7 @@ class DecisionBenchmarkRunner:
             crop=case.crop,
             area_da=case.area_da,
             production_year=case.production_year,
+            irrigation=case.irrigation,
             seed_certificate_available=case.seed_certificate_available,
             sapling_certificate_available=case.sapling_certificate_available,
         )
@@ -92,8 +94,8 @@ class DecisionBenchmarkRunner:
             "category": case.category,
             "expected_status": case.expected_status,
             "actual_status": target_rule_res.status,
-            "expected_amount": str(case.expected_amount) if case.expected_amount else None,
-            "actual_amount": str(calc_res.estimated_amount) if calc_res.estimated_amount else None,
+            "expected_amount": str(case.expected_amount) if case.expected_amount is not None else None,
+            "actual_amount": str(calc_res.estimated_amount) if calc_res.estimated_amount is not None else None,
             "status_ok": status_ok,
             "amount_ok": amount_ok,
             "failed_checks": target_rule_res.failed_checks,
