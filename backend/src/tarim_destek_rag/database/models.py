@@ -225,7 +225,7 @@ class LegalApprovalAttestationModel(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "subject_type IN ('RATE','BASIN','WATER')", name="ck_approval_subject_type"
+            "subject_type IN ('RATE','BASIN','WATER','RELEASE')", name="ck_approval_subject_type"
         ),
         CheckConstraint(
             "role IN ('REVIEWER','APPROVER')", name="ck_approval_role"
@@ -260,7 +260,7 @@ class LegalAuditReceiptModel(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "subject_type IN ('RATE','BASIN','WATER')",
+            "subject_type IN ('RATE','BASIN','WATER','RELEASE')",
             name="ck_audit_subject_kind",
         ),
         CheckConstraint(
@@ -426,6 +426,42 @@ class AgriculturalFAQModel(Base):
 # P0-8B: additive provenance staging; none of the following tables is a
 # source for the current farmer payment engine until an independently reviewed
 # release is explicitly bridged to VerifiedSupportRateModel.
+class LegalReleaseModel(Base):
+    """Fully immutable *candidate* semantics, signed as one RELEASE subject.
+
+    No active flag: two independent verified signatures and WORM evidence
+    together with every referenced approved RATE form the runtime release
+    gate. Only 1 non-revoked release may be selected per year.
+    """
+
+    __tablename__ = "legal_release_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    production_year: Mapped[int] = mapped_column(Integer, nullable=False)
+    source_version_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("source_versions.id"), nullable=False
+    )
+    manifest_json: Mapped[str] = mapped_column(Text, nullable=False)
+    manifest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[date | None] = mapped_column(Date, nullable=True)
+    coverage_complete: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    review_status: Mapped[str] = mapped_column(String(16), default="DRAFT", nullable=False)
+    reviewed_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    review_reference: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    source_version: Mapped["SourceVersionModel"] = relationship()
+
+    __table_args__ = (
+        CheckConstraint("production_year BETWEEN 2020 AND 2100", name="ck_legal_release_year"),
+        CheckConstraint(
+            "review_status IN ('DRAFT','VERIFIED','REVOKED')",
+            name="ck_legal_release_review",
+        ),
+        UniqueConstraint("production_year", "manifest_sha256", name="uq_year_release_manifest"),
+    )
+
+
 class SourceDocumentModel(Base):
     """Original PDF byte-hash and publication provenance, not legal approval."""
 
