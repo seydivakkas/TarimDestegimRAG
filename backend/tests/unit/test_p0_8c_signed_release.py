@@ -4,6 +4,7 @@ No real legal official, KMS/HSM, WORM or production activation exists in CI.
 """
 
 import hashlib
+import base64
 from datetime import date, datetime, timezone
 from decimal import Decimal
 
@@ -19,7 +20,8 @@ from tarim_destek_rag.auto_updater.release import (
 )
 from tarim_destek_rag.database.connection import Base
 from tarim_destek_rag.database.legal_approvals import (
-    register_detached_approval, subject_digest, two_person_approved,
+    register_detached_approval, register_detached_revocation,
+    revocation_message, subject_digest, two_person_approved,
 )
 from tarim_destek_rag.database.models import (
     DynamicRateModel, SourceModel, SourceVersionModel, SupportProgramModel,
@@ -265,3 +267,63 @@ def test_mutating_signed_release_manifest_invalidates_digest(repo_fixture, monke
     assert resolve_active_release(
         session, year=2030, when=date(2030, 4, 1), archive_root=archive,
     )[0].status == "HOLD"
+
+
+def test_competing_signed_releases_for_same_year_fail_closed(repo_fixture, monkeypatch):
+    session, archive, version, rate, candidate, sentence = repo_fixture
+    signers = trust_pair(monkeypatch)
+    sign_two(session, rate, signers)
+    first_manifest = manifest_for(version, rate, candidate, sentence)
+    first = reviewed_release(session, version, first_manifest)
+    sign_two(session, first, signers)
+    second_manifest = manifest_for(version, rate, candidate, sentence)
+    second_manifest["coverage_review_reference"] = "SYNTHETIC-SECOND-REVIEW"
+    second = reviewed_release(session, version, second_manifest)
+    sign_two(session, second, signers)
+    assert first.id != second.id
+    status, content = resolve_active_release(
+        session, year=2030, when=date(2030, 4, 1), archive_root=archive,
+    )
+    assert status.status == "HOLD" and content is None
+
+
+def test_signed_approver_revocation_disables_active_release(repo_fixture, monkeypatch):
+    session, archive, version, rate, candidate, sentence = repo_fixture
+    signers = trust_pair(monkeypatch)
+    sign_two(session, rate, signers)
+    release = reviewed_release(
+        session, version, manifest_for(version, rate, candidate, sentence)
+    )
+    sign_two(session, release, signers)
+    assert resolve_active_release(
+        session, year=2030, when=date(2030, 4, 1), archive_root=archive,
+    )[0].status == "ACTIVE"
+    principal, private = signers["APPROVER"]
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    digest = subject_digest(release)
+    reason = "Synthetic amended law replaced previous 2030 source"
+    signature = private.sign(revocation_message(
+        kind="RELEASE", record_id=release.id, digest=digest,
+        source_sha256=release.source_version.content_hash,
+        principal_id=principal, signed_at=now, reason=reason,
+    ))
+    register_detached_revocation(session, release, {
+        "principal_id": principal, "reason": reason,
+        "signed_at": now, "subject_digest": digest,
+        "source_sha256": release.source_version.content_hash,
+        "signature_b64": base64.b64encode(signature).decode(),
+    })
+    assert resolve_active_release(
+        session, year=2030, when=date(2030, 4, 1), archive_root=archive,
+    )[0].status == "HOLD"
+
+
+def test_overlapping_release_geographic_rates_rejected(repo_fixture):
+    session, archive, version, rate, candidate, sentence = repo_fixture
+    bad = manifest_for(version, rate, candidate, sentence)
+    bad["entries"].append(dict(bad["entries"][0], province="KONYA", district="KARATAY"))
+    with pytest.raises(ValueError, match="Overlapping"):
+        stage_release(
+            session, manifest=bad, source_version_id=version.id,
+            effective_from=date(2030, 1, 1),
+        )
