@@ -16,7 +16,8 @@ from tarim_destek_rag.database.models import (
 from tarim_destek_rag.database.repository import BasinRepository
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
 from tarim_destek_rag.normalization.basin_2026 import (
-    BASIN_SOURCE_URL, stage_basin_districts, validate_basin_catalog,
+    BASIN_SOURCE_URL, BASIN_SOURCE_ID, PINNED_BASIN_PDF_SHA256,
+    stage_basin_districts, validate_basin_catalog,
 )
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.rules.rules_impl import PlannedProductionRule
@@ -33,7 +34,7 @@ def session():
 
 def register_synthetic_snapshot(session, *, approve=False, crops=None, starred=True):
     source = SourceModel(
-        source_id="TEST-BASIN", url=BASIN_SOURCE_URL,
+        source_id=BASIN_SOURCE_ID, url=BASIN_SOURCE_URL,
         title="synthetic complete legal source for unit tests only",
         authority="TEST", content_type="PDF", active=True,
     )
@@ -41,7 +42,7 @@ def register_synthetic_snapshot(session, *, approve=False, crops=None, starred=T
     session.flush()
     version = SourceVersionModel(
         source_id=source.source_id,
-        content_hash="e"*64, version=1,
+        content_hash=PINNED_BASIN_PDF_SHA256, version=1,
         detected_at="2026-10-08T10:00:00Z", effective_from="2026-01-01",
         effective_to="2027-12-31", superseded=False,
     )
@@ -175,9 +176,13 @@ def _synthetic_complete_catalog(pdf_bytes):
     }
 
 
-def test_import_requires_official_pdf_bytes_and_preserves_draft(session, tmp_path):
+def test_import_requires_official_pdf_bytes_and_preserves_draft(session, tmp_path, monkeypatch):
     # Explicit synthetic PDF-like bytes; source content is NEVER legally approved.
     pdf = b"%PDF-SYNTHETIC_TEST_ONLY"
+    monkeypatch.setattr(
+        "tarim_destek_rag.normalization.basin_2026.PINNED_BASIN_PDF_SHA256",
+        sha256(pdf).hexdigest(),
+    )
     catalog = _synthetic_complete_catalog(pdf)
     datafile = tmp_path / "staged.json"
     pdffile = tmp_path / "source.pdf"
@@ -204,6 +209,7 @@ def test_import_requires_official_pdf_bytes_and_preserves_draft(session, tmp_pat
 
 def test_partial_national_extraction_is_rejected():
     catalog = _synthetic_complete_catalog(b"%PDF-SYNTHETIC")
+    catalog["original_pdf_sha256"] = PINNED_BASIN_PDF_SHA256
     catalog["districts"] = catalog["districts"][:10]
     catalog["district_count"] = 10
     catalog["province_count"] = 1
