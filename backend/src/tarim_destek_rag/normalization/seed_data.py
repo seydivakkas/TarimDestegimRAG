@@ -24,7 +24,7 @@ SUPPORT_COEFFICIENTS_2026 = {
 }
 
 
-def seed_2026_support_data(session: Session) -> None:
+def seed_2026_support_data(session: Session, *, include_faqs: bool = True) -> None:
     """Tarihsel örnek veri tohumlar; onaylı tutar üretmez ve var olan kayıtları değiştirmez."""
 
     # 1. Ana Kaynaklar
@@ -451,10 +451,12 @@ def seed_2026_support_data(session: Session) -> None:
         else:
             session.add(win)
 
-    # 7. Tarımsal Soru-Cevap ve Sorun Kütüphanesini Tohumla
-    from tarim_destek_rag.scraper.faq_harvester import AgriculturalFAQHarvester
-    faq_harvester = AgriculturalFAQHarvester(session)
-    faq_harvester.seed_initial_knowledge()
+    # Separate unrelated FAQ bootstrap so rate migration tests stay lightweight.
+    if include_faqs:
+        from tarim_destek_rag.scraper.faq_harvester import AgriculturalFAQHarvester
+
+        faq_harvester = AgriculturalFAQHarvester(session)
+        faq_harvester.seed_initial_knowledge()
 
     session.commit()
 
