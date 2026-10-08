@@ -33,7 +33,10 @@ class EvidenceError(ValueError):
 
 def canonical_url(url: str) -> str:
     """URL fragment'ı belge kaynağının bir parçası değildir; sorgu ve yol korunur."""
-    return urldefrag(str(url))[0]
+    raw = urldefrag(str(url))[0]
+    parsed = urlsplit(raw)
+    # HTTPS alan adında "/" ile boş yol aynı kök kaynağı temsil eder.
+    return parsed._replace(path=parsed.path or "/").geturl()
 
 
 def require_official_https(url: str) -> None:
