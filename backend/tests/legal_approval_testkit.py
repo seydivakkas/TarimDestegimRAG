@@ -30,6 +30,7 @@ def trust_pair(monkeypatch):
         }
     monkeypatch.setenv(TRUST_ENV, json.dumps(config))
     monkeypatch.setenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED", "true")
+    monkeypatch.setenv("TARIM_RAG_LEGAL_SECURITY_PROFILE", "isolated_test")
     return signers
 
 
