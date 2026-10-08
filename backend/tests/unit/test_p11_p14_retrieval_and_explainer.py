@@ -91,7 +91,7 @@ def test_citation_verifier():
     reg.register(
         SourceDefinition(
             id="RG-2026-BITKISEL",
-            url="https://resmigazete.gov.tr",
+            url="https://resmigazete.gov.tr/",
             authority=AuthorityEnum.OFFICIAL_GAZETTE,
             title="Resmî Gazete",
             active=True,
