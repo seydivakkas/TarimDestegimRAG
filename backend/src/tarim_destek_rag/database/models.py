@@ -91,11 +91,11 @@ class SupportAmountModel(Base):
         String(64), ForeignKey("sources.source_id"), nullable=False
     )
     production_year: Mapped[int] = mapped_column(Integer, default=2026)
-    legal_decision_number: Mapped[str | None] = mapped_column(String(64), default="11781", nullable=True)
-    effective_from: Mapped[str | None] = mapped_column(String(10), default="2026-09-08", nullable=True)
+    legal_decision_number: Mapped[str | None] = mapped_column(String(64), default=None, nullable=True)
+    effective_from: Mapped[str | None] = mapped_column(String(10), default=None, nullable=True)
     effective_to: Mapped[str | None] = mapped_column(String(10), nullable=True)
     geographic_scope: Mapped[str] = mapped_column(String(64), default="GENEL")
-    verification_status: Mapped[str] = mapped_column(String(32), default="VERIFIED")  # VERIFIED, DRAFT, SUPERSEDED, REJECTED
+    verification_status: Mapped[str] = mapped_column(String(32), default="DRAFT")  # VERIFIED, DRAFT, SUPERSEDED, REJECTED
 
     __table_args__ = (
         CheckConstraint("unit_amount >= 0", name="check_positive_amount"),
