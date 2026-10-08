@@ -170,16 +170,12 @@ def test_format_highlighted_citation_card():
 
 
 def test_render_document_viewer_html():
-    """render_document_viewer_html'in tam belge okuyucu, gösterge çubuğu ve paragrafları ürettiğini test eder."""
+    """Sentetik mevzuat özetleri birebir resmî belge pasajı gibi sunulmamalıdır."""
     from tarim_destek_rag.citations.document_links import render_document_viewer_html
 
     viewer_html = render_document_viewer_html("MADDE 1")
     assert '<div class="legal-reader-container">' in viewer_html
-    assert '<div class="legal-legend-bar">' in viewer_html
-    assert '🟢 <b>Yeşil:</b>' in viewer_html
-    assert '🔴 <b>Kırmızı:</b>' in viewer_html
-    assert '🟡 <b>Kehribar:</b>' in viewer_html
-    assert '🔵 <b>Mavi:</b>' in viewer_html
-    assert '<p class="legal-reader-paragraph">' in viewer_html
-    assert '<mark class=' in viewer_html
-
+    assert 'Resmî kaynağı aç' in viewer_html
+    assert 'doğrulanmış' in viewer_html
+    assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1"' in viewer_html
+    assert '<mark class=' not in viewer_html
