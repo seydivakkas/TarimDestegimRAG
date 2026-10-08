@@ -54,10 +54,22 @@ class BasicSupportRule(BaseRule):
         else:
             failed.append(f"{parcel.crop} ürünü için 2026 temel destek birim fiyatı bulunamadı.")
 
-        if missing:
-            status = EligibilityStatusEnum.REVIEW
-        elif failed:
+        # BÜGEM 2026 cetveli dipnotu: resmen su kısıtı bulunan havzalarda
+        # dane mısır ve patates ekilişlerine temel destek ödenmez.
+        if parcel.crop in {"MISIR", "PATATES"}:
+            restricted = WaterRestrictionRepository(session).get_restriction(
+                farmer.province, farmer.district, parcel.production_year
+            )
+            if restricted:
+                failed.append(
+                    f"{farmer.province}/{farmer.district} su kısıtı havzasında "
+                    f"{parcel.crop} için temel destek ödenmez."
+                )
+
+        if failed:
             status = EligibilityStatusEnum.NOT_ELIGIBLE
+        elif missing:
+            status = EligibilityStatusEnum.REVIEW
         else:
             status = EligibilityStatusEnum.ELIGIBLE
 
