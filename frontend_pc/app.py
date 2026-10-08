@@ -1221,6 +1221,54 @@ def build_ui() -> gr.Blocks:
                     btn_refresh_sources = gr.Button("🔄 Kaynakları Yenile", size="sm")
                 btn_refresh_sources.click(get_sources_table, outputs=[sources_df])
 
+                gr.Markdown("#### Resmî mevzuatı tek işlemle kontrol et (DRAFT keşif)")
+                gr.Markdown(
+                    "Seçilen yıl için resmî portallardaki yeni PDF/HTML belgeleri arşivler. "
+                    "Eski mevzuatı silmez; **onaysız tutar veya koşulları hesaplamaya aktarmaz.** "
+                    "Bütün resmî kaynakların eksiksiz bulunduğu garanti edilmez."
+                )
+                with gr.Row():
+                    update_year = gr.Number(
+                        label="Üretim yılı", value=datetime.now().year,
+                        precision=0, minimum=2020, maximum=2100,
+                    )
+                    allow_local_scan = (
+                        os.getenv("TARIM_RAG_LOCAL_UPDATES_ENABLED") == "true"
+                        and bool(os.getenv("TARIM_RAG_ADMIN_API_KEY"))
+                        and api_client.base_url.startswith(
+                            ("http://127.0.0.1:", "http://localhost:")
+                        )
+                    )
+                    btn_scan_legal = gr.Button(
+                        "Resmî Mevzuatı Kontrol Et",
+                        variant="primary", interactive=allow_local_scan,
+                    )
+                update_result = gr.Markdown(
+                    "Yerel yönetici taraması varsayılan kapalıdır. Etkinleştirmek "
+                    "için uygulamayı yalnız yerel ağda ve yönetici anahtarıyla çalıştırın."
+                )
+
+                def on_legal_update_scan(year: float) -> str:
+                    if not allow_local_scan:
+                        return "**Güvenlik:** Mevzuat taraması yalnız yerel yetkili oturumda açılır."
+                    result = api_client.scan_legal_updates(int(year))
+                    if result.get("status") in ("ERROR", "ADMIN_NOT_CONFIGURED"):
+                        return "**Tarama çalışmadı:** " + str(result.get("message", ""))
+                    changed = result.get("new_or_changed", 0)
+                    errors = result.get("errors", [])
+                    scanned = len(result.get("documents", []))
+                    return (
+                        f"**Kaynak tarama raporu (onay bekliyor):** {scanned} belge kontrol edildi, "
+                        f"{changed} yeni/değişen sürüm, {len(errors)} erişim/ayrıştırma hatası. "
+                        f"**Üretim yılı: {int(year)}.** "
+                        "Eski sürümler korundu. Destek fiyatları ve hak edişler **güncellenmedi**. "
+                        "Bu işlem resmî mevzuat kapsamının tamamlandığı anlamına gelmez."
+                    )
+
+                btn_scan_legal.click(
+                    on_legal_update_scan, inputs=[update_year], outputs=[update_result],
+                )
+
                 gr.Markdown("""
                 #### 🔄 Otomatik Değişiklik Algılama & Hash Sistemi
                 - Her resmî kaynak URL'si düzenli aralıklarla kontrol edilir.
