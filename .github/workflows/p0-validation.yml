@@ -79,5 +79,7 @@ jobs:
         run: uv sync --extra dev --frozen
       - name: Run P0 focused tests
         run: uv run pytest backend/tests/unit/test_p0_2026_data_reliability.py -q
+      - name: Install optional PDF evidence stack for full integrated regressions
+        run: uv pip install --python .venv/bin/python "PyMuPDF>=1.25,<1.29" "Pillow>=10,<13"
       - name: Run full regression suite
         run: uv run pytest backend/tests -q

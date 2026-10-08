@@ -501,6 +501,63 @@ def list_sources() -> list[SourceDefinition]:
     return source_registry.list_active_sources()
 
 
+# P0-8: manual discovery is separated from legal publication and only scans
+# allowlisted official portals; a user cannot submit arbitrary URLs.
+@app.post("/admin/legal-updates/scan", tags=["Gelecek Yıl Mevzuat Takibi"])
+def scan_future_legal_changes(
+    year: int,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    from tarim_destek_rag.updates.discovery import read_portals, scan_official_sources
+
+    if not 2020 <= year <= 2100:
+        raise HTTPException(status_code=422, detail="Geçersiz üretim yılı")
+    portals = read_portals(Path("configs/official_update_portals.json"))
+    result = scan_official_sources(
+        production_year=year, portals=portals,
+        output=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
+    )
+    return result
+
+
+@app.get("/evidence/highlight/{sha256}", tags=["PDF Belge Kanıtı"])
+def show_exact_pdf_evidence(
+    sha256: str, page: int, quote: str,
+) -> Response:
+    """Read-only verifiable highlighted COPY; original PDF remains immutable."""
+    from tarim_destek_rag.updates.pdf_evidence import (
+        SHA_PATTERN,
+        UnverifiableEvidence,
+        highlighted_pdf_copy,
+        locate_pdf_quote,
+    )
+    if not SHA_PATTERN.fullmatch(sha256) or not 1 <= page <= 2000:
+        raise HTTPException(status_code=422, detail="Belge SHA veya PDF sayfası geçersiz")
+    root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    file_path = root / "originals" / f"{sha256}.pdf"
+    if not file_path.is_file():
+        raise HTTPException(status_code=404, detail="Bu belge sürümü arşivde bulunamadı")
+    try:
+        original = file_path.read_bytes()
+        evidence = locate_pdf_quote(
+            original, expected_sha256=sha256,
+            page_1_indexed=page, exact_quote=quote,
+        )
+        marked_copy = highlighted_pdf_copy(original, evidence)
+    except UnverifiableEvidence as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return Response(
+        content=marked_copy,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'inline; filename="legal-evidence-highlight.pdf"',
+            "Cache-Control": "private, no-store",
+            "X-Legal-Evidence": "EXACT_TEXT_LOCATED_PENDING_LEGAL_REVIEW",
+            "X-Original-Source-SHA256": sha256,
+        },
+    )
+
+
 # P0-8B/8C: Exact-sentence layout grounding & signed legal releases
 @app.get("/api/v1/grounding/evidence/{sentence_id}", tags=["PDF Hukuki Kanıt"])
 @app.get("/api/v1/grounding/{sentence_id}", tags=["PDF Hukuki Kanıt"])

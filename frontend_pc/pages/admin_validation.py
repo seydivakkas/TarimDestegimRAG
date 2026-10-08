@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import os
+from datetime import datetime
+from io import BytesIO
+
 import gradio as gr
 import pandas as pd
 
@@ -37,6 +41,86 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
             return f"⚠️ **Bilgi:** {res.get('message', 'İşlem tamamlandı.')}"
 
         btn_harvest_faqs.click(on_harvest_click, outputs=[harvest_status_box])
+
+        gr.Markdown("### Gelecek Yıl Mevzuat Kontrolü (DRAFT)")
+        gr.Markdown(
+            "Resmî kaynaklardan yeni/değişen belgeleri arşivler; **onaysız "
+            "katsayıları, ilçe listelerini ve hak edişleri etkinleştirmez**. "
+            "Bilinen portal bağlantıları taranır; eksiksiz mevzuat kapsamı iddia edilmez."
+        )
+        local_admin = (
+            os.getenv("TARIM_RAG_LOCAL_UPDATES_ENABLED") == "true"
+            and bool(os.getenv("TARIM_RAG_ADMIN_API_KEY"))
+            and api_client.base_url.startswith(("http://127.0.0.1:", "http://localhost:"))
+        )
+        with gr.Row():
+            legal_year = gr.Number(
+                label="Hedef üretim yılı", value=datetime.now().year,
+                precision=0, minimum=2020, maximum=2100,
+            )
+            btn_scan_year = gr.Button(
+                "Resmî Mevzuatı Kontrol Et",
+                variant="secondary",
+                interactive=local_admin,
+            )
+        scan_status = gr.Markdown(
+            "Yönetici taraması varsayılan kapalıdır. Yalnız yerel oturumda "
+            "TARIM_RAG_LOCAL_UPDATES_ENABLED=true ve yönetici API anahtarıyla açılır."
+        )
+
+        def on_scan_year(year: float) -> str:
+            if not local_admin:
+                return "**Erişim reddedildi:** Güncelleme taraması bu oturumda kapalı."
+            result = api_client.scan_legal_updates(int(year))
+            if result.get("status") in ("ERROR", "ADMIN_NOT_CONFIGURED"):
+                return "**Tarama çalışmadı:** " + str(result.get("message", ""))
+            return (
+                f"**DRAFT tarama:** {result.get('new_or_changed', 0)} yeni/değişen belge; "
+                f"{len(result.get('documents', []))} kontrol; "
+                f"{len(result.get('errors', []))} hata. "
+                "Destek fiyatları ve koşulları **güncellenmedi**."
+            )
+        btn_scan_year.click(on_scan_year, inputs=[legal_year], outputs=[scan_status])
+
+        gr.Markdown("#### PDF Cümlesinin Gerçek Sayfasını Göster (Onaysız Kanıt)")
+        with gr.Row():
+            evidence_id = gr.Number(label="Kaydedilmiş cümle ID", value=1, precision=0, minimum=1)
+            btn_evidence = gr.Button("Sarı İşaretli Sayfayı Göster", variant="secondary")
+        evidence_status = gr.Markdown(
+            "Yalnız SHA-256 doğrulanmış belge/cümle eşleşmesi gösterilir; "
+            "hukukî yürürlük veya çiftçi hak edişi onayı değildir."
+        )
+        evidence_image = gr.Image(
+            label="Orijinal PDF sayfası — birebir cümle sarı işaretli",
+            type="pil", interactive=False,
+        )
+
+        def view_evidence(record_id: float, year: float):
+            from PIL import Image
+
+            data = api_client.get_grounding_evidence(int(record_id), int(year))
+            if data.get("status") != "DRAFT_NEEDS_HUMAN_LEGAL_REVIEW":
+                return "**Kanıt bulunamadı veya henüz doğrulanmadı.**", None
+            raw = api_client.get_grounding_page_bytes(
+                int(record_id), int(data["page_number"]), int(year)
+            )
+            if not raw:
+                return "**Orijinal PDF sayfası doğrulanamadı.**", None
+            with Image.open(BytesIO(raw)) as rendered:
+                rendered.load()
+                picture = rendered.copy()
+            # Render as plain text (not unescaped HTML) to avoid injecting
+            # source document content into the local admin view.
+            return (
+                f"**DRAFT — Hukukî onay bekliyor** | Sayfa {data['page_number']} "
+                f"| SHA-256 `{data['original_pdf_sha256']}`"
+                f"\n\n**Birebir cümle:** {data['exact_quote']}",
+                picture,
+            )
+        btn_evidence.click(
+            view_evidence, inputs=[evidence_id, legal_year],
+            outputs=[evidence_status, evidence_image],
+        )
 
         gr.Markdown("---")
         gr.Markdown("""

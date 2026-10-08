@@ -4,6 +4,24 @@ on:
   pull_request:
     paths:
       - "configs/2026_documented_component_rates_draft.json"
+      - "backend/src/tarim_destek_rag/updates/**"
+      - "backend/src/tarim_destek_rag/auto_updater/**"
+      - "backend/src/tarim_destek_rag/rules/dynamic_engine.py"
+      - "backend/tests/unit/test_p0_8b_layout_dynamic.py"
+      - "backend/tests/unit/test_p0_8c_legal_diff.py"
+      - "backend/tests/unit/test_p0_8c_signed_release.py"
+      - "backend/tests/integration/test_p0_8c_diff_release_api.py"
+      - "backend/src/tarim_destek_rag/auto_updater/legal_diff.py"
+      - "backend/src/tarim_destek_rag/auto_updater/legal_diff_repository.py"
+      - "backend/src/tarim_destek_rag/auto_updater/release.py"
+      - "scripts/build_legal_diff_report.py"
+      - "backend/tests/integration/test_p0_8b_grounding_api.py"
+      - "deployment/sql/p0_8b_create_grounding_and_dynamic_drafts.sql"
+      - "backend/src/tarim_destek_rag/api/**"
+      - "backend/src/tarim_destek_rag/citations/**"
+      - "frontend_pc/**"
+      - "backend/tests/unit/test_p0_8_year_agnostic_updates.py"
+      - "configs/official_update_portals.json"
       - "backend/src/tarim_destek_rag/normalization/legal_components_2026.py"
       - "backend/tests/unit/test_decision_2026_matrix.py"
       - "backend/tests/unit/test_legal_components_2026.py"
@@ -12,6 +30,9 @@ on:
       - "backend/src/tarim_destek_rag/models/farmer_parcel.py"
       - "backend/src/tarim_destek_rag/normalization/basin_2026.py"
       - "backend/tests/unit/test_p0_4_basin_review.py"
+      - "backend/tests/unit/test_p0_6_2026_water_scope.py"
+      - "backend/src/tarim_destek_rag/normalization/water_2026.py"
+      - "configs/2026_water_restriction_52_draft.json"
       - "backend/tests/unit/test_official_basin_catalog_2026.py"
       - "configs/2026_2027_basin_crop_draft.json"
       - ".github/workflows/decision-suite-revalidation.yml"
@@ -31,7 +52,7 @@ jobs:
           python-version: "3.12"
           cache: pip
       - name: Install project dependencies, including RAG/Gradio test modules
-        run: python -m pip install -e ".[dev]"
+        run: python -m pip install -e ".[dev,pdf-evidence]"
       - name: Validate all installed decision tests and integration contracts
         env:
           HF_HUB_OFFLINE: "1"
@@ -50,6 +71,13 @@ jobs:
             backend/tests/unit/test_p0_2_verified_rates.py \
             backend/tests/unit/test_legal_components_2026.py \
             backend/tests/unit/test_p0_4_basin_review.py \
+            backend/tests/unit/test_p0_6_2026_water_scope.py \
+            backend/tests/unit/test_p0_8_year_agnostic_updates.py \
+            backend/tests/unit/test_p0_8b_layout_dynamic.py \
+            backend/tests/unit/test_p0_8c_legal_diff.py \
+            backend/tests/unit/test_p0_8c_signed_release.py \
+            backend/tests/integration/test_p0_8c_diff_release_api.py \
+            backend/tests/integration/test_p0_8b_grounding_api.py \
             backend/tests/unit/test_official_basin_catalog_2026.py \
             backend/tests/unit/test_decision_2026_matrix.py \
             backend/tests/regression/test_regression_cases.py \
