@@ -361,3 +361,68 @@ def test_end_to_end_oidc_vault_dual_sign_worm_activate_revoke_to_review(
         assert len(held) == 3
         # Tombstone is permanent for this ID even while original WORM proofs exist.
         assert two_person_approved(proxy, rate) is False
+
+
+class FakeConfiguredS3:
+    def __init__(self):
+        self.compliance_mode = "COMPLIANCE"
+        self.days = 3650
+        self.public_block = True
+        self.encryption = "aws:kms"
+    def get_bucket_versioning(self, **kwargs):
+        return {"Status": "Enabled"}
+    def get_object_lock_configuration(self, **kwargs):
+        return {"ObjectLockConfiguration": {
+            "ObjectLockEnabled": "Enabled",
+            "Rule": {"DefaultRetention": {
+                "Mode": self.compliance_mode, "Days": self.days
+            }},
+        }}
+    def get_public_access_block(self, **kwargs):
+        return {"PublicAccessBlockConfiguration": {
+            k: self.public_block for k in (
+                "BlockPublicAcls", "IgnorePublicAcls",
+                "BlockPublicPolicy", "RestrictPublicBuckets"
+            )
+        }}
+    def get_bucket_encryption(self, **kwargs):
+        return {"ServerSideEncryptionConfiguration": {
+            "Rules": [{"ApplyServerSideEncryptionByDefault": {
+                "SSEAlgorithm": self.encryption
+            }}]
+        }}
+
+
+def test_read_only_live_s3_compliance_preflight_rejects_downgrades(monkeypatch):
+    from tarim_destek_rag.database.legal_preflight import check_s3_object_lock
+    monkeypatch.setenv("TARIM_RAG_WORM_BUCKET", "legal-immutable-test-bucket")
+    monkeypatch.setenv("TARIM_RAG_WORM_RETENTION_DAYS", "3650")
+    fake = FakeConfiguredS3()
+    check_s3_object_lock(fake)
+    fake.compliance_mode = "GOVERNANCE"
+    with pytest.raises(ValueError, match="COMPLIANCE"):
+        check_s3_object_lock(fake)
+    fake.compliance_mode = "COMPLIANCE"
+    fake.public_block = False
+    with pytest.raises(ValueError, match="public"):
+        check_s3_object_lock(fake)
+    fake.public_block = True
+    fake.encryption = "AES256"
+    with pytest.raises(ValueError, match="KMS"):
+        check_s3_object_lock(fake)
+
+
+def test_no_live_preflight_without_real_operator_policy(monkeypatch):
+    from tarim_destek_rag.database.legal_preflight import run_live_preflight
+    monkeypatch.setenv("TARIM_RAG_LEGAL_SECURITY_PROFILE", "production")
+    monkeypatch.delenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED", raising=False)
+    monkeypatch.delenv("TARIM_RAG_LEGAL_IDP_TRUST_JSON", raising=False)
+    with pytest.raises(ValueError, match="deployment policy"):
+        run_live_preflight()
+
+
+def test_pytest_only_profile_does_not_activate_postgres_role(session, monkeypatch):
+    rate = add_rate(session)
+    sign_subject(session, rate, monkeypatch)
+    assert two_person_approved(session, rate)
+    assert two_person_approved(PostgresSessionProxy(session), rate) is False
