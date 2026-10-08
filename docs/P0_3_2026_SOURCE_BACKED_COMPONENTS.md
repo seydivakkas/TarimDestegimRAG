@@ -73,7 +73,7 @@ Kullanıcının canlı veritabanına bu PR nedeniyle otomatik migration/seed uyg
 
 ## 3. Kalan üretim engelleri
 
-- 8859, 10394 ve 11781 özgün Resmî Gazete PDF baytlarının güvenilir şekilde indirilmesi, bağımsız **SHA-256** doğrulaması, içerik parçalarının saklanması ve kaynak sürüm durumları.
+- 8859, 10394 ve 11781 özgün Resmî Gazete PDF baytları GitHub Actions üzerinden indirilip pypdf ile açıldı ve **gerçek SHA-256** hesaplandı. [Kanıt iş akışı](https://github.com/seydivakkas/TarimDestegimRAG/actions/runs/37805521090) altında indirilmiş PDF'ler ve JSON manifest bulunmaktadır. **Yasal metnin ilgili maddelerinin bağımsız insan incelemesi ve onay imzası hâlâ eksiktir.**
 - Yetkili insan/iki aşamalı imza ve audit log. `VERIFIED` yalnız gerçek belge kanıtı ve onaydan sonra mümkündür. Onay dizgelerinin doldurulması tek başına yetki doğrulaması değildir.
 - Bakanlığın **tüm havza-ürün/ilçe 2026 uygunluk listesi** ve sulama/ÇKS kontrollerinin sürümlendirilmesi. Yalnız `*/*` tutar tablosu bu koşulları yerine getirmez.
 - Sertifikalı tohum ve fidan seçenekleri/sertifika ispatı, su kısıtı istisnaları ve diğer düzenleyici kuralların testi.
@@ -81,3 +81,17 @@ Kullanıcının canlı veritabanına bu PR nedeniyle otomatik migration/seed uyg
 - Tüm entegrasyon ve UI testleri; bu paket özellikle yeni hukuk/deterministik güvenlik testlerine odaklanır.
 
 **Karar:** Güncel mevzuatın bileşenleri taslak katalogda belgelenmiştir. Ancak onay iş akışı ve havza doğrulaması bitmeden herhangi bir `estimated_amount` güvenilir hak ediş olarak sunulmamalıdır.
+
+## 4. Özgün karar PDF'leri — byte-level kanıt (GitHub Actions)
+
+| Karar | İndirilen PDF SHA-256 |
+|---|---|
+| 8859 | `89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f` |
+| 10394 | `cc2598be4128db1d84cef20232b107f19fcd86ae430fda07933ab47b711940d9` |
+| 11781 | `732048cbed664faabc15ad20a6a86427af7881acde24a88adf81007b79479e80` |
+
+Doğrulama akışı `.github/workflows/legal-primary-evidence.yml`, toplama kodu `scripts/collect_2026_legal_evidence.py`. PDF baytlarının kimliği ölçülmüştür; bu durum **otomatik `VERIFIED` tutar onayı DEĞİLDİR**. Katalog gerçek orijinal SHA-256 değerlerini taşısa da veritabanına yapılan `DRAFT` aktarımın kaynak sürümü `UNVERIFIED_PRIMARY_PDF_BYTES` bekçi değeri kullanır. Bunun amacı belge indirmenin tek başına hukuki onay sayılmasını ve basit bir `approved_by` metin değişikliğinin ödeme yolunu açmasını önlemektir.
+
+## 5. Test bağımlılığı notu
+
+Eski `AssistantEngine` başlatıcısı modül import sırasında embedding modeli indirdiği için çevrimdışı CI testlerinin keşfi engelleniyordu. Bu PR'da import sırasında yalnız sözcüksel **BM25** indeksinin hazırlanması sağlandı; dense index API lifespan aşamasında isteğe bağlı hazırlanır. Bu değişiklik otomatik RAG doğrulaması anlamına gelmez.
