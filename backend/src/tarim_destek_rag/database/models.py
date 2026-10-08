@@ -225,7 +225,7 @@ class LegalApprovalAttestationModel(Base):
 
     __table_args__ = (
         CheckConstraint(
-            "subject_type IN ('RATE','BASIN')", name="ck_approval_subject_type"
+            "subject_type IN ('RATE','BASIN','WATER')", name="ck_approval_subject_type"
         ),
         CheckConstraint(
             "role IN ('REVIEWER','APPROVER')", name="ck_approval_role"
