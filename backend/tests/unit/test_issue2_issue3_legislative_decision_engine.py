@@ -158,7 +158,7 @@ def test_missing_basin_record_is_review_not_ineligible(session):
     res = rule.evaluate(farmer_uncatalogued, parcel, session)
 
     assert res.status == EligibilityStatusEnum.REVIEW
-    assert "basin_data" in res.missing_fields
+    assert "verified_basin_provenance" in res.missing_fields
     assert len(res.failed_checks) == 0  # Kesin ret koşulu bulunamaz
 
 
@@ -173,7 +173,7 @@ def test_catalogued_basin_unsupported_crop_is_not_eligible(session):
     res = rule.evaluate(farmer_catalogued, parcel_findik, session)
 
     assert res.status == EligibilityStatusEnum.REVIEW
-    assert "verified_basin_crop" in res.missing_fields
+    assert "verified_basin_provenance" in res.missing_fields
     assert not res.failed_checks
 
 

@@ -1,12 +1,19 @@
+import json
 import re
+from dataclasses import dataclass
 from datetime import date
 
 from sqlalchemy import and_, or_, select
 from sqlalchemy.orm import Session
 
+from tarim_destek_rag.normalization.basin_2026 import (
+    BASIN_SOURCE_ID, BASIN_SOURCE_URL, PINNED_BASIN_PDF_SHA256,
+)
+
 from tarim_destek_rag.database.models import (
     ApplicationWindowModel,
     BasinCropRuleModel,
+    ReviewedBasinSnapshotModel,
     SourceModel,
     SourceVersionModel,
     SupportAmountModel,
@@ -202,11 +209,110 @@ class SupportRepository:
         return self.session.scalars(stmt).first()
 
 
+
+@dataclass(frozen=True)
+class BasinCropAssessment:
+    """Evidence-backed outcome for the *planning* crop list only."""
+
+    outcome: str  # LISTED, NOT_LISTED, UNKNOWN
+    reason: str
+    source_version_id: int | None = None
+    document_page: int | None = None
+    drip_irrigation_required: bool = False
+
+
 class BasinRepository:
     """Tarım havzaları ve ürün uygunluğu veri erişim katmanı."""
 
     def __init__(self, session: Session) -> None:
         self.session = session
+
+
+    def evaluate_official_crop(
+        self,
+        province: str,
+        district: str,
+        crop_code: str,
+        year: int,
+    ) -> BasinCropAssessment:
+        """Fail closed on missing, stale, duplicate or incomplete district lists.
+
+        Old BasinCropRuleModel seed rows have NO authority here.
+        A complete reviewed district list allows a negative membership result.
+        These outcomes concern the planning *list*, not final farmer eligibility.
+        """
+        stmt = (
+            select(ReviewedBasinSnapshotModel)
+            .join(
+                SourceVersionModel,
+                ReviewedBasinSnapshotModel.source_version_id == SourceVersionModel.id,
+            )
+            .join(SourceModel, SourceVersionModel.source_id == SourceModel.source_id)
+            .where(
+                ReviewedBasinSnapshotModel.province == province.strip().upper(),
+                ReviewedBasinSnapshotModel.district == district.strip().upper(),
+                ReviewedBasinSnapshotModel.production_year == year,
+                ReviewedBasinSnapshotModel.review_status == "VERIFIED",
+                ReviewedBasinSnapshotModel.coverage_complete.is_(True),
+                SourceModel.active.is_(True),
+                SourceVersionModel.superseded.is_(False),
+            )
+        )
+        snapshots = list(self.session.scalars(stmt).all())
+        if len(snapshots) != 1:
+            return BasinCropAssessment(
+                "UNKNOWN", "Resmî tam ilçe ürün listesi henüz doğrulanmadı veya çakışıyor."
+            )
+        snapshot = snapshots[0]
+        version = snapshot.source_version
+        if (
+            not snapshot.reviewed_by
+            or not snapshot.reviewed_at
+            or not snapshot.review_reference
+            or snapshot.document_page < 1
+            or not version
+            or version.source_id != BASIN_SOURCE_ID
+            or version.content_hash != PINNED_BASIN_PDF_SHA256
+            or version.source is None
+            or version.source.url != BASIN_SOURCE_URL
+            or not version.effective_from
+            or version.effective_from > f"{year}-12-31"
+            or (version.effective_to and version.effective_to < f"{year}-01-01")
+        ):
+            return BasinCropAssessment("UNKNOWN", "Belge sürümü veya bağımsız onay eksik.")
+        try:
+            crops = json.loads(snapshot.crop_codes_json)
+        except (TypeError, ValueError):
+            crops = None
+        if (
+            not isinstance(crops, list)
+            or not crops
+            or any(not isinstance(x, str) or not x for x in crops)
+            or len(set(crops)) != len(crops)
+        ):
+            return BasinCropAssessment("UNKNOWN", "Ürün listesi bütünlük kontrolü başarısız.")
+        crop = crop_code.strip().upper()
+        # Generic crop labels must not become false negatives for subtype lists.
+        # E.g. MISIR != MISIR_DANE and PAMUK != PAMUK_KÜTLÜ.
+        known_exact_codes = {
+            "ARPA", "ASPİR", "AYÇİÇEĞİ_YAĞLIK", "BUĞDAY", "FASULYE_KURU",
+            "KANOLA", "MERCİMEK", "MISIR_DANE", "NOHUT", "PAMUK_KÜTLÜ",
+            "PATATES", "SOĞAN_KURU", "SOYA", "YEM_BITKILERI_GROUP",
+        }
+        if crop not in known_exact_codes:
+            return BasinCropAssessment(
+                "UNKNOWN", "Ürün alt türü resmî listeyle kesin eşleştirilemiyor."
+            )
+        if crop not in crops:
+            return BasinCropAssessment(
+                "NOT_LISTED", "Onaylı eksiksiz ilçe ürün deseninde bu ürün bulunmuyor.",
+                snapshot.source_version_id, snapshot.document_page,
+            )
+        drip = snapshot.drip_required_for_grain_maize and crop == "MISIR_DANE"
+        return BasinCropAssessment(
+            "LISTED", "Onaylı 2026 ilçe ürün deseninde ürün mevcut.",
+            snapshot.source_version_id, snapshot.document_page, drip,
+        )
 
     def has_basin_records(
         self, province: str, district: str, year: int = 2026

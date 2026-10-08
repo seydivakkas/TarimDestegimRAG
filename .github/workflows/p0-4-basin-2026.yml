@@ -1,0 +1,76 @@
+name: P0-4 Official 2026 Basin Provenance
+
+on:
+  pull_request:
+    paths:
+      - "backend/src/tarim_destek_rag/database/**"
+      - "backend/src/tarim_destek_rag/rules/**"
+      - "backend/src/tarim_destek_rag/models/farmer_parcel.py"
+      - "backend/src/tarim_destek_rag/normalization/basin_2026.py"
+      - "backend/tests/unit/test_p0_4_basin_review.py"
+      - "backend/tests/unit/test_official_basin_catalog_2026.py"
+      - "configs/2026_2027_basin_crop_draft.json"
+      - "scripts/extract_2026_basin_pdf.py"
+      - ".github/workflows/p0-4-basin-2026.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  basin-decision-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install narrow deterministic dependencies
+        run: python -m pip install "pytest>=8,<10" "sqlalchemy>=2.0.35,<3" "pydantic>=2.9,<3" "pydantic-settings>=2.5,<3" "pyyaml>=6,<7"
+      - name: Compile basin code
+        run: |
+          python -m compileall -q scripts/extract_2026_basin_pdf.py
+          python -m compileall -q backend/src/tarim_destek_rag/normalization/basin_2026.py
+          python -m compileall -q backend/src/tarim_destek_rag/database
+          python -m compileall -q backend/src/tarim_destek_rag/rules
+      - name: Prove unknown, negative and water/drip behavior
+        env:
+          PYTHONPATH: "backend/src:."
+        run: |
+          python -m pytest \
+            backend/tests/unit/test_p0_4_basin_review.py \
+            backend/tests/unit/test_official_basin_catalog_2026.py \
+            backend/tests/unit/test_p0_2_verified_rates.py \
+            backend/tests/unit/test_decision_2026_matrix.py \
+            backend/tests/unit/test_issue2_issue3_legislative_decision_engine.py -q
+
+  official-basin-pdf-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PDF table parser
+        run: python -m pip install "pdfplumber>=0.11,<0.13"
+      - name: Retrieve official source and create DRAFT-only extraction
+        run: python scripts/extract_2026_basin_pdf.py --out-dir data/2026_basin_review --emit-log-bundle
+      - name: Confirm official source extraction matches committed DRAFT dataset
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          versioned = json.loads(Path("configs/2026_2027_basin_crop_draft.json").read_text(encoding="utf-8"))
+          fresh = json.loads(Path("data/2026_basin_review/2026_2027_basin_crop_draft.json").read_text(encoding="utf-8"))
+          assert versioned == fresh, "Ministry PDF changed or extraction drifted: stop and review"
+          print(f"Official PDF and committed draft match: {fresh['district_count']} rows, 81 provinces, SHA256={fresh['original_pdf_sha256']}")
+          PY
+      - name: Preserve source PDF and draft district evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-4-official-basin-2026-review
+          path: data/2026_basin_review/
+          if-no-files-found: warn
