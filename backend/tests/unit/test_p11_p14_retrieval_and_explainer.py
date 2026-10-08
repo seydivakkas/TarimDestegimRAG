@@ -106,10 +106,11 @@ def test_citation_verifier():
         section="Madde 1",
         year=2026,
         snippet="Mevzuat metni",
+        url="https://resmigazete.gov.tr",
     )
     v_res = verifier.verify(valid_cit)
     assert v_res.is_valid is False  # Kaynak kaydı, pasajın gerçek belgede olduğunu kanıtlamaz.
-    assert v_res.status == "INSUFFICIENT_EVIDENCE"
+    assert v_res.status == "EVIDENCE_NOT_INDEXED"
 
     invalid_cit = CitationDetail(
         source_id="UNKNOWN-SOURCE",
