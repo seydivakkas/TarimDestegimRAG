@@ -458,7 +458,8 @@ FARMER_FAQ_LIST: list[dict[str, Any]] = [
     },
 ]
 
-# Resmî Mevzuat Metin Parçaları (Full Grounded Document Chunks)
+# Bilgilendirme amaçlı tematik özetler — mevzuattan birebir alınmış pasaj değildir.
+# Bunlar resmî belge doğrulayıcısı tarafından kanıt olarak kabul edilmemelidir.
 OFFICIAL_REGULATION_CHUNKS: list[DocumentChunk] = [
     DocumentChunk(
         chunk_id="chunk_rg_m1",
@@ -466,12 +467,7 @@ OFFICIAL_REGULATION_CHUNKS: list[DocumentChunk] = [
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
         text=(
-            "MADDE 1 - 2026 üretim yılında Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan üreticilere, "
-            "mazot ve gübre maliyetlerini karşılamak amacıyla Temel Destek ödenir. "
-            "Destek ödemeleri dekar başına birim tutarlarla hesaplanır. "
-            "2026 yılı ÇKS ve temel destekleme başvuruları 1 Eylül 2026 tarihinde başlar ve "
-            "31 Aralık 2026 mesai bitiminde sona erer. ÇKS kaydı bulunmayan veya intikali yapılmamış "
-            "araziler için temel destekleme ödemesi yapılmaz."
+            "2026 destekleme mevzuatı için çiftçi kayıt sistemi ve ürün bazlı koşullar ilgili üretim yılında kontrol edilmelidir. Bu metin mevzuatın birebir alıntısı değildir; resmî kayıt ve başvuru penceresi ayrıca doğrulanmalıdır."
         ),
         year=2026,
     ),
@@ -481,11 +477,7 @@ OFFICIAL_REGULATION_CHUNKS: list[DocumentChunk] = [
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 2 - Tarım Havzaları Planlı Üretim Desteği",
         text=(
-            "MADDE 2 - Bakanlıkça ilan edilen Tarım Havzalarında öncelikli stratejik ürünleri üreten üreticilere, "
-            "temel desteğe ilave olarak Planlı Üretim Desteği ödenir. "
-            "Buğday ve arpa için 465 TL/da, kütlü pamuk için 540 TL/da, yağlık ayçiçeği için 360 TL/da, "
-            "kırmızı/yeşil mercimek ve nohut için 350 TL/da planlı üretim desteği ödenir. "
-            "Münavebe şartına uymayan veya havzasında desteklenmeyen ürün eken üreticiler planlı üretim desteğinden yararlanamaz."
+            "2026 üretim yılında buğday ve arpa için temel ve planlı üretim kategori katsayısı 1,3'tür. 08.09.2026 düzenlemesiyle katsayı 367 TL/da olmuştur: temel 477,10 TL/da, planlı üretim 477,10 TL/da, koşullu toplam 954,20 TL/da. Havza ve münavebe koşulları aranır. Bu açıklama kanun maddesinin birebir alıntısı değildir."
         ),
         year=2026,
     ),
@@ -495,10 +487,7 @@ OFFICIAL_REGULATION_CHUNKS: list[DocumentChunk] = [
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 3 - Sertifikalı Tohum Kullanım Desteği",
         text=(
-            "MADDE 3 - Yetkili tohumluk bayilerinden faturalı sertifikalı tohum satın alarak ekim yapan "
-            "ÇKS kayıtlı üreticilere Sertifikalı Tohum Kullanım Desteği verilir. "
-            "Tohum faturasının ve sertifika etiket kopyasının ÇKS başvuru dosyasına eklenmesi zorunludur. "
-            "Faturasız, sertifikasız veya kendi mahsulünden ayrılan tohumluklar için sertifikalı tohum desteği ödenmez."
+            "Sertifikalı tohum için ürün bazında destek katsayısı ve fatura/sertifika koşulları Bakanlığın ilgili tebliğine göre değerlendirilmelidir. 2026 buğday ve arpa sertifikalı tohum birim referansı 0,56 × 367 = 205,52 TL/da'dır. Bu metin resmî mevzuatın birebir alıntısı değildir."
         ),
         year=2026,
     ),
@@ -508,10 +497,7 @@ OFFICIAL_REGULATION_CHUNKS: list[DocumentChunk] = [
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 4 - Yeraltı Su Kısıtı Olan Havzalar Desteği",
         text=(
-            "MADDE 4 - Yeraltı su seviyesinin kritik olduğu tespit edilen havzalarda (Konya, Karaman, Aksaray vb.) "
-            "su tüketimi az olan münavebe ürünleri (Nohut, Mercimek vb.) eken çiftçilere dekar başına 250 TL ilave "
-            "Su Kısıtı Desteği verilir. Yeraltı su kısıtı bulunan havzalarda dane mısır gibi çok su tüketen ürünler ekenlere "
-            "planlı üretim desteği ödenmez."
+            "BÜGEM 2026 cetveline göre su kısıtı ek desteği yalnız Bakanlıkça belirlenen havzalardaki sulu tarım arazileri için geçerlidir. Birinci grup mercimek/nohut/aspir uygunluk halinde 0,8 × 367 = 293,60 TL/da ek tutar alabilir. Kapsam ve münavebe bağımsız doğrulanmalıdır."
         ),
         year=2026,
     ),
@@ -521,11 +507,7 @@ OFFICIAL_REGULATION_CHUNKS: list[DocumentChunk] = [
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 5 - Kadın ve Genç Çiftçi İlave Desteği",
         text=(
-            "MADDE 5 - Tarımsal üretimde kadınların ve gençlerin teşvik edilmesi amacıyla; üretim yılında "
-            "41 yaşından gün almamış genç çiftçiler ile kadın çiftçilere, hak kazandıkları temel desteğe ek olarak "
-            "%100 oranında (1 kat) Kadın/Genç Çiftçi İlave Desteği ödenir. "
-            "Örneğin buğday eken bir kadın çiftçi veya genç çiftçi, temel destek olan 465 TL'ye ilave olarak 465 TL daha destek alır. "
-            "Ayrıca bakanlık hibe ve modernizasyon projelerinde kadın ve genç çiftçilere öncelik puanı verilir."
+            "BÜGEM 2026 birim fiyat cetvelinde KOBÜKS kapsamında kapalı ortamda bitkisel üretim yapan genç ve kadın çiftçilere özel ilave temel destek katsayısı bulunur. Tüm kadın/genç çiftçilere koşulsuz otomatik prim ödeneceği söylenemez. Bu metin mevzuatın birebir alıntısı değildir."
         ),
         year=2026,
     ),
@@ -535,10 +517,7 @@ OFFICIAL_REGULATION_CHUNKS: list[DocumentChunk] = [
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 6 - Sertifikalı Fidan ve Kapama Bahçe Şartı",
         text=(
-            "MADDE 6 - Yetkili fidan üreticilerinden temin edilen sertifikalı/standart fidanlar ile en az 5 dekar alanda "
-            "(bodur/yarı bodur meyve bahçelerinde asgari 5 dekar, standart meyvelerde asgari 10 dekar) kapama meyve bahçesi "
-            "tesis eden üreticilere fidan kullanım desteği verilir. "
-            "Münferit, dağınık ağaç dikimlerine veya kapama bahçe niteliği taşımayan parsellere fidan desteği ödenmez."
+            "2026 sertifikalı/standart meyve fidanı desteğinde destek katsayısı ve bahçe kurulum koşulları ürün türüyle ilişkilidir. Sertifikalı fidan kategori katsayısı 5 × 367 = 1.835,00 TL/da referanstır. Kapama bahçe koşulları ve belge türleri ayrıca doğrulanmalıdır."
         ),
         year=2026,
     ),
@@ -548,13 +527,7 @@ OFFICIAL_REGULATION_CHUNKS: list[DocumentChunk] = [
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 7 - 2026 Yılı Destekleme Birim Tutarları",
         text=(
-            "MADDE 7 - 2026 üretim yılında uygulanacak dekar başına destekleme tutarları: "
-            "Buğday ve Arpa için Temel Destek 465 TL/da + Planlı Üretim 465 TL/da (Toplam 930 TL/da); "
-            "Kütlü Pamuk için Temel 540 TL/da + Planlı 540 TL/da (Toplam 1.080 TL/da); "
-            "Dane Mısır için Temel 320 TL/da + Planlı 320 TL/da (Toplam 640 TL/da); "
-            "Yağlık Ayçiçeği için Temel 360 TL/da + Planlı 360 TL/da (Toplam 720 TL/da); "
-            "Mercimek ve Nohut için Temel 350 TL/da + Planlı 350 TL/da (Toplam 700 TL/da, su kısıtında +250 TL); "
-            "Fındık alan bazlı gelir desteği 300 TL/da; Zeytin temel 300 TL/da + planlı 300 TL/da."
+            "2026 üretim yılı için 08.09.2026 değişikliği sonrasında birim katsayı 367 TL/da'dır. BÜGEM 2026 cetvelindeki kategori katsayılarına göre 1. kategori 367,00; 2. kategori 477,10; 3. kategori 550,50; 4. kategori 825,75 TL/da temel referans tutarları oluşur. Destek türü, coğrafya ve ek şartlar bağımsız kontrol edilmelidir."
         ),
         year=2026,
     ),
