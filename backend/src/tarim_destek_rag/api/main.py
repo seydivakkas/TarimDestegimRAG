@@ -35,6 +35,7 @@ from tarim_destek_rag.explainer.template_explainer import (
 )
 from tarim_destek_rag.logging.logger import logger
 from tarim_destek_rag.models.source import SourceDefinition
+from tarim_destek_rag.normalization.official_rates import load_official_reference
 from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
 from tarim_destek_rag.retrieval.assistant import assistant_engine
 from tarim_destek_rag.retrieval.hybrid import hybrid_retriever
@@ -365,6 +366,33 @@ def list_supports(
             )
         )
     return dtos
+
+
+@app.get("/legal/2026-reference-rates", tags=["Mevzuat Referans Verisi"])
+def get_official_2026_reference_rates() -> dict[str, Any]:
+    """Published combined amounts; never individual support eligibility or payment."""
+    try:
+        catalog = load_official_reference()
+    except (ValueError, OSError, KeyError, TypeError) as exc:
+        logger.error("2026 kaynaklı destek referansları okunamadı: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Doğrulanmış referans kataloğu kullanılamıyor.",
+        ) from exc
+    return {
+        "status": "PUBLISHED_REFERENCE_ONLY",
+        "production_year": catalog["production_year"],
+        "source": catalog["source"],
+        "legal_reference": catalog["legal_reference"],
+        "base_support_coefficient": catalog["base_support_coefficient"],
+        "combined_support_references": catalog["combined_support_references"],
+        "calculable_individual_entitlement": False,
+        "message": (
+            "Bakanlığın yayımladığı birleşik birim referanslarıdır. "
+            "Temel ve planlı üretim alt kalemleri ayrı ayrı doğrulanmadı. "
+            "Bu değerler ÇKS/havza uygunluk kontrolü olmadan ödeme hesabına aktarılamaz."
+        ),
+    }
 
 
 @app.get("/sources", response_model=list[SourceDefinition], tags=["Kaynaklar"])

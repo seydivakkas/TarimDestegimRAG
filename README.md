@@ -15,6 +15,16 @@ Türkiye bitkisel üretim destekleri için geliştirilmekte olan deterministik �
 
 ---
 
+## 2026 resmî birleşik destek referansları (P0 veri aşaması)
+
+Bakanlığın 8 Eylül 2026 tarihli açıklamasından doğrulanan katsayı (**367 TL/da**) ve ürün grubu bazındaki **temel + planlı destek toplamları**, kaynağıyla birlikte `configs/official_support_reference_2026.json` dosyasında saklanır. `GET /legal/2026-reference-rates` çıktısı **yalnızca referanstır**; bireysel uygunluk kararı veya ödeme tahmini değildir.
+
+**Uyarı:** Eski `seed_data.py` fiyatları henüz migrate edilmemiştir. Bu nedenle `/evaluate` gibi mevcut hesaplama uç noktalarının çıktıları güncel mevzuata karşı tam olarak doğrulanmış sayılmaz; üretim kullanımına hazır değildir. Bu kaynaklı referans kataloğu bireysel hak ediş hesabına doğrudan bağlanmamalıdır.
+
+Ayrıntı: [2026 kaynak kayıtları ve denetim planı](docs/LEGAL_DATA_PROVENANCE_2026.md).
+
+---
+
 ## 🌾 Temel Özellikler
 
 1. **Deterministik Karar Motoru (Zero-LLM Rule Engine):**

@@ -1,0 +1,81 @@
+{
+  "catalog_id": "TOB_2026_PRODUCTION_RATES_2026-09-08_V1",
+  "schema_version": 1,
+  "production_year": 2026,
+  "recorded_on": "2026-10-08",
+  "source": {
+    "id": "TOB-NEWS-7258-2026-09-08",
+    "title": "Bitkisel ve Hayvansal Üretimde Destek Tutarları Artırıldı",
+    "url": "https://www.tarimorman.gov.tr/Haber/7258/Bitkisel-Ve-Hayvansal-Uretimde-Destek-Tutarlari-Artirildi",
+    "publisher": "T.C. Tarım ve Orman Bakanlığı",
+    "published_on": "2026-09-08",
+    "content_sha256": null,
+    "content_sha256_status": "NOT_FETCHED_OR_HASHED"
+  },
+  "legal_reference": {
+    "decision_number": "11781",
+    "gazette_issue": "33364",
+    "gazette_published_on": "2026-09-08",
+    "url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+    "document_verification_status": "REFERENCE_URL_CONFIRMED_CONTENT_NOT_INDEPENDENTLY_EXTRACTED"
+  },
+  "base_support_coefficient": {
+    "production_year": 2026,
+    "amount": "367.00",
+    "unit": "TRY/da",
+    "verification_scope": "MINISTRY_PUBLICATION"
+  },
+  "combined_support_references": [
+    {
+      "crop_codes": [
+        "BUĞDAY",
+        "ARPA",
+        "MISIR_DANE"
+      ],
+      "amount_per_da": "954.00",
+      "context": "Temel destek + planlı üretim desteği toplamı; dane mısır için geçerlidir."
+    },
+    {
+      "crop_codes": [
+        "AYÇİÇEĞİ_YAĞLIK",
+        "FASULYE",
+        "SOYA",
+        "KANOLA"
+      ],
+      "amount_per_da": "1101.00",
+      "context": "Temel destek + planlı üretim desteği toplamı; yağlık ayçiçeği için geçerlidir."
+    },
+    {
+      "crop_codes": [
+        "PAMUK"
+      ],
+      "amount_per_da": "1652.00",
+      "context": "Temel destek + planlı üretim desteği toplamı."
+    },
+    {
+      "crop_codes": [
+        "PATATES",
+        "SOĞAN",
+        "ASPİR"
+      ],
+      "amount_per_da": "734.00",
+      "context": "Temel destek + planlı üretim desteği toplamı."
+    },
+    {
+      "crop_codes": [
+        "MERCİMEK",
+        "NOHUT"
+      ],
+      "amount_per_da": "734.00",
+      "context": "Bakanlığın 2026 üretim yılı için açıkladığı temel + planlı üretim toplamı; sonraki yıl katsayılarıyla karıştırılmamalıdır."
+    }
+  ],
+  "legal_use_constraints": {
+    "scope": "REFERENCE_TOTAL_ONLY",
+    "split_into_program_rates_allowed": false,
+    "calculate_individual_entitlement_allowed": false,
+    "requires_verified_basin_crop_year": true,
+    "requires_verified_program_component_rates": true,
+    "require_source_version_review": true
+  }
+}
