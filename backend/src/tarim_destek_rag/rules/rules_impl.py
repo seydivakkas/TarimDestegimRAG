@@ -112,28 +112,31 @@ class PlannedProductionRule(BaseRule):
         # 2. Havza ürün uygunluğu
         basin_repo = BasinRepository(session)
         loc = f"{farmer.province}/{farmer.district}"
-        has_basin_data = basin_repo.has_basin_records(
-            farmer.province, farmer.district, parcel.production_year
+        assessment = basin_repo.evaluate_official_crop(
+            farmer.province, farmer.district, parcel.crop, parcel.production_year
         )
-        if not has_basin_data:
-            missing.append("basin_data")
-            trace.append(
-                f"{loc} için 2026 yılı havza planlı üretim mevzuat verisi henüz kütüğe işlenmemiştir (DOĞRULAMA GEREKLİ)."
+        if assessment.outcome == "UNKNOWN":
+            missing.append("verified_basin_provenance")
+            trace.append(f"{loc} için bağımsız onaylı tam ilçe listesi yok: {assessment.reason}")
+        elif assessment.outcome == "NOT_LISTED":
+            failed.append(
+                f"{parcel.crop}, {loc} için tamamı incelenmiş resmî ürün deseninde yok."
             )
+            trace.append(assessment.reason)
         else:
-            is_supported = basin_repo.is_crop_supported_in_basin(
-                farmer.province, farmer.district, parcel.crop, parcel.production_year
+            passed.append(
+                f"{parcel.crop}, {loc} için onaylı 2026 ürün deseninde listeleniyor."
             )
-            if is_supported:
-                passed.append(
-                    f"{parcel.crop} ürünü, {loc} havzasında desteklenen öncelikli ürünlerdendir."
-                )
-            else:
-                missing.append("verified_basin_crop")
-                trace.append("Ürün-havza kaydı yokluğu doğrulanmış ret anlamına gelmez.")
-
-        # Mevcut ilçe havza seed kayıtları resmî kapsam sertifikası değildir.
-        missing.append("verified_basin_provenance")
+            if assessment.drip_irrigation_required:
+                if parcel.drip_irrigation is None:
+                    missing.append("drip_irrigation")
+                    trace.append(
+                        "Dane mısır için yıldızlı ilçede damla sulama şartı; bilgi eksik."
+                    )
+                elif parcel.drip_irrigation is False:
+                    failed.append("Dane mısır için zorunlu damla sulama uygulanmıyor.")
+                else:
+                    passed.append("Dane mısır damla sulama şartı beyanen sağlandı.")
 
         # 3. Birim Tutar Kontrolü
         support_repo = SupportRepository(session)
