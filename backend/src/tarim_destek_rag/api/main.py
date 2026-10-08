@@ -195,7 +195,13 @@ def calculate_supports(
 
     calc_results: list[CalculationResult] = []
     for r in rule_results:
-        amt_rec = support_repo.get_amount(r.support_id, payload.parcel.crop)
+        amt_rec = support_repo.get_amount(
+            r.support_id,
+            payload.parcel.crop,
+            production_year=payload.parcel.production_year,
+            province=payload.farmer.province,
+            district=payload.farmer.district,
+        )
         unit_amt = amt_rec.unit_amount if amt_rec else None
         calc = SupportCalculator.calculate(r, payload.parcel.area_da, unit_amt)
         calc_results.append(calc)
@@ -216,7 +222,13 @@ def evaluate_all(
     total_amount = Decimal("0.00")
 
     for r in rule_results:
-        amt_rec = support_repo.get_amount(r.support_id, payload.parcel.crop)
+        amt_rec = support_repo.get_amount(
+            r.support_id,
+            payload.parcel.crop,
+            production_year=payload.parcel.production_year,
+            province=payload.farmer.province,
+            district=payload.farmer.district,
+        )
         unit_amt = amt_rec.unit_amount if amt_rec else None
         calc = SupportCalculator.calculate(r, payload.parcel.area_da, unit_amt)
         calc_results.append(calc)
@@ -239,7 +251,9 @@ def evaluate_all(
         rules=rule_results,
         calculations=calc_results,
         explanations=explanations,
-        total_estimated_amount=total_amount,
+        total_estimated_amount=(
+            None if any(c.status == "REVIEW" for c in calc_results) else total_amount
+        ),
     )
 
 
