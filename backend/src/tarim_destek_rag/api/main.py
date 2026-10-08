@@ -51,7 +51,11 @@ from tarim_destek_rag.scraper.registry import SourceRegistry, source_registry
 
 def seed_vector_store_data() -> None:
     """Mevzuat açıklamalarını vektör ve BM25 hibrit indeksine tohumlar."""
-    hybrid_retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
+    if not hybrid_retriever.bm25_retriever._chunks:
+        hybrid_retriever.bm25_retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
+    if not hybrid_retriever.dense_store._chunks:
+        # Dense model may require downloads; BM25 is ready even if this fails.
+        hybrid_retriever.dense_store.add_chunks(OFFICIAL_REGULATION_CHUNKS)
     logger.info(
         "2026 Resmî mevzuat bilgi tabanı indekslendi (%d parça)",
         len(OFFICIAL_REGULATION_CHUNKS),
