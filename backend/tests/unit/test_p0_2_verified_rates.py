@@ -185,3 +185,63 @@ def test_blank_evidence_hash_rejected(session):
     rate.source_version.content_hash = "not-sha256"
     session.commit()
     assert lookup(session) is None
+
+
+def test_sqlite_additive_migration_keeps_old_rows_and_marks_them_draft():
+    """Existing deployed SQLite databases may predate 2026 provenance fields."""
+    from tarim_destek_rag.database.connection import init_db
+
+    engine = create_engine("sqlite:///:memory:")
+    with engine.begin() as connection:
+        connection.exec_driver_sql("""
+            CREATE TABLE support_amounts (
+                id INTEGER PRIMARY KEY,
+                program_id VARCHAR(64) NOT NULL,
+                crop_name VARCHAR(64) NOT NULL,
+                category VARCHAR(64),
+                unit_amount NUMERIC(10,2) NOT NULL,
+                unit VARCHAR(16),
+                source_id VARCHAR(64) NOT NULL
+            )
+        """)
+        connection.exec_driver_sql("""
+            INSERT INTO support_amounts
+            (id, program_id, crop_name, unit_amount, unit, source_id)
+            VALUES (1, 'BASIC_SUPPORT_2026', 'BUĞDAY', 465, 'TRY/da', 'LEGACY')
+        """)
+
+    # Migration is idempotent, and neither existing amount nor source is touched.
+    init_db(engine)
+    init_db(engine)
+    with engine.connect() as connection:
+        info = connection.exec_driver_sql(
+            "PRAGMA table_info('support_amounts')"
+        ).all()
+        columns = {row[1] for row in info}
+        assert {"production_year", "verification_status", "effective_from"} <= columns
+        row = connection.exec_driver_sql(
+            "SELECT unit_amount, source_id, verification_status FROM support_amounts WHERE id=1"
+        ).one()
+        assert Decimal(str(row[0])) == Decimal("465")
+        assert row[1] == "LEGACY"
+        assert row[2] == "DRAFT"
+
+
+def test_bootstrap_does_not_auto_approve_or_overwrite_prior_legacy_amounts():
+    from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
+
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    with Session(engine) as session:
+        seed_2026_support_data(session)
+        repo = SupportRepository(session)
+        legacy = repo.get_legacy_amount("BASIC_SUPPORT_2026", "BUĞDAY")
+        assert legacy is not None
+        assert legacy.verification_status == "DRAFT"
+        legacy.unit_amount = Decimal("123.45")
+        session.commit()
+
+        seed_2026_support_data(session)
+        session.expire_all()
+        assert repo.get_legacy_amount("BASIC_SUPPORT_2026", "BUĞDAY").unit_amount == Decimal("123.45")
+        assert lookup(session) is None
