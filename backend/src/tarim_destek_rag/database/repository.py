@@ -372,6 +372,7 @@ class WaterRestrictionRepository:
             return WaterScopeAssessment("UNKNOWN", "2026 dışındaki üretim yılı incelenmedi.")
         from tarim_destek_rag.normalization.water_2026 import (
             PRIMARY_ID, AMENDMENT_ID, PINNED_DISTRICTS,
+            PRIMARY_SHA256, AMENDMENT_SHA256,
         )
 
         candidates = list(self.session.scalars(select(
@@ -392,6 +393,8 @@ class WaterRestrictionRepository:
             not scope.reviewed_by or not scope.reviewed_at or not scope.review_reference
             or base is None or amend is None
             or base.source_id != PRIMARY_ID or amend.source_id != AMENDMENT_ID
+            or base.content_hash != PRIMARY_SHA256
+            or amend.content_hash != AMENDMENT_SHA256
             or not base.effective_from or not amend.effective_from
             or base.effective_from > "2026-12-31"
             or amend.effective_from > "2026-01-01"
