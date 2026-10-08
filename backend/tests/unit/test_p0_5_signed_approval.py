@@ -216,3 +216,27 @@ def test_attestation_db_signature_tampering_detected_even_if_orm_guard_bypassed(
     ), {"sig": base64.b64encode(b"f" * 64).decode("ascii")})
     session.commit()
     assert lookup(session) is None
+
+
+def test_unofficial_host_or_publisher_must_not_activate(session, monkeypatch):
+    rate = add_rate(session)
+    sign_subject(session, rate, monkeypatch)
+    assert lookup(session) is not None
+    source = session.get(SourceModel, "SYNTHETIC-LEGAL-DOCUMENT")
+    source.url = "https://not-resmigazete.gov.tr.example.invalid/document.pdf"
+    session.commit()
+    assert lookup(session) is None
+    source.url = "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf"
+    source.authority = "TEST_ONLY"
+    session.commit()
+    assert lookup(session) is None
+
+
+def test_inactive_source_denied_even_with_two_signatures(session, monkeypatch):
+    rate = add_rate(session)
+    sign_subject(session, rate, monkeypatch)
+    assert lookup(session) is not None
+    source = session.get(SourceModel, "SYNTHETIC-LEGAL-DOCUMENT")
+    source.active = False
+    session.commit()
+    assert lookup(session) is None
