@@ -1,9 +1,11 @@
+import hmac
 import json
+import os
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
@@ -14,6 +16,8 @@ from tarim_destek_rag.api.schemas import (
     AskQuestionResponse,
     FullEvaluationRequest,
     FullEvaluationResponse,
+    HarvestLiveRequest,
+    ModerationRejectRequest,
     SupportProgramDTO,
 )
 from tarim_destek_rag.calculator.calculator import (
@@ -44,13 +48,17 @@ from tarim_destek_rag.retrieval.vector_store import vector_store
 from tarim_destek_rag.rules.base import RuleResult
 from tarim_destek_rag.rules.orchestrator import decision_orchestrator
 from tarim_destek_rag.scraper.faq_harvester import AgriculturalFAQHarvester
+from tarim_destek_rag.scraper.pipeline import HarvestModerationService
 from tarim_destek_rag.scraper.registry import SourceRegistry, source_registry
 
 
 def seed_vector_store_data() -> None:
     """Mevzuat açıklamalarını vektör ve BM25 hibrit indeksine tohumlar."""
-    # HybridRetriever her iki indeksi günceller; yoğun indekse ikinci kez eklemeyin.
-    hybrid_retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
+    if not hybrid_retriever.bm25_retriever._chunks:
+        hybrid_retriever.bm25_retriever.add_chunks(OFFICIAL_REGULATION_CHUNKS)
+    if not hybrid_retriever.dense_store._chunks:
+        # Dense model may require downloads; BM25 is ready even if this fails.
+        hybrid_retriever.dense_store.add_chunks(OFFICIAL_REGULATION_CHUNKS)
     logger.info(
         "2026 Resmî mevzuat bilgi tabanı indekslendi (%d parça)",
         len(OFFICIAL_REGULATION_CHUNKS),
@@ -93,8 +101,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=[
+        origin.strip()
+        for origin in os.getenv(
+            "TARIM_RAG_CORS_ORIGINS", "http://localhost:7860,http://127.0.0.1:7860"
+        ).split(",")
+        if origin.strip()
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -186,7 +200,11 @@ def calculate_supports(
 
     calc_results: list[CalculationResult] = []
     for r in rule_results:
-        amt_rec = support_repo.get_amount(r.support_id, payload.parcel.crop)
+        amt_rec = support_repo.get_amount(
+            r.support_id, payload.parcel.crop,
+            production_year=payload.parcel.production_year,
+            province=payload.farmer.province, district=payload.farmer.district,
+        )
         unit_amt = amt_rec.unit_amount if amt_rec else None
         calc = SupportCalculator.calculate(r, payload.parcel.area_da, unit_amt)
         calc_results.append(calc)
@@ -207,7 +225,11 @@ def evaluate_all(
     total_amount = Decimal("0.00")
 
     for r in rule_results:
-        amt_rec = support_repo.get_amount(r.support_id, payload.parcel.crop)
+        amt_rec = support_repo.get_amount(
+            r.support_id, payload.parcel.crop,
+            production_year=payload.parcel.production_year,
+            province=payload.farmer.province, district=payload.farmer.district,
+        )
         unit_amt = amt_rec.unit_amount if amt_rec else None
         calc = SupportCalculator.calculate(r, payload.parcel.area_da, unit_amt)
         calc_results.append(calc)
@@ -230,7 +252,9 @@ def evaluate_all(
         rules=rule_results,
         calculations=calc_results,
         explanations=explanations,
-        total_estimated_amount=total_amount,
+        total_estimated_amount=(
+            None if any(calc.status == "REVIEW" for calc in calc_results) else total_amount
+        ),
     )
 
 
@@ -297,33 +321,150 @@ def get_faq_stats(session: Session = Depends(get_db_session)) -> dict[str, Any]:
     if stats["total_count"] == 0:
         return {
             "total_count": len(FARMER_FAQ_LIST),
-            "verified_count": 0,  # Katalog kayıtları bağımsız resmî pasajla doğrulanmadı.
-            "category_counts": {
-                c: sum(1 for faq in FARMER_FAQ_LIST if faq["category"] == c)
-                for c in {f["category"] for f in FARMER_FAQ_LIST}
-            },
+            "verified_count": 0,
+            "category_counts": {c: 1 for c in {f["category"] for f in FARMER_FAQ_LIST}},
         }
     return stats
 
 
+def require_admin_key(x_admin_key: str | None = Header(default=None)) -> None:
+    """Yazma uç noktasını güvenli varsayılanla (kapalı) koru."""
+    expected = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+    if not expected:
+        raise HTTPException(status_code=503, detail="Yönetici yazma işlemleri yapılandırılmadı.")
+    if x_admin_key is None or not hmac.compare_digest(x_admin_key, expected):
+        raise HTTPException(status_code=403, detail="Yönetici yetkisi gerekli.")
+
+
 @app.post("/faqs/harvest", tags=["Chatbot / Semantik Arama"])
-def harvest_faqs(session: Session = Depends(get_db_session)) -> dict[str, Any]:
-    """Yerel küratörlü SSS verisini ekler; bu uç nokta web taraması yapmaz."""
+def harvest_faqs(
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Gerçek web taraması değil: yalnızca yerleşik örnek SSS verisini yeniden yükler."""
     harvester = AgriculturalFAQHarvester(session)
-    seeded_count = harvester.seed_initial_knowledge()
+    count = harvester.seed_initial_knowledge()
     new_chunks = harvester.export_as_document_chunks()
     if new_chunks:
         hybrid_retriever.add_chunks(new_chunks)
     return {
         "status": "SUCCESS",
-        "message": "Yerel SSS kayıtları işlendi. Dış internet kaynağı taranmadı.",
-        "seeded_count": seeded_count,
-        "harvested_count": 0,
-        "total_faqs": len(new_chunks),
+        "message": f"Yerleşik SSS kayıtları yeniden yüklendi ({count} kayıt); web taraması yapılmadı.",
+        "harvested_count": count,
+        "total_faqs": count,
+        "total_faqs_in_db": count,
         "indexed_chunks": len(new_chunks),
     }
 
 
+@app.post("/faqs/harvest-live", tags=["Chatbot / Semantik Arama"])
+def harvest_live_faqs(
+    payload: HarvestLiveRequest,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """İzinli resmî adresten canlı tarama yapar, diff hesaplar ve PENDING inceleme kuyruğuna ekler."""
+    service = HarvestModerationService(session)
+    try:
+        result = service.harvest_from_source(
+            url=payload.source_url,
+            admin_user="admin",
+            source_name=payload.source_name,
+        )
+        return result
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve)) from ve
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Canlı tarama başarısız: {e}") from e
+
+
+@app.get("/faqs/moderation-queue", tags=["Yönetim ve Moderasyon"])
+def list_moderation_queue(
+    status: str = "PENDING",
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> list[dict[str, Any]]:
+    """İnceleme kuyruğundaki kayıtları listeler."""
+    repo = FAQRepository(session)
+    items = repo.list_moderation_queue(status=status)
+    return [
+        {
+            "id": item.id,
+            "question": item.question,
+            "answer": item.answer,
+            "legal_citation": item.legal_citation,
+            "legal_span": item.legal_span,
+            "source_url": item.source_url,
+            "source_domain": item.source_domain,
+            "moderation_status": item.moderation_status,
+            "version": item.version,
+            "created_at": item.created_at,
+        }
+        for item in items
+    ]
+
+
+@app.post("/faqs/{faq_id}/approve", tags=["Yönetim ve Moderasyon"])
+def approve_faq(
+    faq_id: str,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Moderatör onayı ile kaydı yayına alır ve retriever indeksine ekler."""
+    service = HarvestModerationService(session)
+    try:
+        approved = service.approve_item(faq_id, admin_user="admin", retriever=hybrid_retriever)
+        return {
+            "status": "APPROVED",
+            "id": approved.id,
+            "verified": approved.verified,
+            "moderation_status": approved.moderation_status,
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve)) from ve
+
+
+@app.post("/faqs/{faq_id}/reject", tags=["Yönetim ve Moderasyon"])
+def reject_faq(
+    faq_id: str,
+    payload: ModerationRejectRequest,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Moderatör tarafından kaydı gerekçeli olarak reddeder."""
+    service = HarvestModerationService(session)
+    try:
+        rejected = service.reject_item(faq_id, reason=payload.reason, admin_user="admin")
+        return {
+            "status": "REJECTED",
+            "id": rejected.id,
+            "verified": rejected.verified,
+            "moderation_status": rejected.moderation_status,
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve)) from ve
+
+
+@app.get("/faqs/moderation-logs", tags=["Yönetim ve Moderasyon"])
+def get_moderation_logs(
+    limit: int = 100,
+    session: Session = Depends(get_db_session),
+    _admin: None = Depends(require_admin_key),
+) -> list[dict[str, Any]]:
+    """Denetim günlüğü kayıtlarını döner."""
+    repo = FAQRepository(session)
+    logs = repo.get_audit_logs(limit=limit)
+    return [
+        {
+            "id": l.id,
+            "action": l.action,
+            "faq_id": l.faq_id,
+            "performed_by": l.performed_by,
+            "timestamp": l.timestamp,
+            "details": l.details,
+        }
+        for l in logs
+    ]
 
 
 @app.get("/supports", response_model=list[SupportProgramDTO], tags=["Destekler"])
