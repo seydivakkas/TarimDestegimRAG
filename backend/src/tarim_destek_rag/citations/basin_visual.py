@@ -83,14 +83,14 @@ def locate_basin_crop(
                     continue
                 left = _upper(" ".join((cells[0] or "").split()).rstrip("*"))
                 if left == p + "/" + d and LABELS[code] in (cells[1] or ""):
-                    found.append(trow)
+                    found.append((trow, cells[0].strip().rstrip('*').strip()))
         if len(found) != 1:
             raise ValueError("Unique province/district/product row not found in original PDF")
-        source_row = found[0]
+        source_row, source_district = found[0]
         left_rect = pymupdf.Rect(source_row.cells[0])
         right_rect = pymupdf.Rect(source_row.cells[1])
         district_rects = [
-            rect for rect in page.search_for(f"{p.title()}/{d.title()}")
+            rect for rect in page.search_for(source_district)
             if left_rect.contains(rect)
         ]
         # Titles are exact official crop subtype labels, not generic synonyms.
