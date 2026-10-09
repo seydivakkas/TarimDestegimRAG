@@ -95,6 +95,8 @@ def test_original_pdf_quote_index_link_and_tamper_fail_closed(
     })
     assert "PDF’de işaretli cümleyi aç" in html
     assert "birebir bulunan pasaj" in html
+    with pytest.raises(ValueError, match="cannot be independently verified"):
+        index_quote({**row, "section": "MADDE 2"}, root=root, manifest=manifest)
     # Source is silently changed while index remains identical -> no evidence.
     target.write_bytes(raw + b"tampered")
     assert lookup_exact_pdf_citation("BASIC_SUPPORT_2026") is None
