@@ -47,3 +47,28 @@ python -m tarim_destek_rag.citations.visual_pdf --install-8859
 İşaretli kanıt API'si: `GET /evidence/highlight/visual/{sha256}?support_id=BASIC_SUPPORT_2026#page=2`. Kaynağın tamamının bir **kopyası** döner; renkli işaretleme yalnız sayfa 2'deki gerçek üç satırı çevreler. Orijinal dosya üzerinde tek bayt değiştirilmez. Orijinal Resmî Gazete linki ayrıca görünür.
 
 Diğer destekler için bu kayıt **genelleştirilmez**. 2024/39 aslı HTML olduğundan ayrı özgün HTML kanıt mekanizması gerekir. Metnin gerçek tarihsel yürürlük/güncellik denetimi, cümle konumu kontrolünden ayrıdır. Aynı belge üzerinde yanlış MADDE veya başka sayfaya bağlantı tahmin edilmez.
+
+## Seçilen il / ilçe / ürün için aynı belgeden kaynaklı işaretleme
+
+Mevcut proje kaynaklarından yararlanır: `configs/2026_2027_basin_crop_draft.json` içinde 945 ilçe / 81 il / özgün PDF sayfası; `backend/src/tarim_destek_rag/normalization/basin_2026.py` sabit resmî kaynak URL ve SHA-256'sını taşır.
+
+**Özgün Bakanlık PDF'si:** https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/2026%20Y%C4%B1l%C4%B1%20Planlamaya%20Konu%20Havza%20%C3%9Cr%C3%BCn%20Deseni%20Listesi.pdf  
+**SHA-256:** `60263e83a953659ecc4f581bcd1ef1a921cf397bc5b4469869852470473f0b21` · **81 sayfa**.
+
+**Kullanım:**
+
+```powershell
+# Arka uçla aynı yerel arşive özgün Bakanlık PDF'sini indir ve hash doğrula:
+python -m tarim_destek_rag.citations.basin_visual --install
+
+# Ardından FastAPI ve Gradio'yu normal başlatıp
+# Çiftçi & Parsellerim → İl / İlçe / Ürün → Hesapla adımını kullanın.
+```
+
+- Örnek: **KONYA / KARATAY / BUĞDAY → PDF sayfa 53**. `Konya/Karatay` mavi, **yalnız aynı satırdaki** `Buğday` sarı işaretlenir. Orijinal PDF tüm sayfalarıyla ayrı ve değiştirilmeden korunur.
+- Diğer örnekler: **ADANA / CEYHAN / ARPA → sayfa 1**; **SAMSUN / ATAKUM / BUĞDAY → sayfa 67**; **TRABZON / AKÇAABAT / PATATES → sayfa 75**.
+- Şehir adını, başka ilçenin ürün listesini veya belirsiz ürün alt türünü eşleyerek sahte PDF kanıtı oluşturmaz. `MISIR` genel ifadesi otomatik `MISIR_DANE` yapılmaz; `FINDIK` havza planlama listesindeki 14 tanımlı gruba zorla eşlenmez.
+- Kullanıcı yıl olarak **2025** seçerse 2026–2027 PDF'si **kanıt olarak sunulmaz**.
+- **Önemli:** Bu katalog `DRAFT_REQUIRES_HUMAN_ROW_AND_FOOTNOTE_REVIEW` durumundadır. Kaynak satırının gerçek PDF'de bulunması, çiftçinin başvuru hakkı, münavebe/ÇKS, sulama şartı ya da ödeme tutarı için tek başına onay değildir. `ELIGIBLE` ya da `NOT_ELIGIBLE` üretmez.
+- Görünüm için `GET /evidence/highlight/basin/{sha256}?province=KONYA&district=KARATAY&crop=BUĞDAY&production_year=2026#page=53`. URI yalnız kaynak hash, tam ilçe adı, tam ürün adı ve yılla yeniden doğrulanır.
+- PDF sunucusu ile PC arayüzü farklı makinelerdeyse `API_PUBLIC_BASE_URL` tarayıcının erişebildiği gerçek API adresi olmalı. İstemciye kaynak koordinatları serbestçe yazdırılmaz.
