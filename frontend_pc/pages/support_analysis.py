@@ -39,14 +39,15 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             <div class="legal-reader-container" style="margin-top: 4px; margin-bottom: 16px; border-left: 6px solid #047857;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h4 style="margin: 0; color: #064e3b; font-size: 1.15rem;">
-                        ⚖️ %100 Belgeye Dayanan Şeffaf Karar & Renkli İşaretleme Mimarisi
+                        ⚖️ Kanıt Durumu & Resmî Belge İnceleme
                     </h4>
-                    <span class="doc-badge-tag doc-badge-pass">Sıfır LLM &middot; %100 Doğrulanabilir</span>
+                    <span class="doc-badge-tag doc-badge-pass">Sıfır LLM &middot; Birebir kaynak denetimi</span>
                 </div>
                 <p style="margin: 8px 0 12px 0; font-size: 0.92rem; color: #334155; line-height: 1.55;">
-                    Bu sistemde üreticiye sunulan her karar, dekar başı hesaplama ve hak ediş gerekçesi doğrudan
-                    <b>Resmî Gazete</b> ve <b>BÜGEM</b> mevzuatındaki orijinal metinle delillendirilir. İlgili kanun maddesindeki
-                    şartlar ve ret gerekçeleri sistem tarafından <b>renk kodlarıyla işaretlenmiştir</b>.
+                    Kuralların Türkçe açıklaması ile resmî mevzuatın birebir alıntısı ayrı gösterilir.
+                    <b>Yalnızca özgün PDF'de SHA-256, sayfa ve cümle eşleşmesi doğrulanan</b> kanıtlar
+                    işaretli PDF bağlantısıyla açılır. Diğer metinler <b>ön değerlendirme açıklamasıdır</b>;
+                    geçerli hukukî sonuç ya da birebir alıntı olarak sunulmaz.
                 </p>
                 <div class="legal-legend-bar" style="margin-bottom: 0;">
                     <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil Vurgu:</b> Sağlanan Şartlar & Hak Kazanma Hükmü</span>
