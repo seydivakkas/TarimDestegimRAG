@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "purpose": "P0-10.1 immutable source-content regression corpus (replay captured real official documents; NOT byte-identical origin acquisition and NOT complete legislation coverage)",
+  "source_authority": "resmigazete.gov.tr",
+  "capture_date_utc": "2026-10-09",
+  "capture_service": "Firecrawl page retrieval / third-party HTML capture and PDF-to-HTML conversion",
+  "legal_activation": false,
+  "coverage_status": "INCOMPLETE_REAL_DOCUMENT_RAW_HASH_UNVERIFIED",
+  "complete_official_coverage_proven": false,
+  "warnings": [
+    "capture_sha256 is the SHA-256 of UTF-8 encoded stored capture, not the HTTP origin byte stream. Originals must be acquired independently before documentary SHA-256 claims.",
+    "The PDF is converted to HTML and must NEVER be represented as the original PDF.",
+    "Source dates/issue/identity are independently sourced expected labels and are NOT outputs of the classifier.",
+    "Official annex attachments and exact original raw HTTP bytes are not yet present. Do not use this corpus for legal activation or payout."
+  ],
+  "documents": [
+    {
+      "key": "decision_8859",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
+      "capture_format": "third_party_pdf_to_html",
+      "path": "backend/tests/fixtures/p0_10_official/decision_8859_pdf_extracted.html",
+      "capture_sha256": "a92a6a6deab6d261bc5c8f5b649b8c826aae6f1e78d18adc36063aac3c47e29a",
+      "capture_bytes": 147217,
+      "gazette_date": "2024-08-29",
+      "gazette_issue": "32647",
+      "gazette_special_issue": null,
+      "expected_type": "CUMHURBASKANI_KARARI",
+      "expected_own_number": "8859",
+      "expected_base_number": null,
+      "original_source_sha256": null,
+      "capture_http_status": 200,
+      "provenance_grade": "OFFICIAL_URL_CONTENT_THIRD_PARTY_CAPTURE",
+      "stage": "DRAFT_AWAITING_BYTE_EXACT_SOURCE"
+    },
+    {
+      "key": "communique_2024_39",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm",
+      "capture_format": "third_party_raw_html_capture",
+      "path": "backend/tests/fixtures/p0_10_official/communique_2024_39_capture.html",
+      "capture_sha256": "e0eed695806de227de7c88c250105de1df3f816cd6d04ec76ec403ee0724d0ba",
+      "capture_bytes": 240391,
+      "gazette_date": "2024-12-31",
+      "gazette_issue": "32769",
+      "gazette_special_issue": "5. Mükerrer",
+      "expected_type": "BAKANLIK_TEBLIGI",
+      "expected_own_number": "2024/39",
+      "expected_base_number": null,
+      "original_source_sha256": null,
+      "capture_http_status": 200,
+      "provenance_grade": "OFFICIAL_URL_CONTENT_THIRD_PARTY_CAPTURE",
+      "stage": "DRAFT_AWAITING_BYTE_EXACT_SOURCE"
+    },
+    {
+      "key": "amendment_2025_42",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "capture_format": "third_party_raw_html_capture",
+      "path": "backend/tests/fixtures/p0_10_official/amendment_2025_42_capture.html",
+      "capture_sha256": "9e6f60dda4ac37d96a49fddb27a2a25c840262dffd5541578d3fefdfd089404a",
+      "capture_bytes": 42895,
+      "gazette_date": "2025-12-30",
+      "gazette_issue": "33123",
+      "gazette_special_issue": null,
+      "expected_type": "DEGISIKLIK_TEBLIGI",
+      "expected_own_number": "2025/42",
+      "expected_base_number": "2024/39",
+      "original_source_sha256": null,
+      "capture_http_status": 200,
+      "provenance_grade": "OFFICIAL_URL_CONTENT_THIRD_PARTY_CAPTURE",
+      "stage": "DRAFT_AWAITING_BYTE_EXACT_SOURCE"
+    }
+  ]
+}
