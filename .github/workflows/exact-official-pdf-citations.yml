@@ -27,7 +27,7 @@ jobs:
         run: python -m pip install -e ".[dev,pdf-evidence]"
       - name: Check modified source and tests
         run: |
-          ruff check backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_document_links.py frontend_pc/pages/support_analysis.py
+          ruff check backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/visual_pdf.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_8859_scanned_original_highlighting.py backend/tests/unit/test_document_links.py frontend_pc/pages/support_analysis.py
           python -m compileall -q backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py frontend_pc/pages/support_analysis.py
       - name: Test exact source and legacy frontend behavior
         run: python -m pytest -q --no-cov backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_document_links.py backend/tests/unit/test_p11_p14_retrieval_and_explainer.py backend/tests/integration/test_p16_frontend_pc.py
