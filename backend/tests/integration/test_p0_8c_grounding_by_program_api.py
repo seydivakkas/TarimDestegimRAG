@@ -145,4 +145,5 @@ def test_program_lookup_rejects_ambiguous_geographic_candidates(program_groundin
     for params in ({"year": 2030}, {"year": 2030, "crop_code": "BUĞDAY"}):
         response = client.get("/api/v1/grounding/program/BASIC_SUPPORT", params=params)
         assert response.status_code == 409
-        assert "belirsiz" in response.json()["detail"]
+        assert response.json()["code"] == "HTTP_409"
+        assert "belirsiz" in response.json()["message"]
