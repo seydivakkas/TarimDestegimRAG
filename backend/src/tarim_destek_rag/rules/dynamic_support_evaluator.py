@@ -235,7 +235,7 @@ class DynamicSupportEvaluator:
         if any_draft_rule or any_review or any_unknown or not approval_verified:
             total_payable = None
             fail_closed_reason = (
-                "Kuralların doğrulanmış aktivasyonu, tam program kapsamı veya incelemesi eksik (Fail-Closed). "
+                "Kurallar taslak (DRAFT) olabilir veya doğrulanmış aktivasyon, tam program kapsamı eksik (Fail-Closed). "
                 "İmza, kaynak ve yürürlük kapısı geçilmeden hak ediş tutarı oluşturulamaz."
             )
         elif any_eligible:
