@@ -43,13 +43,14 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 </div>
                 <p style="margin: 8px 0 12px 0; font-size: 0.92rem; color: #334155; line-height: 1.55;">
                     Kuralların Türkçe açıklaması ile resmî mevzuatın birebir alıntısı ayrı gösterilir.
-                    <b>Yalnızca özgün PDF'de SHA-256, sayfa ve cümle eşleşmesi doğrulanan</b> kanıtlar
-                    işaretli PDF bağlantısıyla açılır. Diğer metinler <b>ön değerlendirme açıklamasıdır</b>;
+                    <b>Özgün PDF'de SHA-256, sayfa ve pasaj; özgün HTML'de SHA-256,
+                    madde/fıkra ve birebir metin eşleşmesi doğrulanan</b> kanıtlar
+                    işaretli belge bağlantısıyla açılır. Diğer metinler <b>ön değerlendirme açıklamasıdır</b>;
                     geçerli hukukî sonuç ya da birebir alıntı olarak sunulmaz.
                 </p>
                 <div class="legal-legend-bar" style="margin-bottom: 0;">
-                    <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil Vurgu:</b> Sağlanan Şartlar & Hak Kazanma Hükmü</span>
-                    <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı Vurgu:</b> Ret Gerekçesi & Yasal Yasaklar</span>
+                    <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil Vurgu:</b> Ön Değerlendirmede Sağlanan Şartlar</span>
+                    <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı Vurgu:</b> Sağlanmayan Şartlar & İnceleme Gerektiren Durumlar</span>
                     <span class="legend-item"><span class="legend-dot dot-gold"></span> 🟡 <b>Kehribar Vurgu:</b> Birim Destek Tutarları & Katsayılar</span>
                     <span class="legend-item"><span class="legend-dot dot-ref"></span> 🔵 <b>Mavi Vurgu:</b> Resmî Gazete / Madde Numarası Dayanağı</span>
                 </div>
@@ -62,7 +63,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
 
             gr.Markdown(
                 "Aşağıdaki konu bağlantıları henüz birebir madde alıntısı değildir. "
-                "Doğrulanmış kanıt varsa yukarıdaki gerekçe kartında işaretli PDF bağlantısı bulunur:"
+                "Doğrulanmış konum kanıtı varsa yukarıdaki gerekçe kartında işaretli PDF veya HTML bağlantısı bulunur:"
             )
             article_selector = gr.Dropdown(
                 choices=[
