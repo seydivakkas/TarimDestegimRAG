@@ -174,3 +174,59 @@ def test_real_evaluation_exposes_all_three_source_marks_when_installed() -> None
                 "89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f",
             }
             assert len(result.content) > 10_000
+
+def test_html_installer_retries_transient_timeouts_with_exact_sha(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    from contextlib import contextmanager
+
+    import httpx
+
+    from tarim_destek_rag.citations import original_html
+
+    fixture = b"<html><body>Offline retry fixture</body></html>"
+    sha = hashlib.sha256(fixture).hexdigest()
+    monkeypatch.setattr(original_html, "SOURCE_SHA", sha)
+    archive = tmp_path / "archive"
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"sources": [{
+        "id": original_html.SOURCE_ID,
+        "url": original_html.SOURCE_URL,
+        "format": "html",
+        "original_sha256": sha,
+    }]}), encoding="utf-8")
+    monkeypatch.setenv("TARIM_RAG_UPDATE_ARCHIVE", str(archive))
+    monkeypatch.setenv("TARIM_RAG_ORIGINAL_SOURCE_MANIFEST", str(manifest))
+    monkeypatch.setattr(original_html.time, "sleep", lambda _: None)
+    attempts: list[int] = []
+
+    class FakeResponse:
+        status_code = 200
+        url = original_html.SOURCE_URL
+        headers = {"Content-Encoding": "identity", "Content-Type": "text/html"}
+
+        def iter_raw(self):
+            yield fixture
+
+    class FakeClient:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+        @contextmanager
+        def stream(self, *args, **kwargs):
+            attempts.append(1)
+            if len(attempts) < 3:
+                raise httpx.ReadTimeout("Temporary upstream timeout")
+            yield FakeResponse()
+
+    monkeypatch.setattr(httpx, "Client", FakeClient)
+    result = original_html.install_html_original()
+    assert len(attempts) == 3
+    assert result["sha256"] == sha
+    assert (archive / "originals" / (sha + ".html")).read_bytes() == fixture

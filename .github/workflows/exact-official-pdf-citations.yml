@@ -42,6 +42,6 @@ jobs:
         run: |
           python -c "from tarim_destek_rag.citations.basin_visual import lookup_basin_crop_evidence as f; p=f('KONYA','KARATAY','BUĞDAY',2026); assert p and p['page_number']==53 and p['eligible'] is None"
       - name: Test exact source and legacy frontend behavior
-        run: python -m pytest -q --no-cov backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_basin_original_pdf_evidence.py backend/tests/unit/test_8859_scanned_original_highlighting.py backend/tests/unit/test_document_links.py backend/tests/unit/test_p11_p14_retrieval_and_explainer.py backend/tests/integration/test_p16_frontend_pc.py
+        run: python -m pytest -q --no-cov backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_basin_original_pdf_evidence.py backend/tests/unit/test_8859_scanned_original_highlighting.py backend/tests/unit/test_exact_original_html_clause.py backend/tests/unit/test_document_links.py backend/tests/unit/test_p11_p14_retrieval_and_explainer.py backend/tests/integration/test_p16_frontend_pc.py
       - name: Full backend regression
         run: python -m pytest -q --no-cov backend/tests

@@ -11,6 +11,7 @@ import json
 import os
 import re
 import tempfile
+import time
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -138,18 +139,26 @@ def install_html_original() -> dict:
         if hashlib.sha256(existing).hexdigest() != SOURCE_SHA:
             raise ValueError("Existing immutable original does not match SHA")
         return {"sha256": SOURCE_SHA, "bytes": len(existing), "already_present": True}
-    with httpx.Client(timeout=55, follow_redirects=False, trust_env=False) as client:
-        with client.stream("GET", SOURCE_URL, headers={"Accept-Encoding": "identity"}) as response:
-            if (response.status_code != 200 or str(response.url) != SOURCE_URL
-                or response.headers.get("Content-Encoding", "identity").lower() != "identity"
-                or "html" not in response.headers.get("Content-Type", "").lower()):
-                raise ValueError("Original HTML server identity or MIME mismatch")
-            chunks, size = [], 0
-            for block in response.iter_raw():
-                size += len(block)
-                if size > MAX_BYTES:
-                    raise ValueError("Original HTML exceeds maximum allowed bytes")
-                chunks.append(block)
+    # Retry temporary transport failures only, never source-identity or SHA failures.
+    for attempt in range(3):
+        try:
+            with httpx.Client(timeout=55, follow_redirects=False, trust_env=False) as client:
+                with client.stream("GET", SOURCE_URL, headers={"Accept-Encoding": "identity"}) as response:
+                    if (response.status_code != 200 or str(response.url) != SOURCE_URL
+                        or response.headers.get("Content-Encoding", "identity").lower() != "identity"
+                        or "html" not in response.headers.get("Content-Type", "").lower()):
+                        raise ValueError("Original HTML server identity or MIME mismatch")
+                    chunks, size = [], 0
+                    for block in response.iter_raw():
+                        size += len(block)
+                        if size > MAX_BYTES:
+                            raise ValueError("Original HTML exceeds maximum allowed bytes")
+                        chunks.append(block)
+            break
+        except httpx.TransportError:
+            if attempt == 2:
+                raise
+            time.sleep(2 ** attempt)
     raw = b"".join(chunks)
     if hashlib.sha256(raw).hexdigest() != SOURCE_SHA:
         raise ValueError("Official HTML now differs from pinned original")
