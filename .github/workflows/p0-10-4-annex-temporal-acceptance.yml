@@ -47,7 +47,7 @@ jobs:
       - name: Ruff on additional-source collector
         run: ruff check scripts/p0_10_4_direct_new_sources.py
       - name: Directly collect 2025/13 10394 11781 original bytes and SHA-256
-        run: python scripts/p0_10_4_direct_new_sources.py
+        run: python -m scripts.p0_10_4_direct_new_sources
       - name: Upload raw, original official amendments for independent examination
         uses: actions/upload-artifact@v4
         if: always()
