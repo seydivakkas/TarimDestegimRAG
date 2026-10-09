@@ -407,33 +407,63 @@ def format_highlighted_citation_card(
     status: str = "ELIGIBLE",
     support_id: str | None = None,
 ) -> str:
-    """Resmî mevzuat atfını ve metin içindeki işaret edilen kısmı renkli kart olarak biçimlendirir."""
-    title = citation.get("title", "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)")
-    sec = citation.get("section", "Madde")
-    year = citation.get("year", 2026)
-    snip = citation.get("snippet", "")
-    url = citation.get("url")
+    """Distinguish actual matching PDF text from a descriptive rule summary.
 
-    if not url:
-        loc = resolve_check_link(sec, support_id)
-        url = loc["url"]
+    Only an exact quote verified against original SHA-pinned PDF bytes may be
+    shown in quotation marks with a highlighted-PDF evidence link.
+    """
+    from html import escape
+    from os import getenv
+    from urllib.parse import urlsplit
 
+    title = escape(str(citation.get("title") or "Mevzuat kaynağı"))
+    section = escape(str(citation.get("section") or "Madde"))
+    year = escape(str(citation.get("year") or ""))
+    status_code = str(citation.get("verification_status") or "")
+    exact = status_code == "EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW"
+    original_url = str(citation.get("url") or "")
+    # No invented page or section fallback is sufficient to create a proof.
+    source_link = ""
+    if (original_url.startswith("https://") and
+            (urlsplit(original_url).hostname or "") in (
+                "www.resmigazete.gov.tr", "resmigazete.gov.tr", "www.tarimorman.gov.tr",
+            )):
+        clean_url = escape(original_url, quote=True)
+        source_link = (
+            f'<a href="{clean_url}" target="_blank" rel="noopener noreferrer" '
+            'class="legal-source-link">Resmî kaynağı aç ↗</a>'
+        )
+    label = "Ön değerlendirme açıklaması — resmî alıntı değildir"
+    text = escape(str(citation.get("snippet") or ""))
+    if exact:
+        proof_path = str(citation.get("highlighted_pdf_url") or "")
+        sha = str(citation.get("document_sha256") or "")
+        page = citation.get("page_number")
+        if (proof_path.startswith("/evidence/highlight/") and
+                sha in proof_path and isinstance(page, int) and page > 0):
+            public_api = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+            proof_link = escape(public_api + proof_path, quote=True)
+            label = "Özgün PDF'de birebir bulunan pasaj — hukukî onay bekliyor"
+            text = highlight_legal_text(str(citation.get("snippet") or ""), status)
+            source_link = (
+                f'<a href="{proof_link}" target="_blank" rel="noopener noreferrer" '
+                'class="legal-source-link">PDF’de işaretli cümleyi aç ↗</a>'
+            )
+        else:
+            exact = False
     card_class = "pass" if status == "ELIGIBLE" else ("warn" if status == "REVIEW" else "fail")
-    highlighted_snip = highlight_legal_text(snip, status)
-
+    body = f'📜 <i>“{text}”</i>' if exact else f'📝 {text}'
     return (
         f'<div class="legal-quote-card {card_class}">\n'
         f'  <div class="legal-quote-header">\n'
-        f'    <span class="legal-doc-badge">🏛️ {title} ({year}) — {sec}</span>\n'
-        f'    <a href="{url}" target="_blank" rel="noopener noreferrer" class="legal-source-link" '
-        f'title="Resmî Orijinal Belgeyi Aç">Resmî Belgede Gör ↗</a>\n'
+        f'    <span class="legal-doc-badge">🏛️ {title} ({year}) — {section}</span>\n'
+        f'    {source_link}\n'
         f'  </div>\n'
         f'  <div class="legal-quote-body">\n'
-        f'    📜 <i>"{highlighted_snip}"</i>\n'
+        f'    <strong>{label}</strong><div>{body}</div>\n'
         f'  </div>\n'
         f'</div>'
     )
-
 
 def render_document_viewer_html(article_key: str) -> str:
     """Yalnız resmî belge bağlantısını gösterir; sentetik özetleri alıntı gibi sunmaz."""
