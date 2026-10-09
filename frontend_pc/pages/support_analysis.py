@@ -63,8 +63,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             )
 
             gr.Markdown(
-                "Aşağıdaki listeden incelemek istediğiniz maddeyi seçiniz. Resmî belgedeki şartlar, "
-                "hak kazanma hükümleri ve ret gerekçeleri **renkli olarak işaretlenmiştir**:"
+                "Aşağıdaki konu bağlantıları henüz birebir madde alıntısı değildir. "
+                "Doğrulanmış kanıt varsa yukarıdaki gerekçe kartında işaretli PDF bağlantısı bulunur:"
             )
             article_selector = gr.Dropdown(
                 choices=[
