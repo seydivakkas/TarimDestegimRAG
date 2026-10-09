@@ -560,6 +560,68 @@ def test_full_activation_and_evaluator_lifecycle(temp_archive: Path, sample_draf
     assert "Fail-Closed" in str(eval_revoked.fail_closed_reason)
 
 
+
+def test_per_read_activation_verifies_real_bytes_trust_digest_and_revocation(
+    temp_archive: Path, sample_draft_rules: list[dict], monkeypatch,
+):
+    """Synthetic signed release exercises the *read* gate, not legal acceptance."""
+    import hashlib
+
+    original = b"%PDF-1.4\\n%isolated-test-only\\n"
+    sha = hashlib.sha256(original).hexdigest()
+    originals = temp_archive / "originals"
+    originals.mkdir(exist_ok=True)
+    (originals / f"{sha}.pdf").write_bytes(original)
+
+    repo = DynamicRuleRepository(temp_archive)
+    rules = [dict(r, source_document_sha256=sha) for r in sample_draft_rules]
+    repo.save_rules(2026, rules)
+    digest = repo.compute_rules_digest(2026)
+    rev_private, rev_public = generate_ed25519_keypair()
+    app_private, app_public = generate_ed25519_keypair()
+    statement = "Isolated synthetic proof; no financial/legal authorization."
+    message = build_canonical_manifest_bytes(
+        2026, sha, digest, len(rules), statement,
+    )
+    reviewer = LegalAttestation(
+        "SYNTHETIC_REV", "LEGAL_REVIEWER", rev_public,
+        sign_payload_ed25519(rev_private, message), "2026-01-01T00:00:00Z", statement,
+    )
+    approver = LegalAttestation(
+        "SYNTHETIC_APP", "LEGAL_APPROVER", app_public,
+        sign_payload_ed25519(app_private, message), "2026-01-01T00:01:00Z", statement,
+    )
+    pipeline = RuleActivationPipeline(temp_archive)
+    # The module's autouse fixture permits isolated synthetic activation.
+    pipeline.activate_rules(
+        production_year=2026, reviewer_attestation=reviewer,
+        approver_attestation=approver, source_document_sha256=sha,
+        trusted_keys={
+            "reviewer": {"public_key_b64": rev_public},
+            "approver": {"public_key_b64": app_public},
+        },
+    )
+
+    monkeypatch.setenv("TARIM_RAG_LEGAL_SECURITY_PROFILE", "production")
+    monkeypatch.setenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED", "true")
+    monkeypatch.setenv("TARIM_RAG_LEGAL_TRUSTED_KEYS_JSON", json.dumps({
+        "reviewer": {"public_key_b64": rev_public},
+        "approver": {"public_key_b64": app_public},
+    }))
+    assert pipeline.active_release_is_verified(2026)
+
+    modified = repo.load_rules(2026)
+    modified[0]["official_unit_amount"] = "999.00"
+    repo.save_rules(2026, modified)
+    assert not pipeline.active_release_is_verified(2026)
+    modified[0]["official_unit_amount"] = "244.00"
+    repo.save_rules(2026, modified)
+    assert pipeline.active_release_is_verified(2026)
+
+    (originals / f"{sha}.pdf").write_bytes(b"tampered")
+    assert not pipeline.active_release_is_verified(2026)
+
+
 # ---------------------------------------------------------------------------
 # 5. FastAPI Admin Uç Noktaları Testi
 # ---------------------------------------------------------------------------
