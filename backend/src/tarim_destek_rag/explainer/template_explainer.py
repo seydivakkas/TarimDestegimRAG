@@ -109,6 +109,12 @@ class TemplateExplainer:
         # independent page/byte/coordinate checks against the original PDF.
         # Otherwise the defaults remain clearly labelled as explanations.
         proof = lookup_exact_pdf_citation(rule_res.support_id)
+        if proof is None:
+            # Original Gazette page 2 is image-only. Its reviewed coordinates
+            # can support a visibly marked copy without inventing OCR text.
+            from tarim_destek_rag.citations.visual_pdf import lookup_visual_pdf_citation
+
+            proof = lookup_visual_pdf_citation(rule_res.support_id)
         primary_citation = SUPPORT_CITATION_DEFAULTS.get(rule_res.support_id)
         if proof:
             citations.append(CitationDetail(
