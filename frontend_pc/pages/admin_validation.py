@@ -615,8 +615,8 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                 "Sistemin bilişsel eylemleri, karar kilitleri ve adli kanıt zinciri "
                 "[Ian Xiaohei felsefesi](https://github.com/helloianneo/ian-xiaohei-illustrations) ile görselleştirilmiştir."
             )
-            with gr.Tabs():
-                with gr.TabItem("🏗️ Full-Stack Sistem Mimarisi"):
+            with gr.Column():
+                with gr.Accordion("🏗️ Full-Stack Sistem Mimarisi", open=True):
                     if os.path.exists(IMG_FULLSTACK):
                         gr.Image(
                             value=IMG_FULLSTACK,
@@ -626,10 +626,10 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                         )
                     gr.Markdown("""
                     **Bileşen Akışı:** İstemci (Gradio/Flutter) → API Ağ Geçidi & Rol Denetimi → Bitemporal Zaman Saati → Çift Onaylı Noter Kasası → Üç Konumlu Mantık Şalteri (Pass/Fail/Review) → Değiştirilemez WORM Kütüğü & HSM Mühürleme.  
-                    *Ayrıntılı teknik döküm için:* [`docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md`](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md)
+                    *Ayrıntılı teknik döküm için:* [`docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md`](https://github.com/seydivakkas/TarimDestegimRAG/blob/main/docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md)
                     """)
 
-                with gr.TabItem("⚖️ Hukuki Delil ve Veri Hattı"):
+                with gr.Accordion("⚖️ Hukuki Delil ve Veri Hattı", open=False):
                     if os.path.exists(IMG_EVIDENCE):
                         gr.Image(
                             value=IMG_EVIDENCE,
@@ -639,7 +639,7 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                         )
                     gr.Markdown("""
                     **Bileşen Akışı:** Resmî Gazete Sunucusu (1.436.150 B) → SHA-256 Bayt Terazisi (Hash uyuşmazlığında HOLD) → BM25+FAISS Hibrit Arama → Kuruş Hassasiyetli Formül Masası → PDF Koordinatlı Sarı Vurgulama → Mahkeme Mühürlü Adli Delil Kasası.  
-                    *Ayrıntılı teknik döküm için:* [`docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md`](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md)
+                    *Ayrıntılı teknik döküm için:* [`docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md`](https://github.com/seydivakkas/TarimDestegimRAG/blob/main/docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md)
                     """)
 
         gr.Markdown("""

@@ -217,6 +217,7 @@ class BitemporalRuleCatalog:
         facts: dict[str, Any],
         province: str = "*",
         district: str = "*",
+        approval_verified: bool = False,
     ) -> BitemporalEvaluationResult:
         """Evaluate farmer facts against active rules for the exact production year."""
         candidates = self.find_rules(
@@ -260,6 +261,24 @@ class BitemporalRuleCatalog:
 
         rule = candidates[0]
 
+        # Never let a file-based VERIFIED label authorize either payment OR a
+        # binding denial. The caller must first revalidate the signed release,
+        # trusted identities, revocation state and source archive on each read.
+        if rule.review_status != "VERIFIED" or not approval_verified:
+            return BitemporalEvaluationResult(
+                program_key=program_key,
+                crop_code=crop_code,
+                production_year=production_year,
+                status="REVIEW",
+                payable_amount=None,
+                proposed_unit_amount=rule.official_unit_amount,
+                reason="Unverified legal release or rule status; independent approval required.",
+                source_sentence_id=rule.source_sentence_id,
+                source_document_sha256=rule.source_document_sha256,
+                effective_from=rule.effective_from.isoformat(),
+                effective_to=rule.effective_to.isoformat() if rule.effective_to else None,
+            )
+
         # Evaluate conditions via declarative DSL
         checks = DynamicRuleEngine.check(rule.conditions, facts)
 
@@ -288,26 +307,6 @@ class BitemporalRuleCatalog:
                 payable_amount=Decimal("0.00"),
                 proposed_unit_amount=rule.official_unit_amount,
                 reason="Mevzuat uygunluk koşulları sağlanamadı.",
-                rule_checks=checks,
-                source_sentence_id=rule.source_sentence_id,
-                source_document_sha256=rule.source_document_sha256,
-                effective_from=rule.effective_from.isoformat(),
-                effective_to=rule.effective_to.isoformat() if rule.effective_to else None,
-            )
-
-        # If review_status is DRAFT, fail-closed policy: payable_amount is None
-        if rule.review_status != "VERIFIED":
-            return BitemporalEvaluationResult(
-                program_key=program_key,
-                crop_code=crop_code,
-                production_year=production_year,
-                status="REVIEW",
-                payable_amount=None,
-                proposed_unit_amount=rule.official_unit_amount,
-                reason=(
-                    f"Kural {rule.review_status} statüsündedir. "
-                    "Çift onaylı hukuki aktivasyon gerçekleşmeden ödeme yapılamaz."
-                ),
                 rule_checks=checks,
                 source_sentence_id=rule.source_sentence_id,
                 source_document_sha256=rule.source_document_sha256,

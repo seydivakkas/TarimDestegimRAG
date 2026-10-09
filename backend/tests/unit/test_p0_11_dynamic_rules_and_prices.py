@@ -291,9 +291,9 @@ class TestDynamicSupportEvaluator:
             district="POLATLI",
             cks_registered=False,
         )
-        assert summary.overall_status == "NOT_ELIGIBLE"
-        assert summary.total_proposed_amount == Decimal("0.00")
-        assert summary.total_payable_amount == Decimal("0.00")
+        # A DRAFT legal condition cannot deliver a final denial or 0-TL payout.
+        assert summary.overall_status == "REVIEW"
+        assert summary.total_payable_amount is None
 
     def test_verified_rules_allow_payable_amount(self, mock_discovered_legislation: DiscoveredLegislation) -> None:
         # Kuralları DRAFT'tan VERIFIED'a çekip ödeme tutarını test et
@@ -319,10 +319,9 @@ class TestDynamicSupportEvaluator:
             irrigation=False,
             certified_seed=False,
         )
-        # VERIFIED kurallarda total_payable_amount dolu olmalıdır
-        assert summary.total_payable_amount is not None
-        assert summary.total_payable_amount == summary.total_proposed_amount
-        assert summary.fail_closed_reason is None
+        # Fake VERIFIED labels alone cannot authorize a payment.
+        assert summary.total_payable_amount is None
+        assert summary.fail_closed_reason is not None
 
 
 class TestApiEndpointsP011:
