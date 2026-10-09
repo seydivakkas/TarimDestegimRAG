@@ -146,10 +146,11 @@ def test_evaluate_to_neden_link_to_original_ministry_pdf(
         assert evidence["approved_rate"] is None
         monkeypatch.setenv("API_PUBLIC_BASE_URL", "http://testserver")
         reasons = render_reasons_markdown(result)
-        assert "Konya" not in reasons or "KONYA / KARATAY" in reasons
         assert "KONYA / KARATAY" in reasons
         assert "Buğday" in reasons
-        assert evidence["highlighted_pdf_url"] in reasons
+        from html import unescape
+
+        assert evidence["highlighted_pdf_url"] in unescape(reasons)
         assert "işaretli PDF" in reasons
 
         marked = client.get(evidence["highlighted_pdf_url"])
