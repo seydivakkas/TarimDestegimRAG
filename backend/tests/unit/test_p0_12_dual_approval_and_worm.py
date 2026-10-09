@@ -57,6 +57,12 @@ from tarim_destek_rag.rules.worm_audit import (
 )
 
 
+@pytest.fixture(autouse=True)
+def isolated_legal_test_profile(monkeypatch):
+    """Synthetic signatures must not be interpreted as production approvals."""
+    monkeypatch.setenv("TARIM_RAG_LEGAL_SECURITY_PROFILE", "isolated_test")
+
+
 @pytest.fixture
 def temp_archive(tmp_path: Path) -> Path:
     """İzole test için geçici mevzuat arşiv dizini."""
@@ -522,9 +528,10 @@ def test_full_activation_and_evaluator_lifecycle(temp_archive: Path, sample_draf
         cks_registered=True,
     )
 
-    assert eval_verified.overall_status == "ELIGIBLE"
-    assert eval_verified.total_payable_amount == Decimal("48800.00")
-    assert eval_verified.fail_closed_reason is None
+    # Mock activation is not a real, server-trusted, archived release.
+    assert eval_verified.overall_status == "REVIEW"
+    assert eval_verified.total_payable_amount is None
+    assert eval_verified.fail_closed_reason is not None
 
     # Aşama 4: Acil Durum İptali (REVOCATION)
     pipeline.revoke_activation(
