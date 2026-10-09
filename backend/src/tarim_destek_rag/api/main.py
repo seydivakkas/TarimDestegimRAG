@@ -579,6 +579,41 @@ def analyze_raw_legislation(
     return analysis.to_dict()
 
 
+@app.get("/evidence/highlight/visual/{sha256}", tags=["PDF Belge Kanıtı"])
+def show_scanned_gazette_visual_clause(
+    sha256: str, support_id: str,
+) -> Response:
+    """Serve original Gazette PDF COPY with manually located image-text area.
+
+    Source image matches a reviewed original byte hash. Visual transcript
+    location is not independently or legally approved.
+    """
+    from tarim_destek_rag.citations.visual_pdf import render_visual_pdf_copy
+    from tarim_destek_rag.updates.pdf_evidence import SHA_PATTERN
+
+    if not SHA_PATTERN.fullmatch(sha256):
+        raise HTTPException(status_code=422, detail="Geçersiz özgün PDF SHA-256")
+    try:
+        highlighted = render_visual_pdf_copy(
+            support_id, expected_sha256=sha256,
+        )
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Özgün resmî PDF veya görsel pasaj koordinatı doğrulanamadı",
+        ) from exc
+    return Response(
+        content=highlighted,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'inline; filename="resmi-gazete-8859-isaretli-kopya.pdf"',
+            "Cache-Control": "private, no-store",
+            "X-Original-Source-SHA256": sha256,
+            "X-Legal-Evidence": "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW",
+        },
+    )
+
+
 @app.get("/evidence/highlight/{sha256}", tags=["PDF Belge Kanıtı"])
 def show_exact_pdf_evidence(
     sha256: str, page: int, quote: str,
