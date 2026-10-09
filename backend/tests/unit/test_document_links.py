@@ -58,24 +58,21 @@ def test_resolve_check_link_user_scenarios():
 
 
 def test_format_clickable_check():
-    """format_clickable_check'in geçerli target='_blank' ve rozetli HTML ürettiğini test eder."""
+    """A rule status is NOT a verified official article or paragraph citation."""
     html_pass = format_clickable_check("ÇKS kaydı aktif.", status_icon="✅")
-    assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1"' in html_pass
-    assert 'target="_blank"' in html_pass
-    assert 'rel="noopener noreferrer"' in html_pass
-    assert "✅" in html_pass
+    assert "ÇKS kaydı aktif" in html_pass
     assert "doc-pass" in html_pass
-    assert "doc-badge-pass" in html_pass
-    assert "Resmî Gazete Md. 1 ↗" in html_pass
+    assert "Madde/pasaj henüz doğrulanmadı" in html_pass
+    assert "href=" not in html_pass
+    assert "Resmî Gazete Md." not in html_pass
 
     html_fail = format_clickable_check(
         "FINDIK ürünü, TRABZON/AKÇAABAT havzasında planlı üretim kapsamında yer almamaktadır.",
         status_icon="❌",
     )
-    assert 'href="https://www.tarimorman.gov.tr/BUGEM/Menu/14/Tarim-Havzalari-Uretim-Ve-Destekleme-Modeli"' in html_fail
-    assert "❌" in html_fail
     assert "doc-fail" in html_fail
-    assert "doc-badge-fail" in html_fail
+    assert "Madde/pasaj henüz doğrulanmadı" in html_fail
+    assert "href=" not in html_fail
 
 
 def test_format_clickable_action():
@@ -166,7 +163,9 @@ def test_format_highlighted_citation_card():
     assert '<div class="legal-quote-card pass">' in card_html
     assert 'class="legal-source-link"' in card_html
     assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1"' in card_html
-    assert '<mark class="legal-hl-pass">' in card_html
+    assert "resmî alıntı değildir" in card_html
+    assert "PDF’de işaretli cümleyi aç" not in card_html
+    assert '<mark class="legal-hl-pass">' not in card_html
 
 
 def test_render_document_viewer_html():

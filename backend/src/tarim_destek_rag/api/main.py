@@ -249,7 +249,16 @@ def evaluate_all(
         exp = TemplateExplainer.explain(r, calc, chunks)
         explanations.append(exp)
 
+    # No network I/O in evaluation: only return an original-PDF URL if the
+    # exact Ministry source is installed and both source cell texts are found.
+    from tarim_destek_rag.citations.basin_visual import lookup_basin_crop_evidence
+
+    basin_evidence = lookup_basin_crop_evidence(
+        payload.farmer.province, payload.farmer.district,
+        payload.parcel.crop, payload.parcel.production_year,
+    )
     return FullEvaluationResponse(
+        basin_evidence=basin_evidence,
         farmer=payload.farmer,
         parcel=payload.parcel,
         rules=rule_results,
@@ -577,6 +586,73 @@ def analyze_raw_legislation(
         raw_bytes, payload.source_url, payload.mime_type
     )
     return analysis.to_dict()
+
+
+@app.get("/evidence/highlight/basin/{sha256}", tags=["PDF Belge Kanıtı"])
+def show_official_basin_crop_highlight(
+    sha256: str, province: str, district: str, crop: str,
+    production_year: int,
+) -> Response:
+    """Copy of original Ministry PDF with only selected district and crop marked."""
+    from tarim_destek_rag.citations.basin_visual import highlight_basin_crop_copy
+    from tarim_destek_rag.updates.pdf_evidence import SHA_PATTERN
+
+    if not SHA_PATTERN.fullmatch(sha256):
+        raise HTTPException(status_code=422, detail="Geçersiz resmî belge SHA-256")
+    try:
+        marked = highlight_basin_crop_copy(
+            province, district, crop, production_year, expected_sha256=sha256,
+        )
+    except (OSError, ValueError, TypeError, KeyError, ImportError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Seçilen ilçe ve ürünün özgün PDF hücresi doğrulanamadı",
+        ) from exc
+    return Response(
+        content=marked,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'inline; filename="resmi-havza-ilce-urun-isaretli.pdf"',
+            "Cache-Control": "private, no-store",
+            "X-Original-Source-SHA256": sha256,
+            "X-Legal-Evidence": "ORIGINAL_PDF_ROW_AND_CROP_LOCATED_DRAFT_REVIEW",
+        },
+    )
+
+
+@app.get("/evidence/highlight/visual/{sha256}", tags=["PDF Belge Kanıtı"])
+def show_scanned_gazette_visual_clause(
+    sha256: str, support_id: str,
+) -> Response:
+    """Serve original Gazette PDF COPY with manually located image-text area.
+
+    Source image matches a reviewed original byte hash. Visual transcript
+    location is not independently or legally approved.
+    """
+    from tarim_destek_rag.citations.visual_pdf import render_visual_pdf_copy
+    from tarim_destek_rag.updates.pdf_evidence import SHA_PATTERN
+
+    if not SHA_PATTERN.fullmatch(sha256):
+        raise HTTPException(status_code=422, detail="Geçersiz özgün PDF SHA-256")
+    try:
+        highlighted = render_visual_pdf_copy(
+            support_id, expected_sha256=sha256,
+        )
+    except (OSError, ValueError, KeyError, TypeError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Özgün resmî PDF veya görsel pasaj koordinatı doğrulanamadı",
+        ) from exc
+    return Response(
+        content=highlighted,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'inline; filename="resmi-gazete-8859-isaretli-kopya.pdf"',
+            "Cache-Control": "private, no-store",
+            "X-Original-Source-SHA256": sha256,
+            "X-Legal-Evidence": "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW",
+        },
+    )
 
 
 @app.get("/evidence/highlight/{sha256}", tags=["PDF Belge Kanıtı"])

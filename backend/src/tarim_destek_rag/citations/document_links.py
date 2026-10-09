@@ -206,26 +206,23 @@ def format_clickable_check(
     status_icon: str = "✅",
     support_id: str | None = None,
 ) -> str:
-    """Kontrol maddesini tıklanabilir HTML bağlantısına dönüştürür.
+    """Show rule outcome, but NEVER invent a legal clause/page from keywords.
 
-    Kullanıcı tıkladığında doğrudan ilgili belgenin ilgili maddesini yeni sekmede açar.
+    An exact original-PDF evidence link appears in the separately verified
+    citation card only after source SHA, quote, article and page validation.
     """
-    loc = resolve_check_link(check_text, support_id)
-    url = loc["url"]
-    badge = loc["badge"]
-    title = f"{loc['title']} — {loc['section']}"
+    from html import escape
 
-    is_fail = status_icon in ["❌", "⚠️"]
-    extra_class = "doc-fail" if is_fail else "doc-pass"
-    badge_class = "doc-badge-fail" if is_fail else "doc-badge-pass"
-
+    is_fail = status_icon in ("❌", "⚠️")
+    extra = "doc-fail" if is_fail else "doc-pass"
+    safe_icon = escape(status_icon)
+    safe_check = escape(check_text)
     return (
-        f'<a href="{url}" target="_blank" rel="noopener noreferrer" class="doc-link-item {extra_class}" '
-        f'title="{title} — Resmî Belgeyi Aç">\n'
-        f'  <span class="doc-icon">{status_icon}</span>\n'
-        f'  <span class="doc-text">{check_text}</span>\n'
-        f'  <span class="doc-badge-tag {badge_class}">{badge} ↗</span>\n'
-        f'</a>'
+        f'<div class="doc-link-item {extra}">'
+        f'<span class="doc-icon">{safe_icon}</span>'
+        f'<span class="doc-text">{safe_check}</span>'
+        '<span class="doc-badge-tag">Madde/pasaj henüz doğrulanmadı</span>'
+        '</div>'
     )
 
 
@@ -407,41 +404,86 @@ def format_highlighted_citation_card(
     status: str = "ELIGIBLE",
     support_id: str | None = None,
 ) -> str:
-    """Resmî mevzuat atfını ve metin içindeki işaret edilen kısmı renkli kart olarak biçimlendirir."""
-    title = citation.get("title", "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)")
-    sec = citation.get("section", "Madde")
-    year = citation.get("year", 2026)
-    snip = citation.get("snippet", "")
-    url = citation.get("url")
+    """Distinguish actual matching PDF text from a descriptive rule summary.
 
-    if not url:
-        loc = resolve_check_link(sec, support_id)
-        url = loc["url"]
+    Only an exact quote verified against original SHA-pinned PDF bytes may be
+    shown in quotation marks with a highlighted-PDF evidence link.
+    """
+    from html import escape
+    from os import getenv
+    from urllib.parse import urlsplit
 
+    title = escape(str(citation.get("title") or "Mevzuat kaynağı"))
+    section = escape(str(citation.get("section") or "Madde"))
+    year = escape(str(citation.get("year") or ""))
+    status_code = str(citation.get("verification_status") or "")
+    exact = status_code == "EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW"
+    visual = status_code == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW"
+    located = exact or visual
+    original_url = str(citation.get("url") or "")
+    # No invented page or section fallback is sufficient to create a proof.
+    source_link = ""
+    if (original_url.startswith("https://") and
+            (urlsplit(original_url).hostname or "") in (
+                "www.resmigazete.gov.tr", "resmigazete.gov.tr", "www.tarimorman.gov.tr",
+            )):
+        clean_url = escape(original_url, quote=True)
+        source_link = (
+            f'<a href="{clean_url}" target="_blank" rel="noopener noreferrer" '
+            'class="legal-source-link">Resmî kaynağı aç ↗</a>'
+        )
+    label = "Ön değerlendirme açıklaması — resmî alıntı değildir"
+    text = escape(str(citation.get("snippet") or ""))
+    if located:
+        proof_path = str(citation.get("highlighted_pdf_url") or "")
+        sha = str(citation.get("document_sha256") or "")
+        page = citation.get("page_number")
+        if (proof_path.startswith("/evidence/highlight/") and
+                sha in proof_path and isinstance(page, int) and page > 0):
+            public_api = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+            proof_link = escape(public_api + proof_path, quote=True)
+            if visual:
+                label = (
+                    "Özgün Resmî Gazete PDF görüntüsünde işaretlenen pasaj "
+                    "— bağımsız metin ve hukukî inceleme bekliyor"
+                )
+                text = escape(str(citation.get("snippet") or ""))
+            else:
+                label = "Özgün PDF'de birebir bulunan pasaj — hukukî onay bekliyor"
+                text = highlight_legal_text(str(citation.get("snippet") or ""), status)
+            source_link = (
+                f'<a href="{proof_link}" target="_blank" rel="noopener noreferrer" '
+                'class="legal-source-link">PDF’de işaretli cümleyi aç ↗</a> '
+                + source_link
+            )
+        else:
+            located = False
     card_class = "pass" if status == "ELIGIBLE" else ("warn" if status == "REVIEW" else "fail")
-    highlighted_snip = highlight_legal_text(snip, status)
-
+    body = (
+        f'📜 <i>“{text}”</i>' if located
+        else f'📝 {text}'
+    )
     return (
         f'<div class="legal-quote-card {card_class}">\n'
         f'  <div class="legal-quote-header">\n'
-        f'    <span class="legal-doc-badge">🏛️ {title} ({year}) — {sec}</span>\n'
-        f'    <a href="{url}" target="_blank" rel="noopener noreferrer" class="legal-source-link" '
-        f'title="Resmî Orijinal Belgeyi Aç">Resmî Belgede Gör ↗</a>\n'
+        f'    <span class="legal-doc-badge">🏛️ {title} ({year}) — {section}</span>\n'
+        f'    {source_link}\n'
         f'  </div>\n'
         f'  <div class="legal-quote-body">\n'
-        f'    📜 <i>"{highlighted_snip}"</i>\n'
+        f'    <strong>{label}</strong><div>{body}</div>\n'
         f'  </div>\n'
         f'</div>'
     )
-
 
 def render_document_viewer_html(article_key: str) -> str:
     """Yalnız resmî belge bağlantısını gösterir; sentetik özetleri alıntı gibi sunmaz."""
     from html import escape
 
     data = get_article_preview(article_key)
-    title = escape(str(data.get("title", "Mevzuat kaynağı")))
-    source = escape(str(data.get("source", "Resmî Gazete")))
+    # Legacy ARTICLE_PREVIEWS has hand-written topic summaries, not original
+    # Gazette clause titles. Never show their guessed article titles as fact.
+    title = escape("Konu bağlantısı — madde/pasaj henüz eşleştirilmedi")
+    source = escape("İlgili resmî kaynak (doğrulanmış madde bağlantısı değildir)")
     url = escape(str(data.get("url", "")), quote=True)
     return (
         '<div class="legal-reader-container">'

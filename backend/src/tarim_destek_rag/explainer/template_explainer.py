@@ -15,6 +15,11 @@ class CitationDetail(BaseModel):
     year: int = 2026
     url: str | None = None
     snippet: str
+    # The text above is an explanation, NOT a source quotation unless matched.
+    verification_status: str = "UNVERIFIED_EXPLANATION"
+    highlighted_pdf_url: str | None = None
+    document_sha256: str | None = None
+    page_number: int | None = None
 
 
 class ExplanationResult(BaseModel):
@@ -97,9 +102,34 @@ class TemplateExplainer:
         """Kural kararı ve hesaplamaya göre insan dilinde şeffaf gerekçe üretir."""
         citations: list[CitationDetail] = []
 
-        # 1. Referans açıklama ekle; bu pasaj resmî belge ile doğrulanmış alıntı değildir.
+        # Import lazily to avoid citations.verifier -> explainer circular imports.
+        from tarim_destek_rag.citations.exact_index import lookup_exact_pdf_citation
+
+        # 1. A source-bound quote supersedes descriptive defaults ONLY after
+        # independent page/byte/coordinate checks against the original PDF.
+        # Otherwise the defaults remain clearly labelled as explanations.
+        proof = lookup_exact_pdf_citation(rule_res.support_id)
+        if proof is None:
+            # Original Gazette page 2 is image-only. Its reviewed coordinates
+            # can support a visibly marked copy without inventing OCR text.
+            from tarim_destek_rag.citations.visual_pdf import lookup_visual_pdf_citation
+
+            proof = lookup_visual_pdf_citation(rule_res.support_id)
         primary_citation = SUPPORT_CITATION_DEFAULTS.get(rule_res.support_id)
-        if primary_citation:
+        if proof:
+            citations.append(CitationDetail(
+                source_id=proof["source_id"],
+                title=proof["title"],
+                section=proof["section"],
+                year=proof["year"],
+                url=f'{proof["source_url"]}#page={proof["page_number"]}',
+                snippet=proof["exact_quote"],
+                verification_status=proof["verification_status"],
+                highlighted_pdf_url=proof["highlighted_pdf_url"],
+                document_sha256=proof["source_sha256"],
+                page_number=proof["page_number"],
+            ))
+        elif primary_citation:
             citations.append(primary_citation)
 
         # 2. Vektör / Semantik arama ile eşleşen ek mevzuat parçalarını ekle

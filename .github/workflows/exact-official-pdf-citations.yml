@@ -1,0 +1,42 @@
+name: Exact Official PDF Citation Gate
+
+on:
+  push:
+    branches:
+      - fix/exact-official-pdf-citations
+      - integration/p0-security-and-original-pdf-citations
+  pull_request:
+    branches:
+      - main
+      - fix/p0-01-05-fail-closed-security-2026-10-10
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TARIM_RAG_LEGAL_ACTIVATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project and exact PDF layout dependencies
+        run: python -m pip install -e ".[dev,pdf-evidence]"
+      - name: Check modified source and tests
+        run: |
+          ruff check backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/visual_pdf.py backend/src/tarim_destek_rag/citations/basin_visual.py backend/src/tarim_destek_rag/api/schemas.py backend/src/tarim_destek_rag/api/main.py frontend_pc/formatters.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_8859_scanned_original_highlighting.py backend/tests/unit/test_basin_original_pdf_evidence.py backend/tests/unit/test_document_links.py frontend_pc/pages/support_analysis.py
+          python -m compileall -q backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py frontend_pc/pages/support_analysis.py frontend_pc/formatters.py backend/src/tarim_destek_rag/citations/basin_visual.py backend/src/tarim_destek_rag/api/main.py backend/src/tarim_destek_rag/api/schemas.py
+      - name: Install and SHA-verify original 81-page official district/crop PDF
+        run: python -m tarim_destek_rag.citations.basin_visual --install
+      - name: Enforce original Ministry district and product source on real PDF
+        run: |
+          python -c "from tarim_destek_rag.citations.basin_visual import lookup_basin_crop_evidence as f; p=f('KONYA','KARATAY','BUĞDAY',2026); assert p and p['page_number']==53 and p['eligible'] is None"
+      - name: Test exact source and legacy frontend behavior
+        run: python -m pytest -q --no-cov backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_basin_original_pdf_evidence.py backend/tests/unit/test_8859_scanned_original_highlighting.py backend/tests/unit/test_document_links.py backend/tests/unit/test_p11_p14_retrieval_and_explainer.py backend/tests/integration/test_p16_frontend_pc.py
+      - name: Full backend regression
+        run: python -m pytest -q --no-cov backend/tests
