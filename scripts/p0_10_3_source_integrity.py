@@ -12,7 +12,6 @@ import hashlib
 import json
 import os
 import re
-import ssl
 import tempfile
 from datetime import UTC, datetime
 from html.parser import HTMLParser
@@ -218,10 +217,22 @@ def collect(
         "documents": results,
         "errors": failures,
     }
-    _atomic_bytes(
-        target / "report.json",
-        (json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode("utf-8"),
-    )
+    report_path = target / "report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    # The scan report has a new timestamp per run and is NOT an immutable source.
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=target, prefix=".report_",
+        delete=False,
+    ) as f:
+        temp = Path(f.name)
+        json.dump(report, f, ensure_ascii=False, indent=2, sort_keys=True)
+        f.write("\n")
+        f.flush()
+        os.fsync(f.fileno())
+    try:
+        os.replace(temp, report_path)
+    finally:
+        temp.unlink(missing_ok=True)
     return report
 
 
