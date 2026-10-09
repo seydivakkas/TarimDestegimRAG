@@ -54,7 +54,7 @@
       "published": "2025-08-05",
       "rg_issue": "32977",
       "url": "https://www.resmigazete.gov.tr/eskiler/2025/08/20250805-4.htm",
-      "original_sha256": null,
+      "original_sha256": "d97ad8b5e857470fea8fb9a0832b8a6e266a259909dd3f7ec610b41c69ebd366",
       "amends": "communique_2024_39",
       "effective_date": "2025-08-05",
       "retroactive_valid_from": "2025-01-01",
@@ -68,7 +68,12 @@
         "MADDE 17(1)(e)",
         "EK-25 arpa depolama başlangıcı"
       ],
-      "verification": "OFFICIAL_PUBLICATION_LINK_IDENTIFIED_ORIGINAL_BYTES_UNPINNED"
+      "verification": "DIRECT_ORIGINAL_BYTES_HASH_PINNED_TWO_INDEPENDENT_CI_RUNS",
+      "original_bytes": 25260,
+      "source_runs": [
+        37914517047,
+        37914522547
+      ]
     },
     {
       "id": "decision_10394",
@@ -77,7 +82,7 @@
       "published": "2025-09-14",
       "rg_issue": "33017",
       "url": "https://www.resmigazete.gov.tr/eskiler/2025/09/20250914-6.pdf",
-      "original_sha256": null,
+      "original_sha256": "cc2598be4128db1d84cef20232b107f19fcd86ae430fda07933ab47b711940d9",
       "amends": "decision_8859",
       "effective_date": "2026-01-01",
       "preserves_prior_year": [
@@ -87,7 +92,12 @@
         2026,
         2027
       ],
-      "verification": "OFFICIAL_PDF_LINK_IDENTIFIED_ORIGINAL_BYTES_UNPINNED"
+      "verification": "DIRECT_ORIGINAL_BYTES_HASH_PINNED_TWO_INDEPENDENT_CI_RUNS",
+      "original_bytes": 2457388,
+      "source_runs": [
+        37914517047,
+        37914522547
+      ]
     },
     {
       "id": "communique_2025_42",
@@ -116,7 +126,7 @@
       "published": "2026-09-08",
       "rg_issue": "33364",
       "url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
-      "original_sha256": null,
+      "original_sha256": "732048cbed664faabc15ad20a6a86427af7881acde24a88adf81007b79479e80",
       "amends": "decision_8859",
       "effective_date": "2027-01-01",
       "article_effective_exceptions": {
@@ -134,7 +144,12 @@
         2026,
         2027
       ],
-      "verification": "OFFICIAL_PDF_LINK_IDENTIFIED_ORIGINAL_BYTES_UNPINNED"
+      "verification": "DIRECT_ORIGINAL_BYTES_HASH_PINNED_TWO_INDEPENDENT_CI_RUNS",
+      "original_bytes": 1271907,
+      "source_runs": [
+        37914517047,
+        37914522547
+      ]
     },
     {
       "id": "repealed_2022_32",
@@ -179,10 +194,15 @@
   "unresolved_requirements": [
     "COMPLETE_OFFICIAL_GAZETTE_DATE_INDEX_SEARCH_2024_THROUGH_AS_OF_DATE",
     "COMPLETE_MINISTRY_ANNOUNCEMENT_AND_ATTACHMENT_LINK_RECALL",
-    "PIN_2025_13_10394_11781_ORIGINAL_SHA256",
     "VERIFY_2024_39_REPEALED_2022_32_2022_34_2023_48_ORIGINALS",
     "VERIFY_EK20_VISUAL_TRANSCRIPTION_INDEPENDENTLY",
     "REVIEW_11781_RETROACTIVE_EFFECT_AND_ARTICLE_LEVEL_APPLICATION",
     "EXHAUSTIVE_APPLICABILITY_2025_2026_2027_AND_FUTURE_UPDATES"
+  ],
+  "notes": [
+    "Original SHA-256 for 2025/13, 10394 and 11781 fetched and corroborated by independent GitHub Actions push/PR runs, then pinned here.",
+    "Three repealed legacy Communiqués 2022/32, 2022/34 and 2023/48 remain reference-only with unpinned originals; full legal archive and source indexes are not exhaustively traversed.",
+    "The 2026 EK-20 table is image-only; visual transcription requires independent review, and no amount is imported into payable rules.",
+    "2027 future amendments can still appear after audit date 2026-10-09."
   ]
 }

@@ -8,7 +8,7 @@ YASAKLAR: Kopyalanamaz, çoğaltılamaz, dağıtılamaz, satılamaz, tersine mü
 
 # P0-10.4 — Original EK-20 visual evidence + legal-source change chain (as of 2026-10-09)
 
-**Status:** visually inspected primary EK-20 page, targeted legal source discovery expanded, exhaustive official archive and independent legal review still **HOLD**.
+**Status:** 2026 EK-20 original PDF page visually inspected, three previously missing amendment originals now downloaded from official hosts and SHA-256 pinned. **Full official annual archive coverage and independent legal review remain HOLD**.
 
 ## Original EK-20 inspection
 
@@ -24,7 +24,7 @@ From the actual rendered original image:
 
 ## Missing or changed legal instruments found
 
-The previous five-source snapshot did **not** include:
+The previous five-source snapshot did **not** include (these are NOW directly fetched and original-byte SHA-256 pinned):
 - **Tebliğ 2025/13** — 5 Aug 2025, RG 32977, 2024/39 amendment. Article 4 says effective upon publication **but applicable from 1 Jan 2025**. It also changes EK-25 Arpa warehouse start from 1 June to 15 May. Original: https://www.resmigazete.gov.tr/eskiler/2025/08/20250805-4.htm ; corroboration: https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/2025-2027%20Destekleme%20Tebli%C4%9Fi%20De%C4%9Fi%C5%9Fikli%C4%9Fi.pdf
 - **Presidential Decision 10394** — 14 Sep 2025, RG 33017, original PDF https://www.resmigazete.gov.tr/eskiler/2025/09/20250914-6.pdf, amends 8859, effective 1 Jan 2026; preserves earlier provisions for 2025 production claims under its transition clause. Ministry announcement: https://www.tarimorman.gov.tr/HHGM/Haber/175/2025-2027-Yillarinda-Yapilacak-Bitkisel-Uretime-Yonelik-Desteklemeler-Ile-Diger-Bazi-Tarimsal-Desteklemelere-Iliskin-Kararda-Degisiklik-Yapilmasina-Dair-Karar-Yayimlanmistir
 - **Presidential Decision 11781** — 8 Sep 2026, RG 33364, original PDF https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf, amends 8859. Art.6: parts of Art.1 effective on publication with retroactive validity from **1 Jan 2026**, Art.4 effective on publication with retroactive validity from **1 Jan 2025**, other provisions effective **1 Jan 2027**. Ministry: https://www.tarimorman.gov.tr/HHGM/Haber/262/2025-2027-Yillarinda-Yapilacak-Bitkisel-Uretime-Yonelik-Desteklemeler-Ile-Diger-Bazi-Tarimsal-Desteklemelere-Iliskin-Kararda-Degisiklik-Yapilmasina-Dair-Karar
@@ -34,6 +34,14 @@ The base 2024/39 **MADDE 21** expressly repeals 2022/32, 2022/34, and 2023/48. T
 ## Explicit FAIL-CLOSED legal applicability assessment
 
 `scripts/p0_10_4_temporal_audit.py` enforces that 2025/13, 10394, 2025/42 and 11781 cannot be omitted; that 2025 retroactive and transitional treatment is visible; that 11781 Art.1/Art.4 special dates are **not** falsely collapsed into a single effective date; that all three 2024/39 repeal targets exist as references; that a targeted web search cannot set `complete_official_coverage_proven=true`.
+
+Original SHA-256s, independently observed in matching GitHub push and PR runs (37914517047, 37914522547):
+
+| Instrument | Original entity bytes | SHA-256 |
+|---|---:|---|
+| Tebliğ 2025/13 | 25,260 | `d97ad8b5e857470fea8fb9a0832b8a6e266a259909dd3f7ec610b41c69ebd366` |
+| Decision 10394 | 2,457,388 | `cc2598be4128db1d84cef20232b107f19fcd86ae430fda07933ab47b711940d9` |
+| Decision 11781 | 1,271,907 | `732048cbed664faabc15ad20a6a86427af7881acde24a88adf81007b79479e80` |
 
 The full 2025–2027 official Gazette + Ministry day-index inventories, all related instruments, subsequent repeals/amendments, annex rows and date-specific consolidated rules are **not proven complete**. As of October 2026, full 2027 future amendment coverage cannot be guaranteed. Final release requires documented search scope/recall against official annual archive indices plus independent legal expert and original document hash signoff.
 
