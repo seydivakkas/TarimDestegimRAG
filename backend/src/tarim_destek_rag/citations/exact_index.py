@@ -72,7 +72,7 @@ def _check(row: dict, *, root: Path, manifest: Path) -> dict:
             page_1_indexed=page,
             exact_quote=quote,
         )
-    except (KeyError, TypeError, StopIteration, OSError, ValueError, UnverifiableEvidence) as exc:
+    except (KeyError, TypeError, StopIteration, OSError, ValueError, ImportError, UnverifiableEvidence) as exc:
         raise ValueError("Original source quote cannot be independently verified") from exc
     return {
         "source_id": row["source_id"],
