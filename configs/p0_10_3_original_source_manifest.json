@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "audit_phase": "P0-10.3",
+  "target_production_years": [
+    2025,
+    2026,
+    2027
+  ],
+  "complete_official_coverage_proven": false,
+  "origin_byte_manifest_status": "UNPINNED_PENDING_DIRECT_HTTPS_DOWNLOAD",
+  "governance": {
+    "review_required": true,
+    "legal_activation": false,
+    "payable_amount_approved": false
+  },
+  "notes": [
+    "original_sha256=null means no direct official HTTP/PDF bytes have yet been independently downloaded; no transformed HTML fixture hashes may substitute.",
+    "The two PDFs are linked independently by their parent communique HTML. A matched link does not prove complete annex tables or legal applicability.",
+    "All target production years remain COVERAGE_NOT_PROVEN pending exhaustive official index inventory, amendment/repeal chain review and independent legal verification."
+  ],
+  "sources": [
+    {
+      "id": "RG_DECISION_8859",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
+      "format": "pdf",
+      "role": "BASE_DECISION",
+      "parent_id": null,
+      "original_sha256": null,
+      "gazette_date": "2024-08-29",
+      "gazette_issue": "32647",
+      "expected_legal_number": "8859",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "legal_effective_from": null
+    },
+    {
+      "id": "RG_COMMUNIQUE_2024_39",
+      "url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm",
+      "format": "html",
+      "role": "BASE_COMMUNIQUE",
+      "parent_id": null,
+      "original_sha256": null,
+      "gazette_date": "2024-12-31",
+      "gazette_issue": "32769",
+      "gazette_special_issue": "5. Mükerrer",
+      "expected_legal_number": "2024/39",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "legal_effective_from": "2025-01-01",
+      "article_exceptions": {
+        "MADDE 10": "2025-05-01"
+      }
+    },
+    {
+      "id": "RG_COMMUNIQUE_2024_39_ANNEX",
+      "url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8-1.pdf",
+      "format": "pdf",
+      "role": "BASE_COMMUNIQUE_ANNEX",
+      "parent_id": "RG_COMMUNIQUE_2024_39",
+      "original_sha256": null,
+      "gazette_date": "2024-12-31",
+      "gazette_issue": "32769",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ]
+    },
+    {
+      "id": "RG_AMENDMENT_2025_42",
+      "url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "format": "html",
+      "role": "AMENDMENT",
+      "amends": "RG_COMMUNIQUE_2024_39",
+      "parent_id": null,
+      "original_sha256": null,
+      "gazette_date": "2025-12-30",
+      "gazette_issue": "33123",
+      "expected_legal_number": "2025/42",
+      "production_years": [
+        2026,
+        2027
+      ],
+      "transition_years_preserve_prior_rules": [
+        2025
+      ],
+      "legal_effective_from": "2026-01-01"
+    },
+    {
+      "id": "RG_AMENDMENT_2025_42_ANNEX",
+      "url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9-1.pdf",
+      "format": "pdf",
+      "role": "AMENDMENT_ANNEX",
+      "parent_id": "RG_AMENDMENT_2025_42",
+      "original_sha256": null,
+      "gazette_date": "2025-12-30",
+      "gazette_issue": "33123",
+      "expected_annex_reference": "EK-20",
+      "expected_pdf_text_marker": "EK-20",
+      "production_years": [
+        2026,
+        2027
+      ]
+    }
+  ]
+}
