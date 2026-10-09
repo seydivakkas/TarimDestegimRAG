@@ -109,3 +109,67 @@ def test_original_html_api_is_sandboxed_when_available() -> None:
             params={"support_id": "BASIC_SUPPORT_2026"},
         )
         assert invalid.status_code == 409
+
+
+
+def test_real_evaluation_exposes_all_three_source_marks_when_installed() -> None:
+    """A farmer click opens the real 8859 PDF, 2024/39 HTML, and basin PDF."""
+    from tarim_destek_rag.citations.basin_visual import PINNED_BASIN_PDF_SHA256
+
+    originals = [
+        _archive() / "originals" / (SOURCE_SHA + ".html"),
+        _archive() / "originals" / (PINNED_BASIN_PDF_SHA256 + ".pdf"),
+        _archive() / "originals" / (
+            "89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f.pdf"
+        ),
+    ]
+    if any(not p.is_file() for p in originals):
+        pytest.skip("All three official original sources must be installed for E2E test")
+    from fastapi.testclient import TestClient
+    from frontend_pc.formatters import render_reasons_markdown
+    from tarim_destek_rag.api.main import app
+
+    with TestClient(app) as client:
+        r = client.post("/evaluate", json={
+            "farmer": {
+                "farmer_id": "F-01", "province": "KONYA", "district": "KARATAY",
+                "cks_status": True,
+            },
+            "parcel": {
+                "parcel_id": "P-01", "farmer_id": "F-01", "crop": "BUĞDAY",
+                "area_da": 25, "production_year": 2026,
+                "seed_certificate_available": True,
+            },
+        })
+        assert r.status_code == 200
+        response = r.json()
+        evidence = response["basin_evidence"]
+        assert evidence and evidence["page_number"] == 53
+        assert evidence["province"] == "KONYA" and evidence["district"] == "KARATAY"
+        assert evidence["crop_code"] == "BUĞDAY"
+        basic = next(
+            x for x in response["explanations"] if x["support_id"] == "BASIC_SUPPORT_2026"
+        )
+        visual = next(
+            c for c in basic["citations"]
+            if c["verification_status"] == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW"
+        )
+        html = next(
+            c for c in basic["citations"]
+            if c["verification_status"] == "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW"
+        )
+        reasons = render_reasons_markdown(response)
+        assert "HTML’de işaretli fıkrayı aç" in reasons
+        assert "PDF’de işaretli cümleyi aç" in reasons
+        assert "İlçeyi mavi, ürünü sarı" in reasons
+        for url in (
+            visual["highlighted_pdf_url"], html["highlighted_pdf_url"],
+            evidence["highlighted_pdf_url"],
+        ):
+            result = client.get(url)
+            assert result.status_code == 200
+            assert result.headers["X-Original-Source-SHA256"] in {
+                SOURCE_SHA, PINNED_BASIN_PDF_SHA256,
+                "89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f",
+            }
+            assert len(result.content) > 10_000
