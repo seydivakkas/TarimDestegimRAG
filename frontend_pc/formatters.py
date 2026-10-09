@@ -360,6 +360,41 @@ def render_reasons_markdown(resp: dict[str, Any] | None) -> str:
     exp_map = {e.get("support_id"): e for e in explanations}
 
     reasons_markdown = "### 📜 Kural Motoru İşletim Gerekçeleri ve Resmî Mevzuat Dayanakları\n\n"
+    # Province + district + crop evidence is its own source-dependent finding.
+    # It does not certify farmer eligibility or any payable amount.
+    from html import escape
+    from os import getenv
+
+    basin = resp.get("basin_evidence")
+    if isinstance(basin, dict) and basin.get("verification_status") == (
+        "ORIGINAL_PDF_ROW_AND_CROP_LOCATED_DRAFT_REVIEW"
+    ):
+        link = str(basin.get("highlighted_pdf_url") or "")
+        if link.startswith("/evidence/highlight/basin/"):
+            public_api = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+            proof_link = escape(public_api + link, quote=True)
+            original = escape(str(basin.get("source_url") or ""), quote=True)
+            province = escape(str(basin.get("province") or ""))
+            district = escape(str(basin.get("district") or ""))
+            crop = escape(str(basin.get("crop_label") or ""))
+            page = escape(str(basin.get("page_number") or ""))
+            reasons_markdown += (
+                "### 📍 Seçilen İlçe ve Ürün — Özgün Bakanlık PDF Kanıtı\n\n"
+                f"**{province} / {district} — {crop}** · PDF sayfa {page}\n\n"
+                f'<a href="{proof_link}" target="_blank" rel="noopener noreferrer">'
+                "İlçeyi mavi, ürünü sarı işaretli PDF'de aç ↗</a> · "
+                f'<a href="{original}" target="_blank" rel="noopener noreferrer">'
+                "Değiştirilmemiş resmî PDF ↗</a>\n\n"
+                "**Kaynak durumu:** İlçe/ürün satırı özgün PDF'de bulundu; "
+                "satır henüz bağımsız uzman onaylı değildir ve tek başına "
+                "destek uygunluğu/ödeme kanıtı değildir.\n\n---\n\n"
+            )
+    else:
+        reasons_markdown += (
+            "**İlçe/ürün kaynak kanıtı:** Seçilen ilçe ve ürün için özgün PDF'de "
+            "birebir işaretleme şu anda doğrulanamadı (belge kurulmamış, "
+            "ürün alt türü belirsiz veya kaynak yılı farklı olabilir).\n\n---\n\n"
+        )
     for ev in rules:
         sid = ev.get("support_id")
         sname = ev.get("support_name", sid)
