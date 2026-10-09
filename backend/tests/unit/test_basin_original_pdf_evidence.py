@@ -6,13 +6,13 @@ import json
 from pathlib import Path
 
 import pytest
-from frontend_pc.formatters import render_reasons_markdown
 from tarim_destek_rag.citations.basin_visual import (
     PINNED_BASIN_PDF_SHA256,
     highlight_basin_crop_copy,
     locate_basin_crop,
     lookup_basin_crop_evidence,
 )
+from frontend_pc.formatters import render_reasons_markdown
 
 
 def test_basin_manifest_is_not_approved_entitlement() -> None:
