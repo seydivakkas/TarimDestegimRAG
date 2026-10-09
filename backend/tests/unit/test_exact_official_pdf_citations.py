@@ -5,7 +5,6 @@ import hashlib
 import json
 
 import pytest
-
 from tarim_destek_rag.citations.document_links import format_highlighted_citation_card
 from tarim_destek_rag.citations.exact_index import index_quote, lookup_exact_pdf_citation
 from tarim_destek_rag.explainer.template_explainer import SUPPORT_CITATION_DEFAULTS
