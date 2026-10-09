@@ -107,6 +107,35 @@ def test_pr8_modular_ui_kept_with_admin_pdf_controls():
     assert "Sarı İşaretli Sayfayı Göster" in buttons
 
 
+
+def test_program_lookup_is_present_in_modular_five_tab_ui():
+    from frontend_pc.app import build_ui
+
+    config = build_ui().get_config_file()
+    components = config["components"]
+    tabs = [c for c in components if c.get("type", "").lower() == "tabitem"]
+    assert len(tabs) == 5
+    radios = [
+        c.get("props", {}) for c in components
+        if c.get("type", "").lower() == "radio"
+    ]
+    assert any(
+        p.get("label") == "Kanıt Arama Yöntemi"
+        and "Kural/Program Seçimi" in str(p.get("choices"))
+        and "Doğrudan Cümle ID" in str(p.get("choices"))
+        for p in radios
+    )
+    dropdowns = [
+        c.get("props", {}) for c in components
+        if c.get("type", "").lower() == "dropdown"
+    ]
+    assert any(
+        p.get("label") == "Destek Programı"
+        and "BASIC_SUPPORT" in str(p.get("choices"))
+        for p in dropdowns
+    )
+
+
 def test_imported_models_are_distinct_and_not_parallel_approval_backdoors():
     assert ReviewedWaterRestrictionDistrictModel.__tablename__ != ReviewedWaterRestrictionScopeModel.__tablename__
     assert LegalReleaseModel.__tablename__ == "legal_release_snapshots"

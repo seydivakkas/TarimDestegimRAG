@@ -717,11 +717,22 @@ def get_grounding_by_program(
     if crop_code:
         query = query.where(DynamicRateModel.crop_code == crop_code)
 
-    rate_row = session.scalars(query).first()
-    if rate_row is None:
+    matching_rates = session.scalars(query.limit(2)).all()
+    if not matching_rates:
         raise HTTPException(
             status_code=404,
             detail=f"{year} yılı için '{program_key}' programına ait doğrulanmış PDF kanıtı bulunamadı.",
+        )
+    if len(matching_rates) != 1:
+        raise HTTPException(
+            status_code=409,
+            detail="Birden çok program/ürün/yıl kaydı bulundu; kaynak kanıtı belirsiz.",
+        )
+    rate_row = matching_rates[0]
+    if rate_row.review_status != "DRAFT":
+        raise HTTPException(
+            status_code=409,
+            detail="Oran adayı DRAFT durumunda değil; kanıt incelemesi reddedildi.",
         )
 
     try:

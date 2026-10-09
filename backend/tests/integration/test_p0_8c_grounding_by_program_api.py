@@ -20,7 +20,11 @@ from sqlalchemy.pool import StaticPool
 from tarim_destek_rag.api.main import app, get_db_session
 from tarim_destek_rag.auto_updater.grounding_repository import stage_evidence
 from tarim_destek_rag.database.connection import Base
-from tarim_destek_rag.database.models import DynamicRateModel, SourceModel
+from tarim_destek_rag.database.models import (
+    DynamicRateModel,
+    SentenceBoundingBoxModel,
+    SourceModel,
+)
 
 URL = "https://www.resmigazete.gov.tr/eskiler/2030/08/kanun.pdf"
 QUOTE = "2030 Tarimsal Destekleme Kanunu Ornek Metni Madde 5."
@@ -88,14 +92,14 @@ def program_grounding_app(tmp_path, monkeypatch):
     app.dependency_overrides[get_db_session] = dependency
     try:
         with TestClient(app) as client:
-            yield client
+            yield client, engine
     finally:
         app.dependency_overrides.pop(get_db_session, None)
         engine.dispose()
 
 
 def test_get_grounding_by_program_success(program_grounding_app):
-    client = program_grounding_app
+    client, _engine = program_grounding_app
     resp = client.get("/api/v1/grounding/program/BASIC_SUPPORT", params={"year": 2030, "crop_code": "BUĞDAY"})
     assert resp.status_code == 200
     data = resp.json()
@@ -112,7 +116,7 @@ def test_get_grounding_by_program_success(program_grounding_app):
 
 
 def test_get_grounding_by_program_not_found(program_grounding_app):
-    client = program_grounding_app
+    client, _engine = program_grounding_app
     # Wrong program key
     resp = client.get("/api/v1/grounding/program/NON_EXISTENT", params={"year": 2030})
     assert resp.status_code == 404
@@ -120,3 +124,71 @@ def test_get_grounding_by_program_not_found(program_grounding_app):
     # Wrong year
     resp2 = client.get("/api/v1/grounding/program/BASIC_SUPPORT", params={"year": 2029})
     assert resp2.status_code == 404
+
+
+def test_program_lookup_rejects_ambiguous_geographic_candidates(program_grounding_app):
+    client, engine = program_grounding_app
+    with Session(engine) as session:
+        reference = session.query(DynamicRateModel).first()
+        session.add(DynamicRateModel(
+            program_key="BASIC_SUPPORT",
+            crop_code="BUĞDAY",
+            production_year=2030,
+            province="KONYA",
+            district="KARATAY",
+            base_coefficient=Decimal("550.00"),
+            category_multiplier=Decimal("1.0000"),
+            proposed_unit_amount=Decimal("550.00"),
+            unit="TRY/da",
+            effective_from=date(2030, 1, 1),
+            effective_to=date(2030, 12, 31),
+            source_sentence_id=reference.source_sentence_id,
+            review_status="DRAFT",
+        ))
+        session.commit()
+    for params in ({"year": 2030}, {"year": 2030, "crop_code": "BUĞDAY"}):
+        response = client.get("/api/v1/grounding/program/BASIC_SUPPORT", params=params)
+        assert response.status_code == 409
+        assert response.json()["code"] == "HTTP_409"
+        assert "belirsiz" in response.json()["message"]
+
+
+@pytest.mark.parametrize("review_status", ["REVIEW", "REJECTED"])
+def test_program_lookup_rejects_non_draft_rate_candidate(program_grounding_app, review_status):
+    client, engine = program_grounding_app
+    with Session(engine) as session:
+        candidate = session.query(DynamicRateModel).one()
+        candidate.review_status = review_status
+        session.commit()
+
+    response = client.get(
+        "/api/v1/grounding/program/BASIC_SUPPORT",
+        params={"year": 2030, "crop_code": "BUĞDAY"},
+    )
+    assert response.status_code == 409
+    assert response.json()["code"] == "HTTP_409"
+    assert "DRAFT" in response.json()["message"]
+    assert "payable_amount" not in response.json()
+
+
+@pytest.mark.parametrize("review_status", ["REVIEW", "REJECTED"])
+def test_non_draft_sentence_cannot_be_presented_as_pdf_evidence(
+    program_grounding_app, review_status,
+):
+    client, engine = program_grounding_app
+    with Session(engine) as session:
+        row = session.query(SentenceBoundingBoxModel).one()
+        evidence_id = row.id
+        row.review_status = review_status
+        session.commit()
+
+    endpoints = (
+        f"/api/v1/grounding/evidence/{evidence_id}",
+        f"/api/v1/grounding/image/{evidence_id}/page/1",
+        "/api/v1/grounding/program/BASIC_SUPPORT",
+    )
+    for endpoint in endpoints:
+        response = client.get(endpoint, params={"year": 2030})
+        assert response.status_code == 404
+        assert response.json()["code"] == "HTTP_404"
+        assert "payable_amount" not in response.json()

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from html import escape
 from io import BytesIO
 from typing import Any
 
@@ -117,6 +118,24 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
 
         gr.Markdown("#### PDF Cümlesinin Gerçek Sayfasını Göster (Onaysız Kanıt)")
         with gr.Row():
+            evidence_mode = gr.Radio(
+                choices=["Kural/Program Seçimi", "Doğrudan Cümle ID"],
+                value="Kural/Program Seçimi",
+                label="Kanıt Arama Yöntemi",
+            )
+        with gr.Row():
+            evidence_program = gr.Dropdown(
+                choices=[
+                    "BASIC_SUPPORT",
+                    "PLANNED_PRODUCTION",
+                    "WATER_RESTRICTION",
+                    "CERTIFIED_SEED",
+                    "CERTIFIED_SAPLING",
+                ],
+                value="BASIC_SUPPORT",
+                label="Destek Programı",
+            )
+            evidence_crop = gr.Textbox(label="Ürün Kodu (örn. BUĞDAY)", value="BUĞDAY")
             evidence_id = gr.Number(label="Kaydedilmiş cümle ID", value=1, precision=0, minimum=1)
             btn_evidence = gr.Button("Sarı İşaretli Sayfayı Göster", variant="secondary")
         evidence_status = gr.Markdown(
@@ -128,30 +147,69 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
             type="pil", interactive=False,
         )
 
-        def view_evidence(record_id: float, year: float):
+        def view_evidence(
+            mode: str, program_key: str, crop_code: str, record_id: float, year: float,
+        ):
             from PIL import Image
 
-            data = api_client.get_grounding_evidence(int(record_id), int(year))
-            if data.get("status") != "DRAFT_NEEDS_HUMAN_LEGAL_REVIEW":
+            target_year = int(year)
+            if mode == "Kural/Program Seçimi":
+                selected_crop = str(crop_code or "").strip().upper()
+                if not selected_crop:
+                    return "**Ürün kodu gereklidir; kanıt tahmin edilmez.**", None
+                data = api_client.get_grounding_by_program(
+                    str(program_key), target_year, crop_code=selected_crop,
+                )
+                if (
+                    data.get("program_key") != program_key
+                    or data.get("crop_code") != selected_crop
+                ):
+                    return "**Seçilen program/ürün için kanıt doğrulanamadı.**", None
+            elif mode == "Doğrudan Cümle ID":
+                if record_id is None or int(record_id) < 1:
+                    return "**Geçerli kaynak cümlesi ID gereklidir.**", None
+                data = api_client.get_grounding_evidence(int(record_id), target_year)
+            else:
+                return "**Geçersiz kanıt arama yöntemi.**", None
+
+            if (
+                data.get("status") != "DRAFT_NEEDS_HUMAN_LEGAL_REVIEW"
+                or data.get("legal_approval") is not False
+                or data.get("payable_amount") is not None
+                or data.get("production_year") != target_year
+            ):
                 return "**Kanıt bulunamadı veya henüz doğrulanmadı.**", None
-            raw = api_client.get_grounding_page_bytes(
-                int(record_id), int(data["page_number"]), int(year)
-            )
-            if not raw:
-                return "**Orijinal PDF sayfası doğrulanamadı.**", None
-            with Image.open(BytesIO(raw)) as rendered:
-                rendered.load()
-                picture = rendered.copy()
-            # Render as plain text (not unescaped HTML) to avoid injecting
-            # source document content into the local admin view.
+
+            try:
+                sentence_id = int(data["sentence_id"])
+                page_number = int(data["page_number"])
+                if sentence_id < 1 or page_number < 1:
+                    raise ValueError("Invalid source location")
+                raw = api_client.get_grounding_page_bytes(
+                    sentence_id, page_number, target_year,
+                )
+                if not raw:
+                    return "**Orijinal PDF sayfası doğrulanamadı.**", None
+                with Image.open(BytesIO(raw)) as rendered:
+                    rendered.load()
+                    picture = rendered.copy()
+                # Escape untrusted source text: Gradio Markdown must not treat
+                # the extracted PDF quote or document SHA as arbitrary HTML.
+                quoted = escape(str(data["exact_quote"]))
+                source_sha = escape(str(data["original_pdf_sha256"]))
+            except (KeyError, TypeError, ValueError, OSError):
+                return "**Kanıt sayfası okunamadı veya geçersiz.**", None
+
             return (
-                f"**DRAFT — Hukukî onay bekliyor** | Sayfa {data['page_number']} "
-                f"| SHA-256 `{data['original_pdf_sha256']}`"
-                f"\n\n**Birebir cümle:** {data['exact_quote']}",
+                f"**DRAFT — Hukukî onay bekliyor** | Sayfa {page_number} "
+                f"| SHA-256 `{source_sha}`"
+                f"\n\n**Birebir cümle:** {quoted}",
                 picture,
             )
+
         btn_evidence.click(
-            view_evidence, inputs=[evidence_id, legal_year],
+            view_evidence,
+            inputs=[evidence_mode, evidence_program, evidence_crop, evidence_id, legal_year],
             outputs=[evidence_status, evidence_image],
         )
 
