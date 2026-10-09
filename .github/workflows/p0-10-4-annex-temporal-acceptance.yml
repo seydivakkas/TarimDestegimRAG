@@ -1,0 +1,58 @@
+name: P0-10.4 EK-20 Visual Matrix and Multi-Year Legal Coverage HOLD
+
+on:
+  push:
+    branches:
+      - feat/p0-10-4-annex-temporal-coverage
+  pull_request:
+    branches:
+      - feat/p0-10-3-original-source-integrity
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  legal-index-and-visual-transcription:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      TARIM_RAG_LEGAL_ACTIVATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install focused audit dependencies
+        run: python -m pip install "pytest>=8,<10" "ruff>=0.6.9"
+      - name: Strict Ruff including new source inventory tests
+        run: ruff check scripts/p0_10_4_temporal_audit.py backend/tests/unit/test_p0_10_4_official_scope.py
+      - name: Compile auditor and tests
+        run: python -m compileall -q scripts/p0_10_4_temporal_audit.py backend/tests/unit/test_p0_10_4_official_scope.py
+      - name: Test source-linked 2026 EK-20 table and fail-closed 2025-2027 changes
+        run: python -m pytest backend/tests/unit/test_p0_10_4_official_scope.py -q -p no:cacheprovider
+      - name: Report unresolved production-year legal coverage
+        run: python scripts/p0_10_4_temporal_audit.py
+
+  fetch-three-missing-official-amendment-originals:
+    runs-on: ubuntu-latest
+    timeout-minutes: 24
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install original source structural parser
+        run: python -m pip install "pypdf>=5,<7" "beautifulsoup4>=4.12,<5" "ruff>=0.6.9"
+      - name: Ruff on additional-source collector
+        run: ruff check scripts/p0_10_4_direct_new_sources.py
+      - name: Directly collect 2025/13 10394 11781 original bytes and SHA-256
+        run: python scripts/p0_10_4_direct_new_sources.py
+      - name: Upload raw, original official amendments for independent examination
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p0-10-4-three-more-original-amendments
+          path: data/p0_10_4_additional_originals/
+          if-no-files-found: warn
+          retention-days: 90
