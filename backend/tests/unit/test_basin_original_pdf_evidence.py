@@ -86,7 +86,8 @@ def test_official_pdf_multiple_district_rows_when_installed(
 
     with pymupdf.open(stream=marked, filetype="pdf") as pdf:
         assert pdf.page_count == 81
-        annotations = list(pdf[page_no - 1].annots())
+        highlighted_page = pdf[page_no - 1]
+        annotations = list(highlighted_page.annots())
         assert len(annotations) == 2
         assert all(a.type[1] == "Square" for a in annotations)
     assert hashlib.sha256(original).hexdigest() == PINNED_BASIN_PDF_SHA256
