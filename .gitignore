@@ -51,6 +51,10 @@ data/snapshots/*
 !data/snapshots/.gitkeep
 data/reports/*
 !data/reports/.gitkeep
+data/legal_update_archive/*
+!data/legal_update_archive/.gitkeep
+data/releases/*
+!data/releases/.gitkeep
 data/*.db
 data/*.sqlite
 

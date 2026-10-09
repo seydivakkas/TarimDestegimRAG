@@ -385,6 +385,149 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
         btn_revoke_act.click(on_revoke_activation, inputs=[act_year, revoke_reason_input], outputs=[act_status_box, worm_audit_df])
 
         gr.Markdown("---")
+        gr.Markdown("### 🔐 Kurumsal Onay, HSM/KMS ve Güvenli Yayın Yönetimi (P0-13)")
+        gr.Markdown("""
+        Kurumsal anahtar yönetim servisleri (HSM/KMS), PostgreSQL rol/RLS ayrımı,
+        KMS mühürlü `.tar.gz` dağıtım paketleri, mahkeme/Sayıştay onaylı Hukuki Delil Paketi (ZIP)
+        ve gerekçeli iptal/geri alma protokolü.
+        """)
+
+        with gr.Row():
+            btn_kms_status = gr.Button("🔑 KMS/HSM Donanım Durumu", variant="secondary", interactive=local_admin)
+            btn_db_roles = gr.Button("🛡️ Veritabanı Rol & RLS Denetimi", variant="secondary", interactive=local_admin)
+            btn_export_vault = gr.Button("🏛️ Hukuki Delil Paketi Dışa Aktar (ZIP)", variant="secondary", interactive=local_admin)
+
+        enterprise_status_box = gr.Markdown("KMS ve veritabanı kurumsal durumunu denetlemek için yukarıdaki butonları kullanabilirsiniz.")
+
+        def on_kms_status_click() -> str:
+            if not local_admin:
+                return "**Erişim reddedildi:** KMS denetimi yönetici yetkisi gerektirir."
+            res = api_client.get_kms_status()
+            if res.get("status") == "ERROR":
+                return f"⚠️ **KMS Sorgu Hatası:** {res.get('message')}"
+            keys = res.get("keys", [])
+            lines = [
+                f"**Sağlayıcı:** `{res.get('provider_type')}` | **Aktif Anahtar Sayısı:** `{res.get('key_count')}`\n",
+                "| Anahtar ID | Takma Ad | Algoritma | Donanım Korumalı | Durum |",
+                "| :--- | :--- | :--- | :--- | :--- |",
+            ]
+            for k in keys:
+                hw = "✅ EVET (HSM/Vault)" if k.get("hardware_backed") else "💻 Yazılım (Yalıtılmış)"
+                st = "🟢 AKTİF" if k.get("is_enabled") else "🔴 PASİF"
+                lines.append(f"| `{k.get('key_id')}` | **{k.get('alias')}** | `{k.get('algorithm')}` | {hw} | {st} |")
+            return "\n".join(lines)
+
+        def on_db_roles_click() -> str:
+            if not local_admin:
+                return "**Erişim reddedildi:** Veritabanı denetimi yönetici yetkisi gerektirir."
+            res = api_client.audit_database_roles()
+            if res.get("status") == "ERROR":
+                return f"⚠️ **Veritabanı Rol Denetim Hatası:** {res.get('message')}"
+            lines = [
+                f"**Veritabanı Motoru:** `{res.get('database_dialect')}` | **Denetim Tarihi:** `{res.get('audited_at_utc')}`",
+                f"**DDL Komut Dosyası:** `{res.get('script_path')}` (Mevcut: `{res.get('script_available')}`)\n",
+                "**Tanımlı Kurumsal Roller:**",
+            ]
+            for r in res.get("defined_roles", []):
+                lines.append(f"- `{r.get('role_name')}`: {r.get('description')}")
+            lines.append("\n**Yetki Matrisi Doğrulama Özeti:**")
+            matrix = res.get("permission_matrix_audit", {})
+            for role_name, perms in matrix.items():
+                lines.append(f"- **{role_name}**: SELECT={perms.get('can_select')}, INSERT={perms.get('can_insert')}, UPDATE={perms.get('can_update')}, DELETE={perms.get('can_delete')}")
+            return "\n".join(lines)
+
+        def on_export_vault_click() -> str:
+            if not local_admin:
+                return "**Erişim reddedildi:** Delil paketi dışa aktarma yönetici yetkisi gerektirir."
+            res = api_client.export_evidence_vault(production_year=2026, signer_officer="ChiefLegalAuditor", key_alias="legal-approver")
+            if res.get("status") == "ERROR":
+                return f"⚠️ **Delil Paketi Oluşturma Hatası:** {res.get('message')}"
+            return (
+                f"✅ **Hukuki Delil Paketi Başarıyla Mühürlendi ve Dışa Aktarıldı:**\n\n"
+                f"- **Dosya Adı:** `{res.get('vault_filename')}`\n"
+                f"- **Yerel Dosya Yolu:** `{res.get('vault_path')}`\n"
+                f"- **Kapsam:** 2026 Üretim Yılı Resmî Mevzuatı, Onaylı Dinamik Kurallar, WORM Blok Zinciri, SHA-256 Sağlama ve KMS İmzası."
+            )
+
+        btn_kms_status.click(on_kms_status_click, outputs=[enterprise_status_box])
+        btn_db_roles.click(on_db_roles_click, outputs=[enterprise_status_box])
+        btn_export_vault.click(on_export_vault_click, outputs=[enterprise_status_box])
+
+        with gr.Accordion("📦 KMS Mühürlü Güvenli Yayın Paketi & Saha Dağıtımı", open=False):
+            with gr.Row():
+                rel_year = gr.Number(label="Üretim Yılı", value=2026, precision=0, minimum=2020, maximum=2100)
+                rel_key_alias = gr.Dropdown(label="KMS İmza Anahtarı", choices=["release-master", "legal-approver"], value="release-master")
+                btn_build_release = gr.Button("🚀 Yayın Paketi Mühürle (.tar.gz)", variant="primary", interactive=local_admin)
+            release_output_box = gr.Markdown("Henüz yayın paketi oluşturulmadı.")
+
+            def on_build_release(year: float, key_alias: str) -> str:
+                if not local_admin:
+                    return "**Erişim reddedildi:** Yayın paketi oluşturma yönetici yetkisi gerektirir."
+                res = api_client.build_secure_release(production_year=int(year), key_alias=key_alias, enforce_verified_only=True)
+                if res.get("status") == "ERROR":
+                    return f"⚠️ **Yayın Paketi Oluşturulamadı:** {res.get('message')}"
+                return (
+                    f"✅ **Güvenli Yayın Paketi Başarıyla Mühürlendi:**\n\n"
+                    f"- **Paket Adı:** `{res.get('archive_name')}`\n"
+                    f"- **Yol:** `{res.get('archive_path')}`\n"
+                    f"- **İmzalayan:** KMS `{key_alias}`\n"
+                    f"- **Güvenlik Politikası:** Yalnızca VERIFIED statüsündeki kurallar dahil edildi (Fail-Closed)."
+                )
+
+            btn_build_release.click(on_build_release, inputs=[rel_year, rel_key_alias], outputs=[release_output_box])
+
+        with gr.Accordion("⚠️ Gerekçeli Kurumsal İptal / Geri Alma (Hukuki Taksonomi)", open=False):
+            with gr.Row():
+                ent_rule_id = gr.Textbox(label="İptal Edilecek Kural ID", placeholder="Örn: R2026-MAZOT-GUBRE-001")
+                ent_reason_code = gr.Dropdown(
+                    label="Hukuki İptal Gerekçesi",
+                    choices=[
+                        "COURT_STAY_OF_EXECUTION",
+                        "REGULATION_AMENDED",
+                        "BUDGET_EXHAUSTION",
+                        "CLERICAL_ERROR",
+                        "ADMINISTRATIVE_SUSPENSION",
+                    ],
+                    value="COURT_STAY_OF_EXECUTION",
+                )
+            with gr.Row():
+                ent_legal_ref = gr.Textbox(label="Resmî Karar / Evrak Numarası", placeholder="Örn: Danıştay 10. Daire Esas No: 2026/1042")
+                ent_officer = gr.Textbox(label="Yetkili Denetçi / Müsteşar", value="Bakanlık Başhukuk Müşaviri")
+            with gr.Row():
+                btn_ent_revoke = gr.Button("⛔ Kurumsal İptal Sertifikası İmzala & Yürürlükten Kaldır", variant="stop", interactive=local_admin)
+            ent_revoke_output = gr.Markdown("İptal sertifikası düzenlendiğinde burada görüntülenecektir.")
+
+            def on_enterprise_revoke(rule_id: str, reason: str, legal_ref: str, officer: str) -> str:
+                if not local_admin:
+                    return "**Erişim reddedildi:** İptal işlemi yönetici yetkisi gerektirir."
+                if not rule_id.strip() or not legal_ref.strip():
+                    return "⚠️ **Eksik Bilgi:** Lütfen Kural ID ve Resmî Karar Numarasını giriniz."
+                res = api_client.enterprise_revoke(
+                    rule_id=rule_id.strip(),
+                    reason_code=reason,
+                    legal_reference=legal_ref.strip(),
+                    authorized_officer=officer.strip(),
+                )
+                if res.get("status") == "ERROR":
+                    return f"⚠️ **İptal Başarısız:** {res.get('message')}"
+                cert = res.get("certificate", {})
+                return (
+                    f"✅ **Kurumsal İptal Sertifikası Düzenlendi ve Kural Yürürlükten Kaldırıldı (REVOKED):**\n\n"
+                    f"- **Sertifika ID:** `{cert.get('certificate_id')}`\n"
+                    f"- **Kural ID:** `{cert.get('rule_id')}`\n"
+                    f"- **Gerekçe:** `{cert.get('reason_title')}` (`{cert.get('reason_code')}`)\n"
+                    f"- **Hukuki Dayanak:** `{cert.get('legal_reference')}`\n"
+                    f"- **KMS İmza:** `{cert.get('kms_signature_hex')[:32]}...`\n"
+                    f"- **Denetim İzi:** WORM kütüğüne işlendi."
+                )
+
+            btn_ent_revoke.click(
+                on_enterprise_revoke,
+                inputs=[ent_rule_id, ent_reason_code, ent_legal_ref, ent_officer],
+                outputs=[ent_revoke_output],
+            )
+
+        gr.Markdown("---")
         gr.Markdown("""
         ### 🧪 Deterministik Kural Motoru Benchmark Test Seti (100 Vaka)
         100 farklı çiftçi/parsel senaryosunda (ÇKS eksikliği, havza uyumsuzluğu, sertifikasız tohum vb.)

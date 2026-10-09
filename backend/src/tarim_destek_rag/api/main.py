@@ -1166,3 +1166,169 @@ def get_worm_audit_log(
     }
 
 
+# ---------------------------------------------------------------------------
+# P0-13: Gerçek Kurumsal Onay, HSM/KMS ve Güvenli Yayın Uç Noktaları
+# ---------------------------------------------------------------------------
+
+class BuildReleaseRequest(BaseModel):
+    production_year: int = Field(default=2026, ge=2020, le=2100)
+    key_alias: str = "release-master"
+    enforce_verified_only: bool = True
+
+
+class VerifyReleaseRequest(BaseModel):
+    package_path: str
+    expected_key_alias: str | None = "release-master"
+
+
+class EnterpriseRevokeRequest(BaseModel):
+    rule_id: str
+    reason_code: str
+    legal_reference: str
+    authorized_officer: str
+    notes: str = ""
+    key_alias: str = "legal-approver"
+
+
+@app.get("/admin/enterprise/kms/status", tags=["Kurumsal Onay & Güvenli Yayın (P0-13)"])
+def get_kms_status(
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """KMS / HSM donanım güvenlik modülü durumunu ve kayıtlı anahtarları listeler."""
+    from tarim_destek_rag.security.kms_provider import get_kms_provider
+
+    kms = get_kms_provider()
+    keys = kms.list_keys()
+    return {
+        "provider_type": type(kms).__name__,
+        "key_count": len(keys),
+        "keys": [
+            {
+                "key_id": k.key_id,
+                "alias": k.alias,
+                "algorithm": k.algorithm,
+                "created_at_utc": k.created_at_utc,
+                "is_enabled": k.is_enabled,
+                "hardware_backed": k.hardware_backed,
+                "public_key_b64": k.public_key_b64,
+            }
+            for k in keys
+        ],
+    }
+
+
+@app.get("/admin/enterprise/db-roles/audit", tags=["Kurumsal Onay & Güvenli Yayın (P0-13)"])
+def audit_database_roles(
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """PostgreSQL kurumsal rol ve RLS ayrım matrisini denetler."""
+    from tarim_destek_rag.security.database_roles import get_database_role_manager
+
+    manager = get_database_role_manager()
+    return manager.audit_roles()
+
+
+@app.post("/admin/enterprise/release/build", tags=["Kurumsal Onay & Güvenli Yayın (P0-13)"])
+def build_secure_release(
+    request: BuildReleaseRequest,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """KMS mühürlü güvenli yayın paketi oluşturur (.tar.gz)."""
+    from tarim_destek_rag.security.secure_release import get_secure_release_manager
+
+    rel_mgr = get_secure_release_manager()
+    try:
+        archive_path = rel_mgr.build_release_package(
+            production_year=request.production_year,
+            key_alias=request.key_alias,
+            enforce_verified_only=request.enforce_verified_only,
+        )
+        return {
+            "status": "SEALED_SUCCESSFULLY",
+            "production_year": request.production_year,
+            "archive_path": str(archive_path),
+            "archive_name": archive_path.name,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Yayın paketi oluşturma hatası: {exc}")
+
+
+@app.post("/admin/enterprise/release/verify", tags=["Kurumsal Onay & Güvenli Yayın (P0-13)"])
+def verify_secure_release(
+    request: VerifyReleaseRequest,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """KMS mühürlü yayın paketini fail-closed kriptografik doğrulamadan geçirir."""
+    from tarim_destek_rag.security.secure_release import get_secure_release_manager
+
+    rel_mgr = get_secure_release_manager()
+    pkg_path = Path(request.package_path)
+    is_valid, reason, metadata = rel_mgr.verify_release_package(
+        package_path=pkg_path,
+        expected_key_alias=request.expected_key_alias,
+    )
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=f"Kriptografik Doğrulama Reddedildi: {reason}")
+    return {
+        "status": "VERIFIED",
+        "reason": reason,
+        "metadata": metadata,
+    }
+
+
+@app.post("/admin/enterprise/revoke/enterprise", tags=["Kurumsal Onay & Güvenli Yayın (P0-13)"])
+def enterprise_revoke_rule(
+    request: EnterpriseRevokeRequest,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Hukuki gerekçe taksonomisi ve KMS imzalı sertifika ile kuralı derhal iptal eder."""
+    from tarim_destek_rag.security.revocation_manager import get_enterprise_revocation_manager
+
+    rev_mgr = get_enterprise_revocation_manager()
+    try:
+        cert = rev_mgr.revoke_rule(
+            rule_id=request.rule_id,
+            reason_code=request.reason_code,
+            legal_reference=request.legal_reference,
+            authorized_officer=request.authorized_officer,
+            notes=request.notes,
+            key_alias=request.key_alias,
+        )
+        return {
+            "status": "REVOKED_SUCCESSFULLY",
+            "certificate": cert.to_dict(),
+        }
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"İptal işlemi hatası: {exc}")
+
+
+@app.get("/admin/enterprise/evidence-vault/export", tags=["Kurumsal Onay & Güvenli Yayın (P0-13)"])
+def export_evidence_vault(
+    production_year: int = 2026,
+    signer_officer: str = "ChiefLegalAuditor",
+    key_alias: str = "legal-approver",
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Mahkeme ve resmi denetime hazır imzalı Hukuki Delil Paketi (ZIP) dışa aktarır."""
+    from tarim_destek_rag.security.enterprise_worm import get_enterprise_worm_archive
+
+    archive = get_enterprise_worm_archive()
+    try:
+        zip_path = archive.export_legal_evidence_vault(
+            production_year=production_year,
+            signer_officer=signer_officer,
+            key_alias=key_alias,
+        )
+        return {
+            "status": "EVIDENCE_VAULT_EXPORTED",
+            "production_year": production_year,
+            "vault_path": str(zip_path),
+            "vault_filename": zip_path.name,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Delil paketi oluşturma hatası: {exc}")
+
+
+

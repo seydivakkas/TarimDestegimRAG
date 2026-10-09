@@ -407,6 +407,121 @@ class ApiClient:
         except Exception as exc:
             return {"status": "ERROR", "message": str(exc), "history": []}
 
+    # -----------------------------------------------------------------------
+    # P0-13: Gerçek Kurumsal Onay, HSM/KMS ve Güvenli Yayın İstemci Yöntemleri
+    # -----------------------------------------------------------------------
+
+    def get_kms_status(self) -> dict[str, Any]:
+        """Fetch KMS / HSM provider status and registered keys."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            resp = self._request("GET", "/admin/enterprise/kms/status", headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc), "keys": []}
+
+    def audit_database_roles(self) -> dict[str, Any]:
+        """Audit PostgreSQL enterprise roles, grants, and RLS policies."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            resp = self._request("GET", "/admin/enterprise/db-roles/audit", headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def build_secure_release(
+        self,
+        production_year: int = 2026,
+        key_alias: str = "release-master",
+        enforce_verified_only: bool = True,
+    ) -> dict[str, Any]:
+        """Build cryptographically sealed release bundle via KMS."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            body = {
+                "production_year": production_year,
+                "key_alias": key_alias,
+                "enforce_verified_only": enforce_verified_only,
+            }
+            resp = self._request("POST", "/admin/enterprise/release/build", json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def verify_secure_release(
+        self,
+        package_path: str,
+        expected_key_alias: str = "release-master",
+    ) -> dict[str, Any]:
+        """Verify cryptographic integrity and KMS seal of a release package."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            body = {
+                "package_path": package_path,
+                "expected_key_alias": expected_key_alias,
+            }
+            resp = self._request("POST", "/admin/enterprise/release/verify", json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def enterprise_revoke(
+        self,
+        rule_id: str,
+        reason_code: str,
+        legal_reference: str,
+        authorized_officer: str,
+        notes: str = "",
+        key_alias: str = "legal-approver",
+    ) -> dict[str, Any]:
+        """Execute enterprise rule revocation with reason taxonomy and KMS certificate."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            body = {
+                "rule_id": rule_id,
+                "reason_code": reason_code,
+                "legal_reference": legal_reference,
+                "authorized_officer": authorized_officer,
+                "notes": notes,
+                "key_alias": key_alias,
+            }
+            resp = self._request("POST", "/admin/enterprise/revoke/enterprise", json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def export_evidence_vault(
+        self,
+        production_year: int = 2026,
+        signer_officer: str = "ChiefLegalAuditor",
+        key_alias: str = "legal-approver",
+    ) -> dict[str, Any]:
+        """Export signed, court-admissible legal evidence vault (ZIP)."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            params = {
+                "production_year": production_year,
+                "signer_officer": signer_officer,
+                "key_alias": key_alias,
+            }
+            resp = self._request("GET", "/admin/enterprise/evidence-vault/export", params=params, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+
 
 
 
