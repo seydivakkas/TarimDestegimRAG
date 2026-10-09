@@ -151,9 +151,14 @@ def _assert_structure(document: dict, body: bytes, mime: str) -> dict:
         # A genuine page with scanned/image-only text remains INCOMPLETE, not a match.
         pdf_text = "\n".join((p.extract_text() or "") for p in pdf.pages)
         marker_ok = not marker or marker.casefold() in pdf_text.casefold()
-        if marker and not marker_ok:
-            raise SourceIntegrityError("Expected annex text marker missing (OCR REVIEW)")
-        return {"page_count": page_count, "pdf_text_marker_verified": marker_ok}
+        # A genuine scanned/embedded annex may lack extractable text. Preserve
+        # its independently fetched original bytes and exact SHA-256, but keep
+        # semantic verification on HOLD until page/table inspection is completed.
+        return {
+            "page_count": page_count,
+            "pdf_text_marker_verified": marker_ok,
+            "semantic_review_required": bool(marker and not marker_ok),
+        }
     if mime not in ("text/html", "application/xhtml+xml"):
         raise SourceIntegrityError("Unexpected HTML source MIME")
     if b"<html" not in body[:16384].lower():
@@ -200,6 +205,12 @@ def collect(
             _atomic_bytes(target / "originals" / (digest + suffix), body)
             if "html_links" in structure:
                 html_links[source_id] = set(structure.pop("html_links"))
+            if structure.get("semantic_review_required"):
+                failures.append({
+                    "id": source_id,
+                    "stage": "ANNEX_SEMANTIC_CONTENT",
+                    "error": "Original PDF byte hash archived but EK-20 text/table not verified",
+                })
             results.append(
                 {
                     "id": source_id,
