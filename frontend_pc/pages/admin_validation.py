@@ -17,6 +17,10 @@ from frontend_pc.services.benchmark_service import (
     load_benchmark_data,
 )
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+IMG_FULLSTACK = os.path.join(PROJECT_ROOT, "proje_tanıtım_resim", "Xiaohei_FullStack_Sistem_Mimarisi_TR.jpg")
+IMG_EVIDENCE = os.path.join(PROJECT_ROOT, "proje_tanıtım_resim", "Xiaohei_Hukuki_Delil_ve_Veri_Hatti_TR.jpg")
+
 
 def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.components.Component]:
     """Yönetim & Doğrulama sekmesini inşa eder ve bileşen sözlüğünü döner."""
@@ -604,7 +608,41 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
         - **Belge İçi Renkli İşaretleme Sistemi:** Hak kazanma hükümleri 🟢 yeşil, ret ve yasak hükümleri 🔴 kırmızı, birim tutarlar 🟡 kehribar ve yasal merciler 🔵 mavi ile işaretlenerek mutlak şeffaflık sağlanır.
         - **Hibrit Arama Motoru:** `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` + `FAISS` ve `BM25Plus` ile Reciprocal Rank Fusion birleşimi (MRR=1.0000).
         - **Çok Platformlu Mimari:** Arka uç FastAPI bağımsız REST API olarak çalışır; PC Paneli ve Flutter mobil istemcisi aynı çekirdeği paylaşır.
+        """)
 
+        with gr.Accordion("🎨 Ian Xiaohei Stili Full-Stack Sistem Mimarisi & Hukuki Delil Hattı İllüstrasyonları", open=True):
+            gr.Markdown(
+                "Sistemin bilişsel eylemleri, karar kilitleri ve adli kanıt zinciri "
+                "[Ian Xiaohei felsefesi](https://github.com/helloianneo/ian-xiaohei-illustrations) ile görselleştirilmiştir."
+            )
+            with gr.Tabs():
+                with gr.TabItem("🏗️ Full-Stack Sistem Mimarisi"):
+                    if os.path.exists(IMG_FULLSTACK):
+                        gr.Image(
+                            value=IMG_FULLSTACK,
+                            label="TarımDesteğimRAG Full-Stack Mimari Şeması (Türkçe - Ian Xiaohei Stili)",
+                            show_label=True,
+                            interactive=False,
+                        )
+                    gr.Markdown("""
+                    **Bileşen Akışı:** İstemci (Gradio/Flutter) → API Ağ Geçidi & Rol Denetimi → Bitemporal Zaman Saati → Çift Onaylı Noter Kasası → Üç Konumlu Mantık Şalteri (Pass/Fail/Review) → Değiştirilemez WORM Kütüğü & HSM Mühürleme.  
+                    *Ayrıntılı teknik döküm için:* [`docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md`](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md)
+                    """)
+
+                with gr.TabItem("⚖️ Hukuki Delil ve Veri Hattı"):
+                    if os.path.exists(IMG_EVIDENCE):
+                        gr.Image(
+                            value=IMG_EVIDENCE,
+                            label="Veri, Hukuki Kanıt ve Çiftçi Açıklanabilirlik Akışı (Türkçe - Ian Xiaohei Stili)",
+                            show_label=True,
+                            interactive=False,
+                        )
+                    gr.Markdown("""
+                    **Bileşen Akışı:** Resmî Gazete Sunucusu (1.436.150 B) → SHA-256 Bayt Terazisi (Hash uyuşmazlığında HOLD) → BM25+FAISS Hibrit Arama → Kuruş Hassasiyetli Formül Masası → PDF Koordinatlı Sarı Vurgulama → Mahkeme Mühürlü Adli Delil Kasası.  
+                    *Ayrıntılı teknik döküm için:* [`docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md`](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md)
+                    """)
+
+        gr.Markdown("""
         ---
         ### 📜 Telif Hakkı ve Lisans Bildirimi
         ```

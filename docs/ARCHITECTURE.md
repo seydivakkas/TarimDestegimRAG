@@ -9,6 +9,12 @@
 
 TarımDestekRAG, Türkiye'deki 2026 bitkisel üretim desteklerine ilişkin mevzuat hükümlerini ve çiftçi verilerini deterministik olarak işleyen, hibrit RAG destekli bir karar destek sistemidir.
 
+Tüm sistem bileşenleri, [helloianneo/ian-xiaohei-illustrations](https://github.com/helloianneo/ian-xiaohei-illustrations) felsefesine uygun olarak 16:9 minimalist infografik mimariyle modellenmiştir:
+
+![TarımDesteğimRAG Full-Stack Mimari Şeması (Türkçe - Ian Xiaohei Stili)](../proje_tanıtım_resim/Xiaohei_FullStack_Sistem_Mimarisi_TR.jpg)
+
+> 📖 **Detaylı Mimari İnceleme ve Kaynak Kod Karşılıkları:** Her bir katmanın güvenlik kuralları ve kaynak dosya eşleştirmeleri için [P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md](P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md) raporuna başvurunuz.
+
 ```text
 Resmî Kaynaklar (Resmî Gazete, BÜGEM)
            │
@@ -49,7 +55,20 @@ Resmî Kaynaklar (Resmî Gazete, BÜGEM)
 
 ---
 
-## 2. Değiştirilemez İlke: Zero-LLM Karar Motoru
+## 2. Hukuki Delil ve Veri Akış Hattı
+
+Resmî Gazete'den çiftçinin ekranına ve mahkeme adli delil kasasına uzanan veri ve ispat zinciri:
+
+![Veri, Hukuki Kanıt ve Çiftçi Açıklanabilirlik Akışı (Türkçe - Ian Xiaohei Stili)](../proje_tanıtım_resim/Xiaohei_Hukuki_Delil_ve_Veri_Hatti_TR.jpg)
+
+1. **SHA-256 Bayt Terazisi:** 1.436.150 baytlık Resmî Gazete PDF'i bayt bayt tartılır, hash uyuşmazlığında sistem FAIL-CLOSED durumuna geçer.
+2. **Hibrit Arama:** BM25 ve çok dilli FAISS indeksleri üzerinden RRF birleşimiyle mevzuat hükümleri taranır.
+3. **Şeffaf İspat Masası:** Çiftçinin hak ediş tutarı (`50 da x 244 TL = 12.200 TL`) kuruş hassasiyetiyle hesaplanır ve Resmî Gazete PDF'inde sarı vurgu ile koordinat bazlı işaretlenir.
+4. **Adli Delil Kasası:** Merkle kökü özetleri periyodik checkpoint'lerle taşa kazınır (WORM) ve mahkemeye sunulabilir mühürlü arşiv üretilir.
+
+---
+
+## 3. Değiştirilemez İlke: Zero-LLM Karar Motoru
 
 Sistemde uygunluk kararları ve tutar hesaplamaları için **asla yapay zeka/LLM tahmini kullanılmaz**:
 
@@ -63,7 +82,7 @@ LLM != Eligibility Decision
 
 ---
 
-## 3. Hibrit Arama ve Bilgi Getirme (Hybrid Retrieval)
+## 4. Hibrit Arama ve Bilgi Getirme (Hybrid Retrieval)
 
 Bilgi getirme motoru, sözcüksel ve yoğun anlamsal aramayı **Reciprocal Rank Fusion (RRF)** ile birleştirir:
 
@@ -75,7 +94,7 @@ $$RRF\_Score(d) = \frac{w_{\text{dense}}}{60 + \text{rank}_{\text{dense}}(d)} + 
 
 ---
 
-## 4. Kullanıcı Arayüzleri
+## 5. Kullanıcı Arayüzleri
 
 1. **PC Web Arayüzü (Gradio):** 9 sekmeli masaüstü yönetim paneli:
    - Tekil Parsel Değerlendirme

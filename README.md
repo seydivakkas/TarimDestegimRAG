@@ -63,6 +63,25 @@ TarımDesteğimRAG, standart yapay zeka arama veya sohbet robotlarından (Chatbo
 
 ---
 
+## 🏛️ Ian Xiaohei Felsefesiyle Full-Stack Sistem Mimarisi ve Hukuki Delil Hattı
+
+> **"Bir sistemi anlamak; karar kilitlerini, veri akışını ve adli kanıt zincirini adım adım görmektir."**  
+> Projemizin tüm uçtan uca mekanizması ve mevzuat kanıt hattı, [helloianneo/ian-xiaohei-illustrations](https://github.com/helloianneo/ian-xiaohei-illustrations) felsefesiyle hazırlanan Türkçe el çizimi infografiklerle somutlaştırılmıştır.
+
+### 1. 🏗️ Büyük Resim: Full-Stack Uçtan Uca Sistem Mimarisi
+Gradio Web & Flutter mobil istemcilerinden başlayarak, FastAPI Güvenlik Ağ Geçidi, Bitemporal Zaman Saati, Çift Onaylı Hukuki Noter Kasası, Üç Konumlu Mantık Şalteri, Merkle Kökü Doğrulamalı WORM Kütüğü ve Donanımsal HSM Mühürleme mekanizmasını içeren tam katmanlı mimari:
+
+![TarımDesteğimRAG Full-Stack Mimari Şeması (Türkçe - Ian Xiaohei Stili)](proje_tanıtım_resim/Xiaohei_FullStack_Sistem_Mimarisi_TR.jpg)
+
+### 2. ⚖️ Veri, Hukuki Kanıt ve Çiftçi Açıklanabilirlik Akışı
+1.436.150 baytlık Resmî Gazete Karar 8859 PDF'inin SHA-256 bayt terazisinde tartılmasından, BM25+FAISS hibrit aramasından, kuruş hassasiyetli formül hesabından ve mahkemeye sunulabilir mühürlü adli delil kasasına aktarılmasına kadar uzanan deterministik boru hattı:
+
+![Veri, Hukuki Kanıt ve Çiftçi Açıklanabilirlik Akışı (Türkçe - Ian Xiaohei Stili)](proje_tanıtım_resim/Xiaohei_Hukuki_Delil_ve_Veri_Hatti_TR.jpg)
+
+> 📖 **Detaylı Mimari İnceleme ve Kaynak Dosya Eşleştirmeleri:** Şemadaki tüm modüllerin projedeki gerçek Python dosyaları ve güvenlik garantileri için [P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md](docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md) teknik raporunu inceleyebilirsiniz.
+
+---
+
 ## 🎨 Renk Kodlu Metin İçi Kanıt ve Madde İşaretleme Sistemi (In-Document Color Highlighting)
 
 Sistemimiz, mevzuat metinlerini ve gerekçe alıntılarını yalnızca statik metin olarak sunmaz. Kararı etkileyen her bir koşulu, yasal hükmü ve parasal değeri renk kodlarıyla görselleştirir:
@@ -204,6 +223,7 @@ flutter run
 
 ## 📁 Mimari ve Dokümantasyon
 
+- [🎨 Ian Xiaohei Full-Stack Mimari ve Delil Hattı Analizi (P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md)](docs/P0_14_IAN_XIAOHEI_FULLSTACK_ARCHITECTURE.md)
 - [Sistem Mimarisi (ARCHITECTURE.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/ARCHITECTURE.md)
 - [Mevzuat Kural Kataloğu (rule_catalog.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/rule_catalog.md)
 - [REST API Sözleşmesi (api_contract.md)](file:///c:/Users/seydieryilmaz/TarımRAGProje/docs/api_contract.md)
