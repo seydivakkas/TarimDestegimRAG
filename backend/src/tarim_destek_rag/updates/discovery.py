@@ -183,6 +183,50 @@ def scan_official_sources(
                 else:
                     _atomic_write(archive, data)
                 inventory[url] = digest
+                from tarim_destek_rag.updates.legislation_analyzer import LegislationAnalyzer
+                from tarim_destek_rag.updates.legislation_repository import (
+                    LegislationCatalogRepository,
+                )
+
+                leg_summary = None
+                effective_from = None
+                try:
+                    analysis = LegislationAnalyzer.analyze_document(data, url, content_type)
+                    LegislationCatalogRepository(output).save(analysis)
+                    effective_from = analysis.effective_dates.effective_date
+                    leg_summary = {
+                        "legislation_type": analysis.identity.legislation_type.value,
+                        "number": analysis.identity.number,
+                        "title": analysis.identity.title,
+                        "rg_date": analysis.identity.rg_date,
+                        "rg_number": analysis.identity.rg_number,
+                        "authority": analysis.identity.authority,
+                        "effective_date": effective_from,
+                        "valid_production_years": analysis.effective_dates.valid_production_years,
+                        "amendment_target": (
+                            analysis.amendment_target.base_legislation_no
+                            if analysis.amendment_target
+                            else None
+                        ),
+                        "modified_articles": (
+                            analysis.amendment_target.modified_articles
+                            if analysis.amendment_target
+                            else []
+                        ),
+                        "annex_tables_count": len(analysis.annex_tables),
+                        "annex_tables": [
+                            {
+                                "annex_code": a.annex_code,
+                                "title": a.title,
+                                "table_kind": a.table_kind.value,
+                                "page_number": a.page_number,
+                            }
+                            for a in analysis.annex_tables
+                        ],
+                    }
+                except Exception:
+                    pass
+
                 discovered.append({
                     "source_id": portal.source_id, "source_url": url,
                     "source_title": title, "mime_type": content_type,
@@ -190,8 +234,9 @@ def scan_official_sources(
                     "status": status,
                     "archive_relative": str(archive.relative_to(output)),
                     "legal_status": "DRAFT_NEEDS_CLAUSE_AND_HUMAN_REVIEW",
-                    "legal_effective_from": None,
+                    "legal_effective_from": effective_from,
                     "verified_rates_imported": False,
+                    "legislation_analysis": leg_summary,
                 })
             except Exception as exc:
                 failures.append({"source": portal.source_id, "url": url, "error": str(exc)})

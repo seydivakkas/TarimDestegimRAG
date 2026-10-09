@@ -75,12 +75,45 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
             result = api_client.scan_legal_updates(int(year))
             if result.get("status") in ("ERROR", "ADMIN_NOT_CONFIGURED"):
                 return "**Tarama çalışmadı:** " + str(result.get("message", ""))
-            return (
-                f"**DRAFT tarama:** {result.get('new_or_changed', 0)} yeni/değişen belge; "
-                f"{len(result.get('documents', []))} kontrol; "
-                f"{len(result.get('errors', []))} hata. "
-                "Destek fiyatları ve koşulları **güncellenmedi**."
+
+            docs = result.get("documents", [])
+            output_lines = [
+                f"**DRAFT Tarama Tamamlandı:** {result.get('new_or_changed', 0)} yeni/değişen belge | "
+                f"Toplam: {len(docs)} belge kontrol edildi | {len(result.get('errors', []))} hata.",
+                "\n### 🏛️ Keşfedilen Resmî Mevzuat Belgeleri ve Ek Tablolar:\n",
+            ]
+            if not docs:
+                output_lines.append("_Bu portallarda belirtilen yıl için yeni mevzuat belgesi bulunamadı._")
+            else:
+                for doc in docs:
+                    analysis = doc.get("legislation_analysis") or {}
+                    l_type = analysis.get("legislation_type", "BELGE")
+                    l_no = analysis.get("number") or "Numara Belirtilmemiş"
+                    l_title = analysis.get("title") or doc.get("source_title", "Başlıksız")
+                    eff_date = analysis.get("effective_date") or "Belirtilmemiş"
+                    rg_date = analysis.get("rg_date") or "-"
+                    rg_no = analysis.get("rg_number") or "-"
+                    annexes = analysis.get("annex_tables", [])
+                    amend = analysis.get("amendment_target")
+
+                    line = (
+                        f"- **[{l_type}]** {l_title} (No: `{l_no}`)\n"
+                        f"  - **Resmî Gazete:** {rg_date} / Sayı: {rg_no} | **Yürürlük Tarihi:** `{eff_date}`\n"
+                    )
+                    if amend:
+                        mods = ", ".join(analysis.get("modified_articles", []))
+                        line += f"  - **Değişiklik Hedefi:** {amend} sayılı ana mevzuat (Değişen maddeler: {mods or 'Genel'})\n"
+                    if annexes:
+                        tab_str = ", ".join(f"`{a.get('annex_code')}`: {a.get('title')}" for a in annexes[:3])
+                        line += f"  - **Tespit Edilen Ek Tablolar ({len(annexes)} adet):** {tab_str}\n"
+                    output_lines.append(line)
+
+            output_lines.append(
+                "\n> ⚠️ **Hukuki Güvenlik Notu:** Bu veriler taslak (DRAFT) olarak arşivlenmiştir. "
+                "İki yetkili imzası ve WORM kaydı olmaksızın hak edişe veya hesaplamaya dönüştürülemez."
             )
+            return "\n".join(output_lines)
+
         btn_scan_year.click(on_scan_year, inputs=[legal_year], outputs=[scan_status])
 
         gr.Markdown("#### PDF Cümlesinin Gerçek Sayfasını Göster (Onaysız Kanıt)")
