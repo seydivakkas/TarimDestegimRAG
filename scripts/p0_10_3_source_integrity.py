@@ -13,9 +13,11 @@ import json
 import os
 import re
 import tempfile
+import time
 from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.error import URLError
 from urllib.parse import urljoin, urlsplit
 from urllib.request import HTTPRedirectHandler, Request, build_opener
 
@@ -70,13 +72,27 @@ def fetch_original(url: str) -> tuple[bytes, str]:
             "Accept": "application/pdf,text/html;q=0.9",
         },
     )
-    with build_opener(_NoRedirect,).open(request, timeout=25) as response:
-        if response.geturl() != url:
-            raise SourceIntegrityError("Unexpected final source URL")
-        if response.headers.get("Content-Encoding", "identity").lower() != "identity":
-            raise SourceIntegrityError("Compressed response is not a raw document identity body")
-        mime = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
-        body = response.read(MAX_BYTES + 1)
+    last_error: OSError | None = None
+    # Bounded retries handle transient Gazette transfer stalls, not HTTP redirects.
+    for attempt in range(3):
+        try:
+            with build_opener(_NoRedirect).open(request, timeout=45) as response:
+                if response.geturl() != url:
+                    raise SourceIntegrityError("Unexpected final source URL")
+                if response.headers.get("Content-Encoding", "identity").lower() != "identity":
+                    raise SourceIntegrityError(
+                        "Compressed response is not a raw document identity body"
+                    )
+                mime = response.headers.get("Content-Type", "").split(";")[0].strip().lower()
+                body = response.read(MAX_BYTES + 1)
+            break
+        except (TimeoutError, URLError) as exc:
+            last_error = exc
+            if attempt >= 2:
+                raise SourceIntegrityError(
+                    "Official origin unavailable after three bounded TLS fetch attempts"
+                ) from last_error
+            time.sleep(2 * (attempt + 1))
     if not body or len(body) > MAX_BYTES:
         raise SourceIntegrityError("Empty or oversized official document")
     return body, mime
@@ -123,8 +139,9 @@ def _assert_structure(document: dict, body: bytes, mime: str) -> dict:
             raise SourceIntegrityError("PDF magic/trailer missing")
         if mime not in ("application/pdf", "application/octet-stream"):
             raise SourceIntegrityError("Incorrect PDF response MIME")
-        from pypdf import PdfReader
         from io import BytesIO
+
+        from pypdf import PdfReader
 
         pdf = PdfReader(BytesIO(body), strict=True)
         if not pdf.pages:
