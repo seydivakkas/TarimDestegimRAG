@@ -25,3 +25,25 @@ python -m tarim_destek_rag.citations.exact_index --support-id BASIC_SUPPORT_2026
 **Sınırlar:** `2024/39` resmî HTML ve taranmış/görüntü PDF'ler için ayrıca belge türüne özel orijinal metin/render/OCR koordinat indeksi gerekir. Mevcut işaretleme ilk aşamada yalnız metin katmanı bulunan **orijinal PDF** dosyalarını kapsar. `EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW` metnin kaynaktaki yerini kanıtlar; hükmün yürürlük/geçerlilik/uygunluk onayını değil.
 
 **Yanıltıcı eski kontrol linkleri:** Arayüzde kural durum satırları artık sırf "ÇKS", "havza" veya "tohum" kelimesi geçtiği için 8859 PDF'deki MADDE 1/2/3'e otomatik bağlanmaz. Bunlar kanıt indeksindeki gerçek madde ve alıntı eşleşmesine bağlanana kadar **Madde/pasaj henüz doğrulanmadı** olarak gösterilir.
+
+## İlk gerçek örnek: 8859, MADDE 2(1), resim taraması
+
+**Gerçek kaynağın kendisi**: https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf, **89 sayfa**, dosya SHA-256 `89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f`. Kararın **PDF sayfa 2**'si metin katmanı olmayan taranmış sayfadır.
+
+Gözle işaretlenen resmî hüküm MADDE 2(1)'in Tarım ve Orman Bakanlığının belirlediği kayıt sistemlerine kayıt şartı ile ilgili pasajıdır. Kaynak görüntü üzerinde **3 gerçek satırın** sarı koordinatları `configs/p0_10_5_8859_visual_clause_index.json` içinde sürümlenmiştir. Bu, otomatik OCR cümlesi değildir; özgün PDF görüntüsüne dayanan **manuel konum tespitidir** ve `VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW` durumundadır. Hukukî uygunluk veya belirli destek tutarı onaylanmış değildir.
+
+**Kullanım:**
+
+```powershell
+# Projenin kök dizininde, gerekli Python bağımlılıkları kurulduktan sonra
+python -m tarim_destek_rag.citations.visual_pdf --install-8859
+
+# Ardından mevcut PC arayüzünü normal şekilde başlatın.
+# BASIC_SUPPORT_2026 destek gerekçesinde "PDF'de işaretli cümleyi aç" belirir.
+```
+
+İndirme yalnızca sabit resmî HTTPS URL'den gerçekleştirilir, yönlendirme kabul edilmez, indirilen baytların SHA-256 değeri değişirse kurulum **reddedilir**. Önceden doğrulanmış dosya varsa tekrar indirilmez. Çiftçi değerlendirmesi sırasında kontrolsüz ağ isteği yapılmaz.
+
+İşaretli kanıt API'si: `GET /evidence/highlight/visual/{sha256}?support_id=BASIC_SUPPORT_2026#page=2`. Kaynağın tamamının bir **kopyası** döner; renkli işaretleme yalnız sayfa 2'deki gerçek üç satırı çevreler. Orijinal dosya üzerinde tek bayt değiştirilmez. Orijinal Resmî Gazete linki ayrıca görünür.
+
+Diğer destekler için bu kayıt **genelleştirilmez**. 2024/39 aslı HTML olduğundan ayrı özgün HTML kanıt mekanizması gerekir. Metnin gerçek tarihsel yürürlük/güncellik denetimi, cümle konumu kontrolünden ayrıdır. Aynı belge üzerinde yanlış MADDE veya başka sayfaya bağlantı tahmin edilmez.
