@@ -4,12 +4,10 @@ from __future__ import annotations
 
 import logging
 import time
-import uuid
 from datetime import datetime
 from typing import Any
 
 import pandas as pd
-
 from tarim_destek_rag.citations.document_links import (
     format_citation_section_header,
     format_clickable_action,
