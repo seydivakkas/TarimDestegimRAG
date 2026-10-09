@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
 
 from tarim_destek_rag.calculator.calculator import CalculationResult
-from tarim_destek_rag.citations.exact_index import lookup_exact_pdf_citation
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
 from tarim_destek_rag.retrieval.models import DocumentChunk
 from tarim_destek_rag.rules.base import RuleResult
@@ -102,6 +101,9 @@ class TemplateExplainer:
     ) -> ExplanationResult:
         """Kural kararı ve hesaplamaya göre insan dilinde şeffaf gerekçe üretir."""
         citations: list[CitationDetail] = []
+
+        # Import lazily to avoid citations.verifier -> explainer circular imports.
+        from tarim_destek_rag.citations.exact_index import lookup_exact_pdf_citation
 
         # 1. A source-bound quote supersedes descriptive defaults ONLY after
         # independent page/byte/coordinate checks against the original PDF.
