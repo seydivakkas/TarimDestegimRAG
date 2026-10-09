@@ -1,0 +1,35 @@
+name: Exact Official PDF Citation Gate
+
+on:
+  push:
+    branches:
+      - fix/exact-official-pdf-citations
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  exact-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TARIM_RAG_LEGAL_ACTIVATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project and exact PDF layout dependencies
+        run: python -m pip install -e ".[dev,pdf-evidence]"
+      - name: Check modified source and tests
+        run: |
+          ruff check backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_document_links.py frontend_pc/pages/support_analysis.py
+          python -m compileall -q backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py frontend_pc/pages/support_analysis.py
+      - name: Test exact source and legacy frontend behavior
+        run: python -m pytest -q --no-cov backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_document_links.py backend/tests/unit/test_p11_p14_retrieval_and_explainer.py backend/tests/integration/test_p16_frontend_pc.py
+      - name: Full backend regression
+        run: python -m pytest -q --no-cov backend/tests
