@@ -670,6 +670,11 @@ def get_grounding_by_program(
             detail="Birden çok program/ürün/yıl kaydı bulundu; kaynak kanıtı belirsiz.",
         )
     rate_row = matching_rates[0]
+    if rate_row.review_status != "DRAFT":
+        raise HTTPException(
+            status_code=409,
+            detail="Oran adayı DRAFT durumunda değil; kanıt incelemesi reddedildi.",
+        )
 
     try:
         record, document, grounded, _ = load_grounded_sentence(

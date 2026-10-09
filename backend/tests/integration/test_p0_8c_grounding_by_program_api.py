@@ -20,7 +20,11 @@ from sqlalchemy.pool import StaticPool
 from tarim_destek_rag.api.main import app, get_db_session
 from tarim_destek_rag.auto_updater.grounding_repository import stage_evidence
 from tarim_destek_rag.database.connection import Base
-from tarim_destek_rag.database.models import DynamicRateModel, SourceModel
+from tarim_destek_rag.database.models import (
+    DynamicRateModel,
+    SentenceBoundingBoxModel,
+    SourceModel,
+)
 
 URL = "https://www.resmigazete.gov.tr/eskiler/2030/08/kanun.pdf"
 QUOTE = "2030 Tarimsal Destekleme Kanunu Ornek Metni Madde 5."
@@ -147,3 +151,44 @@ def test_program_lookup_rejects_ambiguous_geographic_candidates(program_groundin
         assert response.status_code == 409
         assert response.json()["code"] == "HTTP_409"
         assert "belirsiz" in response.json()["message"]
+
+
+@pytest.mark.parametrize("review_status", ["REVIEW", "REJECTED"])
+def test_program_lookup_rejects_non_draft_rate_candidate(program_grounding_app, review_status):
+    client, engine = program_grounding_app
+    with Session(engine) as session:
+        candidate = session.query(DynamicRateModel).one()
+        candidate.review_status = review_status
+        session.commit()
+
+    response = client.get(
+        "/api/v1/grounding/program/BASIC_SUPPORT",
+        params={"year": 2030, "crop_code": "BUĞDAY"},
+    )
+    assert response.status_code == 409
+    assert response.json()["code"] == "HTTP_409"
+    assert "DRAFT" in response.json()["message"]
+    assert "payable_amount" not in response.json()
+
+
+@pytest.mark.parametrize("review_status", ["REVIEW", "REJECTED"])
+def test_non_draft_sentence_cannot_be_presented_as_pdf_evidence(
+    program_grounding_app, review_status,
+):
+    client, engine = program_grounding_app
+    with Session(engine) as session:
+        row = session.query(SentenceBoundingBoxModel).one()
+        evidence_id = row.id
+        row.review_status = review_status
+        session.commit()
+
+    endpoints = (
+        f"/api/v1/grounding/evidence/{evidence_id}",
+        f"/api/v1/grounding/image/{evidence_id}/page/1",
+        "/api/v1/grounding/program/BASIC_SUPPORT",
+    )
+    for endpoint in endpoints:
+        response = client.get(endpoint, params={"year": 2030})
+        assert response.status_code == 404
+        assert response.json()["code"] == "HTTP_404"
+        assert "payable_amount" not in response.json()

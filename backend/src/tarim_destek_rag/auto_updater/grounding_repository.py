@@ -139,6 +139,8 @@ def load_grounded_sentence(
     row = session.get(SentenceBoundingBoxModel, evidence_id)
     if row is None:
         raise LookupError("Unknown PDF legal sentence")
+    if row.review_status != "DRAFT":
+        raise LookupError("PDF sentence is no longer a DRAFT evidence candidate")
     doc = session.get(SourceDocumentModel, row.document_id)
     if doc is None or doc.production_year != year or doc.review_status != "DRAFT":
         raise LookupError("Document is unavailable or outside requested year")
