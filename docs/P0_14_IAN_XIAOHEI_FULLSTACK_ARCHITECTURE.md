@@ -17,7 +17,7 @@ YASAKLAR: Kopyalanamaz, çoğaltılamaz, dağıtılamaz, satılamaz, tersine mü
 
 Aşağıdaki görselde Xiaohei (Sistem Nöbetçimiz); kullanıcı arayüzünden başlayıp, bitemporal zaman saatinden, çift onaylı noter kasasından ve üç konumlu vanadan geçerek taşa kazınan WORM kütüğüne ve HSM donanım kasasına kadar tüm full-stack mekanizmasını bizzat yönetmektedir.
 
-![TarımDesteğimRAG Full-Stack Mimari Şeması (Ian Xiaohei Stili)](C:\Users\seydieryilmaz\.gemini\antigravity-ide\brain\1c7353b9-b1b4-43fe-90d9-0d5f5a42a50e\fullstack_architecture_xiaohei_1791543400154.jpg)
+![TarımDesteğimRAG Full-Stack Mimari Şeması (Türkçe - Ian Xiaohei Stili)](../proje_tanıtım_resim/Xiaohei_FullStack_Sistem_Mimarisi_TR.jpg)
 
 ### 🧩 Katmanlar ve Mühendislik Karşılıkları
 
@@ -57,7 +57,7 @@ graph LR
 
 Aşağıdaki görselde Xiaohei; Resmî Gazete baytlarını hassas terazide tartmakta, hibrit arama motorundan geçirip cam masada çiftçiye PDF sayfasını büyüteçle aydınlatmakta ve tüm süreci adli makamlara sunulmak üzere mühürlü delil kasasına kilitlemektedir.
 
-![Veri, Hukuki Kanıt ve Çiftçi Açıklanabilirlik Akışı (Ian Xiaohei Stili)](C:\Users\seydieryilmaz\.gemini\antigravity-ide\brain\1c7353b9-b1b4-43fe-90d9-0d5f5a42a50e\evidence_pipeline_xiaohei_1791543420068.jpg)
+![Veri, Hukuki Kanıt ve Çiftçi Açıklanabilirlik Akışı (Türkçe - Ian Xiaohei Stili)](../proje_tanıtım_resim/Xiaohei_Hukuki_Delil_ve_Veri_Hatti_TR.jpg)
 
 ### 🌊 Veri Akış Hattı Aşamaları
 
