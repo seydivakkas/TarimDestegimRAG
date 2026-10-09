@@ -22,6 +22,7 @@ YAZARIN AÇIK YAZILI İZNİ OLMAKSIZIN HİÇBİR KULLANIM HAKKI TANINMAZ.
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -106,3 +107,62 @@ class DynamicRuleRepository:
                 results.append(rule)
 
         return results
+
+    def compute_rules_digest(self, year: int) -> str:
+        """Belirtilen üretim yılına ait tüm kuralların deterministik SHA-256 özetini üretir.
+
+        Özet, kuralların kural ID'sine göre sıralanmış kanonik JSON temsili üzerinden hesaplanır.
+        """
+        rules = self.load_rules(year)
+        if not rules:
+            return hashlib.sha256(b"[]").hexdigest()
+
+        # Deterministic sorting by rule_id
+        sorted_rules = sorted(rules, key=lambda r: r.get("rule_id", ""))
+        canonical = json.dumps(
+            sorted_rules,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        ).encode("utf-8")
+        return hashlib.sha256(canonical).hexdigest()
+
+    def update_rule_status(
+        self,
+        year: int,
+        new_status: str,
+        rule_ids: list[str] | None = None,
+    ) -> int:
+        """Kayıtlı kuralların onay durumunu (review_status) atomik olarak günceller.
+
+        Args:
+            year: Üretim yılı.
+            new_status: Yeni onay durumu ("DRAFT", "VERIFIED", "REVOKED", "HOLD").
+            rule_ids: Güncellenecek kural ID listesi. None ise tüm kurallar güncellenir.
+
+        Returns:
+            Güncellenen kural sayısı.
+        """
+        rules = self.load_rules(year)
+        if not rules:
+            return 0
+
+        target_set = set(rule_ids) if rule_ids is not None else None
+        updated_count = 0
+
+        for r in rules:
+            if target_set is None or r.get("rule_id") in target_set:
+                r["review_status"] = new_status
+                updated_count += 1
+
+        self.save_rules(year, rules)
+        return updated_count
+
+    def get_status_counts(self, year: int) -> dict[str, int]:
+        """Belirtilen yıldaki kuralların durum bazında dağılımını döner."""
+        rules = self.load_rules(year)
+        counts: dict[str, int] = {}
+        for r in rules:
+            st = r.get("review_status", "UNKNOWN")
+            counts[st] = counts.get(st, 0) + 1
+        return counts

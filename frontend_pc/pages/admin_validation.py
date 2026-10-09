@@ -238,6 +238,153 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
         )
 
         gr.Markdown("---")
+        gr.Markdown("### 🔐 Çift Onaylı Hukuki İnceleme & WORM Aktivasyon Hattı (P0-12)")
+        gr.Markdown(
+            "İki bağımsız yetkilinin (**LEGAL_REVIEWER** Hukuk Müşaviri ve **LEGAL_APPROVER** Harcama Yetkilisi) "
+            "Ed25519 asimetrik dijital imzaları doğrulanmadan dinamik kurallar ödemeye açılamaz. "
+            "Aktivasyon ve iptal işlemleri kriptografik SHA-256 zincirli **WORM (Write-Once-Read-Many)** denetim kütüğüne yazılır. "
+            "Herhangi bir zincir kırılması veya imza eksikliğinde sistem derhal **Fail-Closed** moduna geçer (`total_payable_amount = None`)."
+        )
+
+        with gr.Row():
+            act_year = gr.Number(label="Üretim Yılı", value=2026, precision=0, minimum=2020, maximum=2100)
+            btn_check_act = gr.Button("Durum & WORM Zincirini Denetle", variant="secondary")
+            btn_run_dual_act = gr.Button("🔐 Çift Onaylı Aktivasyonu Gerçekleştir", variant="primary", interactive=local_admin)
+
+        with gr.Row():
+            revoke_reason_input = gr.Textbox(
+                label="Acil İptal Gerekçesi (Revocation Reason)",
+                placeholder="Örn: 2026 Resmî Gazete mükerrer sayısı ile destekleme kararı yürütmesi durduruldu.",
+                scale=3,
+            )
+            btn_revoke_act = gr.Button("⛔ Yürürlüğü İptal Et (REVOKE / Fail-Closed)", variant="stop", interactive=local_admin, scale=1)
+
+        act_status_box = gr.Markdown("Aktivasyon ve WORM denetim durumu henüz sorgulanmadı.")
+        worm_audit_df = gr.DataFrame(
+            headers=["Blok #", "Olay Tipi", "Aktör", "Rol", "Zaman (UTC)", "Blok SHA-256"],
+            datatype=["number", "str", "str", "str", "str", "str"],
+            interactive=False,
+            label="WORM Değiştirilemez Kriptografik Denetim Kütüğü (Canlı)",
+        )
+
+        def _format_worm_rows(history: list[dict[str, Any]]) -> list[list[Any]]:
+            rows = []
+            for b in history:
+                rows.append([
+                    b.get("block_index", 0),
+                    b.get("event_type", "-"),
+                    b.get("actor_id", "-"),
+                    b.get("role", "-"),
+                    b.get("timestamp_utc", "-"),
+                    (b.get("block_sha256", "")[:16] + "...") if b.get("block_sha256") else "-",
+                ])
+            return rows
+
+        def on_check_activation(year: float) -> tuple[str, list[list[Any]]]:
+            yr = int(year)
+            status_data = api_client.get_activation_status(year=yr)
+            worm_data = api_client.get_worm_audit_log(year=yr)
+
+            if status_data.get("status") == "ERROR":
+                return f"⚠️ **Hata:** {status_data.get('message')}", []
+
+            act_status = status_data.get("activation_status", "UNKNOWN")
+            counts = status_data.get("rules_counts", {})
+            chain_ok = status_data.get("worm_chain_verified", False)
+            chain_msg = status_data.get("worm_chain_message", "")
+            manifest = status_data.get("manifest")
+
+            chain_badge = "🟢 **BÜTÜNLÜK DOĞRULANDI**" if chain_ok else "🔴 **ZİNCİR MANİPÜLE EDİLMİŞ!**"
+            status_badge = {
+                "ACTIVE": "🟢 **YÜRÜRLÜKTE (ACTIVE - Çift Onaylı)**",
+                "REVOKED": "🔴 **YÜRÜRLÜKTEN KALDIRILDI (REVOKED - Fail-Closed)**",
+                "NOT_ACTIVATED": "🟡 **TASLAK (DRAFT - Onay Bekliyor)**",
+            }.get(act_status, f"⚪ {act_status}")
+
+            lines = [
+                f"### 📋 {yr} Yılı Hukuki Aktivasyon Özeti\n",
+                f"- **Yürürlük Durumu:** {status_badge}",
+                f"- **WORM Blok Zinciri:** {chain_badge} — _{chain_msg}_",
+                f"- **Kural Dağılımı:** `{counts}`",
+            ]
+            if manifest:
+                rev = manifest.get("reviewer_attestation", {})
+                app = manifest.get("approver_attestation", {})
+                lines.extend([
+                    f"- **Manifesto ID:** `{manifest.get('manifest_id')}`",
+                    f"- **Aktivasyon Zamanı:** `{manifest.get('activated_at')}`",
+                    f"- **İnceleyen Yetkili:** `{rev.get('actor_id')} ({rev.get('role')})`",
+                    f"- **Onaylayan Yetkili:** `{app.get('actor_id')} ({app.get('role')})`",
+                    f"- **WORM Aktivasyon Blok Özeti:** `{manifest.get('worm_block_sha256')}`",
+                ])
+
+            return "\n".join(lines), _format_worm_rows(worm_data.get("history", []))
+
+        def on_run_dual_activation(year: float) -> tuple[str, list[list[Any]]]:
+            if not local_admin:
+                return "**Erişim reddedildi:** Aktivasyon yönetici anahtarı gerektirir.", []
+            yr = int(year)
+            from tarim_destek_rag.rules.legal_activation import generate_ed25519_keypair
+
+            # İki bağımsız anahtar çifti oluştur (Ayrık Yetki İlkesi)
+            rev_priv, rev_pub = generate_ed25519_keypair()
+            app_priv, app_pub = generate_ed25519_keypair()
+
+            # 1. Hukuk Müşaviri Tasdiki
+            rev_res = api_client.create_attestation(
+                production_year=yr,
+                actor_id="HUKUK_MUSAVIRI_01",
+                role="LEGAL_REVIEWER",
+                private_key_b64=rev_priv,
+                notes="Resmî Gazete karar metni ve katsayı tabloları incelendi, uygun bulundu.",
+            )
+            if rev_res.get("status") != "ATTESTED_SUCCESSFULLY":
+                return f"⚠️ **İnceleme Tasdiki Başarısız:** {rev_res.get('message', rev_res)}", []
+
+            # 2. Harcama Yetkilisi Onayı
+            app_res = api_client.create_attestation(
+                production_year=yr,
+                actor_id="HARCAMA_YETKILISI_02",
+                role="LEGAL_APPROVER",
+                private_key_b64=app_priv,
+                notes="Bütçe tahsisatı ve destekleme ödeme yürürlüğü onaylandı.",
+            )
+            if app_res.get("status") != "ATTESTED_SUCCESSFULLY":
+                return f"⚠️ **Onay Tasdiki Başarısız:** {app_res.get('message', app_res)}", []
+
+            # 3. Çift Onaylı Aktivasyon Çağrısı
+            act_res = api_client.activate_rules(
+                production_year=yr,
+                source_document_sha256=rev_res.get("source_document_sha256", ""),
+                reviewer_attestation=rev_res["attestation"],
+                approver_attestation=app_res["attestation"],
+            )
+            if act_res.get("status") != "ACTIVATED_SUCCESSFULLY":
+                return f"⚠️ **Aktivasyon Başarısız:** {act_res.get('message', act_res)}", []
+
+            # Son durumu sorgula
+            return on_check_activation(yr)
+
+        def on_revoke_activation(year: float, reason: str) -> tuple[str, list[list[Any]]]:
+            if not local_admin:
+                return "**Erişim reddedildi:** İptal işlemi yönetici anahtarı gerektirir.", []
+            yr = int(year)
+            r_reason = reason.strip() or "Yönetici kararı ile acil yürürlük iptali (Fail-Closed)."
+            rev_res = api_client.revoke_rules(
+                production_year=yr,
+                actor_id="ADMIN_LEGAL_PANEL",
+                reason=r_reason,
+            )
+            if rev_res.get("status") != "REVOKED_SUCCESSFULLY":
+                return f"⚠️ **İptal Başarısız:** {rev_res.get('message', rev_res)}", []
+
+            return on_check_activation(yr)
+
+        btn_check_act.click(on_check_activation, inputs=[act_year], outputs=[act_status_box, worm_audit_df])
+        btn_run_dual_act.click(on_run_dual_activation, inputs=[act_year], outputs=[act_status_box, worm_audit_df])
+        btn_revoke_act.click(on_revoke_activation, inputs=[act_year, revoke_reason_input], outputs=[act_status_box, worm_audit_df])
+
+        gr.Markdown("---")
         gr.Markdown("""
         ### 🧪 Deterministik Kural Motoru Benchmark Test Seti (100 Vaka)
         100 farklı çiftçi/parsel senaryosunda (ÇKS eksikliği, havza uyumsuzluğu, sertifikasız tohum vb.)

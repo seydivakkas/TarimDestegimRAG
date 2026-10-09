@@ -946,3 +946,223 @@ def dynamic_evaluate_parcel(
     return summary.to_dict()
 
 
+# ---------------------------------------------------------------------------
+# P0-12: Çift Onaylı Hukuki İnceleme & WORM Aktivasyon Hattı Uç Noktaları
+# ---------------------------------------------------------------------------
+
+class CreateAttestationRequest(BaseModel):
+    production_year: int = Field(ge=2020, le=2100)
+    actor_id: str
+    role: str  # "LEGAL_REVIEWER" veya "LEGAL_APPROVER"
+    private_key_b64: str
+    source_document_sha256: str | None = None
+    statement: str | None = None
+    notes: str = ""
+
+
+class ActivateRulesRequest(BaseModel):
+    production_year: int = Field(ge=2020, le=2100)
+    source_document_sha256: str
+    reviewer_attestation: dict[str, Any]
+    approver_attestation: dict[str, Any]
+    trusted_keys: dict[str, Any] | None = None
+
+
+class RevokeRulesRequest(BaseModel):
+    production_year: int = Field(ge=2020, le=2100)
+    actor_id: str
+    reason: str
+    signature_b64: str | None = None
+
+
+@app.post("/admin/rules/attestation", tags=["Çift Onaylı Hukuki Aktivasyon & WORM"])
+def create_legal_attestation(
+    request: CreateAttestationRequest,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Yetkilinin Ed25519 özel anahtarı ile kanonik beyanı imzalar ve tasdik nesnesi döner."""
+    from datetime import UTC, datetime
+
+    from tarim_destek_rag.rules.dynamic_rule_repository import DynamicRuleRepository
+    from tarim_destek_rag.rules.legal_activation import (
+        STANDARD_ATTESTATION_STATEMENT,
+        LegalAttestation,
+        build_canonical_manifest_bytes,
+        sign_payload_ed25519,
+    )
+    from tarim_destek_rag.updates.legislation_repository import LegislationCatalogRepository
+
+    archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    rule_repo = DynamicRuleRepository(archive_root)
+    rules = rule_repo.load_rules(request.production_year)
+    if not rules:
+        raise HTTPException(
+            status_code=400,
+            detail=f"{request.production_year} yılı için kayıtlı dinamik kural bulunamadı.",
+        )
+
+    doc_sha = request.source_document_sha256
+    if not doc_sha:
+        leg_repo = LegislationCatalogRepository(archive_root)
+        discovered_docs = leg_repo.list_discovered(year=request.production_year)
+        if not discovered_docs:
+            discovered_docs = leg_repo.list_discovered()
+        if not discovered_docs:
+            raise HTTPException(
+                status_code=400,
+                detail="Mevzuat belgesi bulunamadı. Lütfen source_document_sha256 belirtin.",
+            )
+        doc_sha = discovered_docs[0].document_sha256
+
+    rules_digest = rule_repo.compute_rules_digest(request.production_year)
+    statement = request.statement or STANDARD_ATTESTATION_STATEMENT.format(year=request.production_year)
+
+    canonical_bytes = build_canonical_manifest_bytes(
+        production_year=request.production_year,
+        source_document_sha256=doc_sha,
+        rules_digest=rules_digest,
+        rule_count=len(rules),
+        statement=statement,
+    )
+
+    try:
+        import base64
+
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+        priv_raw = base64.b64decode(request.private_key_b64.encode("ascii"))
+        private_key = Ed25519PrivateKey.from_private_bytes(priv_raw)
+        pub_raw = private_key.public_key().public_bytes_raw()
+        pub_b64 = base64.b64encode(pub_raw).decode("ascii")
+
+        sig_b64 = sign_payload_ed25519(request.private_key_b64, canonical_bytes)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Ed25519 imzalama hatası: {exc}",
+        )
+
+    now_utc = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    attestation = LegalAttestation(
+        actor_id=request.actor_id,
+        role=request.role,
+        public_key_b64=pub_b64,
+        signature_b64=sig_b64,
+        signed_at=now_utc,
+        statement=statement,
+        notes=request.notes,
+    )
+    return {
+        "status": "ATTESTED_SUCCESSFULLY",
+        "attestation": attestation.to_dict(),
+        "source_document_sha256": doc_sha,
+        "rules_digest": rules_digest,
+        "rule_count": len(rules),
+    }
+
+
+@app.post("/admin/rules/activate", tags=["Çift Onaylı Hukuki Aktivasyon & WORM"])
+def activate_dynamic_rules(
+    request: ActivateRulesRequest,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Çift onaylı hukuki incelemeyi doğrular ve kuralları VERIFIED statüsüne yükseltir."""
+    from tarim_destek_rag.rules.legal_activation import (
+        ActivationError,
+        InvalidSignatureError,
+        LegalAttestation,
+        RuleActivationPipeline,
+        SeparationOfDutiesViolation,
+        TrustedKeyMismatchError,
+    )
+    from tarim_destek_rag.rules.worm_audit import TamperedAuditError
+
+    archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    pipeline = RuleActivationPipeline(archive_root)
+
+    try:
+        rev_att = LegalAttestation.from_dict(request.reviewer_attestation)
+        app_att = LegalAttestation.from_dict(request.approver_attestation)
+
+        manifest = pipeline.activate_rules(
+            production_year=request.production_year,
+            reviewer_attestation=rev_att,
+            approver_attestation=app_att,
+            source_document_sha256=request.source_document_sha256,
+            trusted_keys=request.trusted_keys,
+        )
+        return {
+            "status": "ACTIVATED_SUCCESSFULLY",
+            "production_year": request.production_year,
+            "manifest": manifest.to_dict(),
+        }
+    except SeparationOfDutiesViolation as e:
+        raise HTTPException(status_code=400, detail=f"Görevler Ayrılığı İhlali: {e}")
+    except (InvalidSignatureError, TrustedKeyMismatchError) as e:
+        raise HTTPException(status_code=403, detail=f"Kriptografik Doğrulama Reddedildi: {e}")
+    except TamperedAuditError as e:
+        raise HTTPException(status_code=500, detail=f"WORM Denetim İzi Bütünlük Hatası: {e}")
+    except ActivationError as e:
+        raise HTTPException(status_code=400, detail=f"Aktivasyon Hatası: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Beklenmeyen aktivasyon hatası: {e}")
+
+
+@app.get("/admin/rules/activation-status", tags=["Çift Onaylı Hukuki Aktivasyon & WORM"])
+def get_rule_activation_status(
+    year: int = 2026,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Üretim yılına ait kural aktivasyon durumunu ve WORM zincir bütünlüğünü sorgular."""
+    from tarim_destek_rag.rules.legal_activation import RuleActivationPipeline
+
+    archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    pipeline = RuleActivationPipeline(archive_root)
+    return pipeline.get_activation_status(year)
+
+
+@app.post("/admin/rules/revoke", tags=["Çift Onaylı Hukuki Aktivasyon & WORM"])
+def revoke_rule_activation(
+    request: RevokeRulesRequest,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Aktivasyonu derhal iptal eder (Fail-Closed: VERIFIED -> REVOKED) ve WORM günlüğüne yazar."""
+    from tarim_destek_rag.rules.legal_activation import RuleActivationPipeline
+
+    archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    pipeline = RuleActivationPipeline(archive_root)
+    pipeline.revoke_activation(
+        production_year=request.production_year,
+        actor_id=request.actor_id,
+        reason=request.reason,
+        signature_b64=request.signature_b64,
+    )
+    return {
+        "status": "REVOKED_SUCCESSFULLY",
+        "production_year": request.production_year,
+        "reason": request.reason,
+        "revoked_by": request.actor_id,
+    }
+
+
+@app.get("/admin/rules/worm-audit", tags=["Çift Onaylı Hukuki Aktivasyon & WORM"])
+def get_worm_audit_log(
+    year: int | None = None,
+    event_type: str | None = None,
+    limit: int = 50,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """WORM değiştirilemez denetim kütüğünü ve blok zincir doğrulama sonucunu döner."""
+    from tarim_destek_rag.rules.worm_audit import WormAuditLog
+
+    archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    worm = WormAuditLog(archive_root)
+    verified, message = worm.verify_chain()
+    history = worm.get_history(production_year=year, event_type=event_type, limit=limit)
+    return {
+        "verified": verified,
+        "message": message,
+        "total_returned": len(history),
+        "history": history,
+    }
+
+

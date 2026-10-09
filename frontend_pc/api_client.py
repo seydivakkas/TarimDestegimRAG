@@ -290,6 +290,123 @@ class ApiClient:
         except Exception as exc:
             return {"status": "ERROR", "message": str(exc)}
 
+    def create_attestation(
+        self,
+        production_year: int,
+        actor_id: str,
+        role: str,
+        private_key_b64: str,
+        source_document_sha256: str | None = None,
+        statement: str | None = None,
+        notes: str = "",
+    ) -> dict[str, Any]:
+        """Sign and generate an official Ed25519 legal attestation for dynamic rules."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            body: dict[str, Any] = {
+                "production_year": production_year,
+                "actor_id": actor_id,
+                "role": role,
+                "private_key_b64": private_key_b64,
+                "notes": notes,
+            }
+            if source_document_sha256:
+                body["source_document_sha256"] = source_document_sha256
+            if statement:
+                body["statement"] = statement
+            resp = self._request("POST", "/admin/rules/attestation", json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            return {"status": "ERROR", "message": f"HTTP {exc.response.status_code}: {exc.response.text}"}
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def activate_rules(
+        self,
+        production_year: int,
+        source_document_sha256: str,
+        reviewer_attestation: dict[str, Any],
+        approver_attestation: dict[str, Any],
+        trusted_keys: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Submit dual legal attestations to elevate rules from DRAFT to VERIFIED in WORM audit."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            body = {
+                "production_year": production_year,
+                "source_document_sha256": source_document_sha256,
+                "reviewer_attestation": reviewer_attestation,
+                "approver_attestation": approver_attestation,
+                "trusted_keys": trusted_keys,
+            }
+            resp = self._request("POST", "/admin/rules/activate", json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            return {"status": "ERROR", "message": f"HTTP {exc.response.status_code}: {exc.response.text}"}
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def get_activation_status(self, year: int = 2026) -> dict[str, Any]:
+        """Get rule activation state, manifest info, and WORM chain integrity status."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            resp = self._request("GET", "/admin/rules/activation-status", params={"year": year}, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def revoke_rules(
+        self,
+        production_year: int,
+        actor_id: str,
+        reason: str,
+        signature_b64: str | None = None,
+    ) -> dict[str, Any]:
+        """Instantly revoke rule activation (fail-closed) and append revocation event to WORM log."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            body = {
+                "production_year": production_year,
+                "actor_id": actor_id,
+                "reason": reason,
+                "signature_b64": signature_b64,
+            }
+            resp = self._request("POST", "/admin/rules/revoke", json=body, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            return {"status": "ERROR", "message": f"HTTP {exc.response.status_code}: {exc.response.text}"}
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def get_worm_audit_log(
+        self,
+        year: int | None = None,
+        event_type: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Retrieve WORM immutable audit log blocks and chain integrity verification."""
+        key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        headers = {"X-Admin-Key": key} if key else {}
+        try:
+            params: dict[str, Any] = {"limit": limit}
+            if year:
+                params["year"] = year
+            if event_type:
+                params["event_type"] = event_type
+            resp = self._request("GET", "/admin/rules/worm-audit", params=params, headers=headers)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc), "history": []}
+
 
 
 
