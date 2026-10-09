@@ -126,8 +126,9 @@ def test_real_evaluation_exposes_all_three_source_marks_when_installed() -> None
     if any(not p.is_file() for p in originals):
         pytest.skip("All three official original sources must be installed for E2E test")
     from fastapi.testclient import TestClient
-    from frontend_pc.formatters import render_reasons_markdown
     from tarim_destek_rag.api.main import app
+
+    from frontend_pc.formatters import render_reasons_markdown
 
     with TestClient(app) as client:
         r = client.post("/evaluate", json={
