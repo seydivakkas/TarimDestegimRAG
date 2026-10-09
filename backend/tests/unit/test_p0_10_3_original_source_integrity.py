@@ -23,7 +23,13 @@ MANIFEST_PATH = Path("configs/p0_10_3_original_source_manifest.json")
 
 @pytest.fixture
 def manifest() -> dict:
-    return json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    # Tests use deterministic synthetic bytes, never confuse synthetic SHA
+    # with exact pinned real official-origin HTTP/PDF response digests.
+    doc = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    for row in doc["sources"]:
+        row["original_sha256"] = None
+        row["original_bytes"] = None
+    return doc
 
 
 def _pdf() -> bytes:
@@ -64,11 +70,20 @@ def _fake_fetch(responses):
     return fetch
 
 
-def test_official_source_manifest_is_unpinned_and_fail_closed(manifest: dict) -> None:
-    assert len(manifest["sources"]) == 5
-    assert manifest["complete_official_coverage_proven"] is False
-    assert manifest["target_production_years"] == [2025, 2026, 2027]
-    assert all(row["original_sha256"] is None for row in manifest["sources"])
+def test_official_original_source_manifest_pins_real_byte_sha_without_covering_year() -> None:
+    raw = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    assert len(raw["sources"]) == 5
+    assert raw["complete_official_coverage_proven"] is False
+    assert raw["target_production_years"] == [2025, 2026, 2027]
+    assert raw["origin_byte_manifest_status"].startswith("PINNED_5_OF_5")
+    assert all(
+        len(row["original_sha256"]) == 64 and row["original_bytes"] > 1000
+        for row in raw["sources"]
+    )
+    assert all(
+        row["provenance_evidence_run_ids"] == [37906860240, 37906865615]
+        for row in raw["sources"]
+    )
     assert {r["role"] for r in manifest["sources"]} == {
         "BASE_DECISION", "BASE_COMMUNIQUE", "BASE_COMMUNIQUE_ANNEX",
         "AMENDMENT", "AMENDMENT_ANNEX",
@@ -234,3 +249,24 @@ def test_2026_missing_amendment_annex_forces_incomplete_scope(
     result = assess_year_coverage(manifest, report, 2026)
     assert result["status"] == "HOLD"
     assert result["missing_source_ids"] == ["RG_AMENDMENT_2025_42_ANNEX"]
+
+
+
+def test_pinned_original_byte_pass_does_not_validate_unreadable_annex_table(
+    manifest: dict, tmp_path: Path,
+) -> None:
+    responses = _responses(manifest)
+    for row in manifest["sources"]:
+        row["original_sha256"] = hashlib.sha256(responses[row["url"]][0]).hexdigest()
+    annex = next(
+        row for row in manifest["sources"]
+        if row["id"] == "RG_AMENDMENT_2025_42_ANNEX"
+    )
+    annex["expected_pdf_text_marker"] = "EK-20"
+    report = collect(
+        manifest, tmp_path, mode="verify", fetch=_fake_fetch(responses)
+    )
+    assert report["original_byte_integrity_status"] == "PASS"
+    assert report["source_status"] == "HOLD"
+    assert report["annex_table_semantics_status"] == "HOLD"
+    assert any(e["stage"] == "ANNEX_SEMANTIC_CONTENT" for e in report["errors"])
