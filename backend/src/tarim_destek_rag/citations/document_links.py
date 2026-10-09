@@ -418,6 +418,8 @@ def format_highlighted_citation_card(
     year = escape(str(citation.get("year") or ""))
     status_code = str(citation.get("verification_status") or "")
     exact = status_code == "EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW"
+    visual = status_code == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW"
+    located = exact or visual
     original_url = str(citation.get("url") or "")
     # No invented page or section fallback is sufficient to create a proof.
     source_link = ""
@@ -432,7 +434,7 @@ def format_highlighted_citation_card(
         )
     label = "Ön değerlendirme açıklaması — resmî alıntı değildir"
     text = escape(str(citation.get("snippet") or ""))
-    if exact:
+    if located:
         proof_path = str(citation.get("highlighted_pdf_url") or "")
         sha = str(citation.get("document_sha256") or "")
         page = citation.get("page_number")
@@ -440,16 +442,27 @@ def format_highlighted_citation_card(
                 sha in proof_path and isinstance(page, int) and page > 0):
             public_api = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
             proof_link = escape(public_api + proof_path, quote=True)
-            label = "Özgün PDF'de birebir bulunan pasaj — hukukî onay bekliyor"
-            text = highlight_legal_text(str(citation.get("snippet") or ""), status)
+            if visual:
+                label = (
+                    "Özgün Resmî Gazete PDF görüntüsünde işaretlenen pasaj "
+                    "— bağımsız metin ve hukukî inceleme bekliyor"
+                )
+                text = escape(str(citation.get("snippet") or ""))
+            else:
+                label = "Özgün PDF'de birebir bulunan pasaj — hukukî onay bekliyor"
+                text = highlight_legal_text(str(citation.get("snippet") or ""), status)
             source_link = (
                 f'<a href="{proof_link}" target="_blank" rel="noopener noreferrer" '
-                'class="legal-source-link">PDF’de işaretli cümleyi aç ↗</a>'
+                'class="legal-source-link">PDF’de işaretli cümleyi aç ↗</a> '
+                + source_link
             )
         else:
-            exact = False
+            located = False
     card_class = "pass" if status == "ELIGIBLE" else ("warn" if status == "REVIEW" else "fail")
-    body = f'📜 <i>“{text}”</i>' if exact else f'📝 {text}'
+    body = (
+        f'📜 <i>“{text}”</i>' if located
+        else f'📝 {text}'
+    )
     return (
         f'<div class="legal-quote-card {card_class}">\n'
         f'  <div class="legal-quote-header">\n'
