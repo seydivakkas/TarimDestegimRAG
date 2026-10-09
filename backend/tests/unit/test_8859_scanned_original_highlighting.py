@@ -158,7 +158,6 @@ def test_visual_endpoint_returns_marked_copy_not_replacement(
     scanned_pdf_source: dict,
 ) -> None:
     from fastapi.testclient import TestClient
-
     from tarim_destek_rag.api.main import app
 
     src = scanned_pdf_source
