@@ -12,7 +12,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from tarim_destek_rag.updates.legislation_analyzer import LegislationAnalyzer
 from tarim_destek_rag.updates.legislation_models import LegislationType
 
