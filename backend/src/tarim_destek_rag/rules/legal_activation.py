@@ -45,7 +45,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 
 from tarim_destek_rag.rules.dynamic_rule_repository import DynamicRuleRepository
-from tarim_destek_rag.rules.worm_audit import WormAuditLog
+from tarim_destek_rag.rules.worm_audit import TamperedAuditError, WormAuditLog
 
 # Standart hukuk tasdiki beyan metni şablonu
 STANDARD_ATTESTATION_STATEMENT = (
@@ -379,7 +379,7 @@ class RuleActivationPipeline:
                 and b.production_year == production_year
                 and b.block_index > matches[0].block_index for b in blocks
             )
-        except (OSError, ValueError, TypeError, KeyError, RuntimeError):
+        except (OSError, ValueError, TypeError, KeyError, RuntimeError, TamperedAuditError):
             return False
 
 
