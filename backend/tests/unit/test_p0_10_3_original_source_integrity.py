@@ -38,6 +38,9 @@ def _responses(manifest: dict) -> dict[str, tuple[bytes, str]]:
     result = {}
     for row in manifest["sources"]:
         if row["format"] == "pdf":
+            # Blank mock PDFs have no text. Real EK-20 marker validation is
+            # separately exercised as a negative case.
+            row.pop("expected_pdf_text_marker", None)
             result[row["url"]] = (annex_pdf, "application/pdf")
         else:
             annex_url = next(
