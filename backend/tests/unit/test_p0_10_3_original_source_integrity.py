@@ -9,6 +9,7 @@ from urllib.parse import urlparse
 
 import pytest
 from pypdf import PdfWriter
+
 from scripts.p0_10_3_source_integrity import (
     SourceIntegrityError,
     _atomic_bytes,
@@ -50,7 +51,7 @@ def _responses(manifest: dict) -> dict[str, tuple[bytes, str]]:
             content = (
                 "<html><body><p>Gazette official test source</p>"
                 f'<a href="{annex_url}">Official annex</a></body></html>'
-            ).encode("utf-8")
+            ).encode()
             result[row["url"]] = (content, "text/html")
     return result
 
