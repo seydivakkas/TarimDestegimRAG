@@ -170,7 +170,7 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
             return (
                 f"**DRAFT — Hukukî onay bekliyor** | Sayfa {page_number} "
                 f"| SHA-256 `{source_sha}`"
-                f"\\n\\n**Birebir cümle:** {quoted}",
+                f"\n\n**Birebir cümle:** {quoted}",
                 picture,
             )
 
