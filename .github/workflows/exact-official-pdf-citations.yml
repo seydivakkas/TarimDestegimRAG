@@ -29,6 +29,8 @@ jobs:
         run: |
           ruff check backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/visual_pdf.py backend/src/tarim_destek_rag/citations/basin_visual.py backend/src/tarim_destek_rag/citations/original_html.py backend/src/tarim_destek_rag/api/schemas.py backend/src/tarim_destek_rag/api/main.py frontend_pc/formatters.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py backend/tests/unit/test_exact_official_pdf_citations.py backend/tests/unit/test_8859_scanned_original_highlighting.py backend/tests/unit/test_basin_original_pdf_evidence.py backend/tests/unit/test_exact_original_html_clause.py backend/tests/unit/test_document_links.py frontend_pc/pages/support_analysis.py
           python -m compileall -q backend/src/tarim_destek_rag/citations/exact_index.py backend/src/tarim_destek_rag/citations/document_links.py backend/src/tarim_destek_rag/explainer/template_explainer.py frontend_pc/pages/support_analysis.py frontend_pc/formatters.py backend/src/tarim_destek_rag/citations/basin_visual.py backend/src/tarim_destek_rag/api/main.py backend/src/tarim_destek_rag/api/schemas.py
+      - name: Install original 8859 scanned Gazette PDF and verify pinned source bytes
+        run: python -m tarim_destek_rag.citations.visual_pdf --install-8859
       - name: Install original 2024/39 Resmî Gazete HTML and verify pinned source bytes
         run: python -m tarim_destek_rag.citations.original_html --install
       - name: Verify MADDE 4(1) is a true exact original HTML clause
