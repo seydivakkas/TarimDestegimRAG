@@ -206,26 +206,23 @@ def format_clickable_check(
     status_icon: str = "✅",
     support_id: str | None = None,
 ) -> str:
-    """Kontrol maddesini tıklanabilir HTML bağlantısına dönüştürür.
+    """Show rule outcome, but NEVER invent a legal clause/page from keywords.
 
-    Kullanıcı tıkladığında doğrudan ilgili belgenin ilgili maddesini yeni sekmede açar.
+    An exact original-PDF evidence link appears in the separately verified
+    citation card only after source SHA, quote, article and page validation.
     """
-    loc = resolve_check_link(check_text, support_id)
-    url = loc["url"]
-    badge = loc["badge"]
-    title = f"{loc['title']} — {loc['section']}"
+    from html import escape
 
-    is_fail = status_icon in ["❌", "⚠️"]
-    extra_class = "doc-fail" if is_fail else "doc-pass"
-    badge_class = "doc-badge-fail" if is_fail else "doc-badge-pass"
-
+    is_fail = status_icon in ("❌", "⚠️")
+    extra = "doc-fail" if is_fail else "doc-pass"
+    safe_icon = escape(status_icon)
+    safe_check = escape(check_text)
     return (
-        f'<a href="{url}" target="_blank" rel="noopener noreferrer" class="doc-link-item {extra_class}" '
-        f'title="{title} — Resmî Belgeyi Aç">\n'
-        f'  <span class="doc-icon">{status_icon}</span>\n'
-        f'  <span class="doc-text">{check_text}</span>\n'
-        f'  <span class="doc-badge-tag {badge_class}">{badge} ↗</span>\n'
-        f'</a>'
+        f'<div class="doc-link-item {extra}">'
+        f'<span class="doc-icon">{safe_icon}</span>'
+        f'<span class="doc-text">{safe_check}</span>'
+        '<span class="doc-badge-tag">Madde/pasaj henüz doğrulanmadı</span>'
+        '</div>'
     )
 
 
