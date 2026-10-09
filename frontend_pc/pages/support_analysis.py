@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import gradio as gr
-import pandas as pd
-
 from tarim_destek_rag.citations.document_links import render_document_viewer_html
 
 
