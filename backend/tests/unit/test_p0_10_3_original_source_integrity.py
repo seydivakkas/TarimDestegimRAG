@@ -84,7 +84,7 @@ def test_official_original_source_manifest_pins_real_byte_sha_without_covering_y
         row["provenance_evidence_run_ids"] == [37906860240, 37906865615]
         for row in raw["sources"]
     )
-    assert {r["role"] for r in manifest["sources"]} == {
+    assert {r["role"] for r in raw["sources"]} == {
         "BASE_DECISION", "BASE_COMMUNIQUE", "BASE_COMMUNIQUE_ANNEX",
         "AMENDMENT", "AMENDMENT_ANNEX",
     }
