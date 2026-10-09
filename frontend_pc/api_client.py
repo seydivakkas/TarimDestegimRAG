@@ -241,5 +241,55 @@ class ApiClient:
         except Exception as exc:
             return {"status": "ERROR", "message": str(exc)}
 
+    def synthesize_dynamic_rules(
+        self,
+        document_sha256: str,
+        production_year: int | None = None,
+        default_base_coef: str | None = None,
+    ) -> dict[str, Any]:
+        """Synthesize and persist declarative dynamic rules from discovered legislation."""
+        try:
+            body: dict[str, Any] = {"document_sha256": document_sha256}
+            if production_year:
+                body["production_year"] = production_year
+            if default_base_coef:
+                body["default_base_coefficient"] = default_base_coef
+            response = self._request("POST", "/admin/rules/synthesize", json=body)
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def list_dynamic_rules(
+        self,
+        year: int | None = None,
+        program_key: str | None = None,
+        crop_code: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """List and filter dynamic rules stored in repository."""
+        try:
+            params: dict[str, Any] = {}
+            if year:
+                params["year"] = year
+            if program_key:
+                params["program_key"] = program_key
+            if crop_code:
+                params["crop_code"] = crop_code
+            response = self._request("GET", "/admin/rules/dynamic", params=params)
+            response.raise_for_status()
+            return response.json()
+        except Exception:
+            return []
+
+    def dynamic_evaluate(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Evaluate a farmer parcel across all dynamic support programs."""
+        try:
+            response = self._request("POST", "/api/v1/rules/dynamic-evaluate", json=payload)
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+
 
 

@@ -5,9 +5,9 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from io import BytesIO
+from typing import Any
 
 import gradio as gr
-import pandas as pd
 
 from frontend_pc.api_client import ApiClient
 from frontend_pc.services.benchmark_service import (
@@ -153,6 +153,88 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
         btn_evidence.click(
             view_evidence, inputs=[evidence_id, legal_year],
             outputs=[evidence_status, evidence_image],
+        )
+
+        gr.Markdown("---")
+        gr.Markdown("### ⚡ Dinamik Kural ve Fiyat Sentezi (P0-11)")
+        gr.Markdown(
+            "Keşfedilen mevzuat ek tablolarından (EK-1 katsayılar, EK-2 planlı üretim, "
+            "EK-3 su kısıtı havzaları/ilçeleri) otomatik deklaratif bitemporal kurallar "
+            "ve fiyat matrisleri sentezler. **İlk sentezlenen kurallar DRAFT statüsündedir; "
+            "yetkili onay/WORM kaydı tamamlanmadan çiftçi ödemesine (payable_amount) dönüşmez.**"
+        )
+        with gr.Row():
+            synth_year = gr.Number(
+                label="Sentezlenecek Üretim Yılı",
+                value=2026,
+                precision=0,
+                minimum=2020,
+                maximum=2100,
+            )
+            synth_doc_sha = gr.Textbox(
+                label="Mevzuat Belge SHA-256 (Opsiyonel / Boşsa ilk bulunan)",
+                value="",
+                placeholder="Örn: 64 karakterli SHA-256 veya boş bırakın",
+            )
+            btn_synthesize = gr.Button(
+                "Ek Tablolardan Dinamik Kuralları Sentezle",
+                variant="primary",
+                interactive=local_admin,
+            )
+        synth_status = gr.Markdown("Dinamik kural sentezi henüz tetiklenmedi.")
+        dynamic_rules_df = gr.DataFrame(
+            headers=["Kural ID", "Program", "Ürün", "Yıl", "Birim Tutar", "Durum"],
+            datatype=["str", "str", "str", "number", "str", "str"],
+            interactive=False,
+            label="Sentezlenen Dinamik Kurallar Kataloğu (Özet)",
+        )
+
+        def on_synthesize_rules(year: float, doc_sha: str) -> tuple[str, list[list[Any]]]:
+            if not local_admin:
+                return "**Erişim reddedildi:** Dinamik kural sentezi yönetici API anahtarı gerektirir.", []
+            yr = int(year)
+            target_sha = doc_sha.strip()
+            if not target_sha:
+                discovered_list = api_client.list_discovered_legislation(year=yr)
+                if not discovered_list:
+                    discovered_list = api_client.list_discovered_legislation()
+                if discovered_list:
+                    target_sha = discovered_list[0].get("document_sha256", "")
+            if not target_sha:
+                return f"⚠️ **Hata:** {yr} yılı için kayıtlı mevzuat bulunamadı. Lütfen önce mevzuat taraması yapın veya SHA-256 girin.", []
+
+            res = api_client.synthesize_dynamic_rules(document_sha256=target_sha, production_year=yr)
+            if res.get("status") != "SYNTHESIZED_SUCCESSFULLY":
+                return f"⚠️ **Sentez Başarısız:** {res.get('message', 'Bilinmeyen hata')}", []
+
+            rule_count = res.get("rule_count", 0)
+            base_coef = res.get("base_coefficient", "-")
+            rules = api_client.list_dynamic_rules(year=yr)
+            rows = []
+            for r in rules:
+                rows.append([
+                    r.get("rule_id", "-"),
+                    r.get("program_key", "-"),
+                    r.get("crop_code", "-"),
+                    r.get("production_year", yr),
+                    f"{r.get('official_unit_amount', '-')} {r.get('unit', 'TRY/da')}",
+                    r.get("review_status", "DRAFT"),
+                ])
+            status_text = (
+                f"✅ **Kurallar Başarıyla Sentezlendi!**\n\n"
+                f"- **Üretim Yılı:** `{yr}`\n"
+                f"- **Belge SHA-256:** `{target_sha[:16]}...`\n"
+                f"- **Temel Gösterge Katsayısı:** `{base_coef} TL/da`\n"
+                f"- **Sentezlenen Toplam Kural Sayısı:** **{rule_count}**\n\n"
+                f"> 🔒 **Hukuki Güvenlik:** Sentezlenen tüm kurallar `DRAFT` statüsündedir. "
+                f"Fail-closed güvenlik ilkesi gereği, `total_payable_amount` resmî yetkili doğrulaması yapılana kadar `None` kalacaktır."
+            )
+            return status_text, rows
+
+        btn_synthesize.click(
+            on_synthesize_rules,
+            inputs=[synth_year, synth_doc_sha],
+            outputs=[synth_status, dynamic_rules_df],
         )
 
         gr.Markdown("---")

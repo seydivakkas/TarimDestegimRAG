@@ -813,3 +813,136 @@ def inspect_signed_year_release(
         "payable_amount": None,
     }
 
+
+class SynthesizeRulesRequest(BaseModel):
+    document_sha256: str
+    production_year: int | None = None
+    default_base_coefficient: str | None = None
+
+
+@app.post("/admin/rules/synthesize", tags=["Dinamik Kural ve Fiyat Motoru"])
+def synthesize_dynamic_rules(
+    request: SynthesizeRulesRequest,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Keşfedilen mevzuattan ve ek tablolardan dinamik kuralları sentezler ve kaydeder."""
+    from tarim_destek_rag.rules.dynamic_rule_repository import DynamicRuleRepository
+    from tarim_destek_rag.rules.rule_synthesizer import RuleSynthesizer
+    from tarim_destek_rag.rules.table_parser import TableParser
+    from tarim_destek_rag.updates.legislation_repository import LegislationCatalogRepository
+
+    archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    leg_repo = LegislationCatalogRepository(archive_root)
+    discovered = leg_repo.load(request.document_sha256)
+    if discovered is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Mevzuat belgesi bulunamadı: {request.document_sha256}",
+        )
+
+    base_coef = (
+        Decimal(request.default_base_coefficient)
+        if request.default_base_coefficient
+        else Decimal("244.00")
+    )
+    year = (
+        request.production_year
+        or (discovered.effective_dates.valid_production_years[0]
+            if discovered.effective_dates.valid_production_years else 2026)
+    )
+
+    # Ek tabloları ayrıştır
+    matrix = TableParser.parse_annex_matrices(
+        discovered.annex_tables,
+        pages_text=[],
+        production_year=year,
+        default_base_coef=base_coef,
+    )
+
+    # Kuralları sentezle
+    candidates = RuleSynthesizer.synthesize_candidates(
+        discovered, matrix=matrix, production_year=year
+    )
+
+    # Kataloğa kaydet
+    rule_repo = DynamicRuleRepository(archive_root)
+    rule_repo.save_rules(year, candidates)
+
+    return {
+        "status": "SYNTHESIZED_SUCCESSFULLY",
+        "document_sha256": request.document_sha256,
+        "production_year": year,
+        "base_coefficient": str(matrix.base_coefficient),
+        "rule_count": len(candidates),
+        "rules_sample": candidates[:5],
+    }
+
+
+@app.get("/admin/rules/dynamic", tags=["Dinamik Kural ve Fiyat Motoru"])
+def list_dynamic_rules(
+    year: int | None = None,
+    program_key: str | None = None,
+    crop_code: str | None = None,
+    review_status: str | None = None,
+    _admin: None = Depends(require_admin_key),
+) -> list[dict[str, Any]]:
+    """Kayıtlı dinamik kuralları listeler ve filtreler."""
+    from tarim_destek_rag.rules.dynamic_rule_repository import DynamicRuleRepository
+
+    archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    rule_repo = DynamicRuleRepository(archive_root)
+    return rule_repo.list_rules(
+        year=year,
+        program_key=program_key,
+        crop_code=crop_code,
+        review_status=review_status,
+    )
+
+
+class DynamicEvaluateRequest(BaseModel):
+    production_year: int = Field(ge=2020, le=2100)
+    as_of_date: str | None = None
+    crop: str
+    area_da: float = Field(gt=0)
+    province: str
+    district: str
+    cks_registered: bool = True
+    irrigation: bool = False
+    certified_seed: bool = False
+    certified_sapling: bool = False
+
+
+@app.post("/api/v1/rules/dynamic-evaluate", tags=["Dinamik Kural ve Fiyat Motoru"])
+def dynamic_evaluate_parcel(
+    request: DynamicEvaluateRequest,
+) -> dict[str, Any]:
+    """Çiftçi parselini bitemporal dinamik kurallarla tüm destek programları bazında değerlendirir."""
+    from tarim_destek_rag.rules.dynamic_rule_repository import DynamicRuleRepository
+    from tarim_destek_rag.rules.dynamic_support_evaluator import DynamicSupportEvaluator
+
+    archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    rule_repo = DynamicRuleRepository(archive_root)
+    catalog = rule_repo.get_catalog(years=[request.production_year])
+
+    eval_date = (
+        date.fromisoformat(request.as_of_date)
+        if request.as_of_date
+        else date(request.production_year, 6, 1)
+    )
+
+    summary = DynamicSupportEvaluator.evaluate_parcel(
+        catalog=catalog,
+        production_year=request.production_year,
+        as_of_date=eval_date,
+        crop=request.crop,
+        area_da=Decimal(str(request.area_da)),
+        province=request.province,
+        district=request.district,
+        cks_registered=request.cks_registered,
+        irrigation=request.irrigation,
+        certified_seed=request.certified_seed,
+        certified_sapling=request.certified_sapling,
+    )
+    return summary.to_dict()
+
+
