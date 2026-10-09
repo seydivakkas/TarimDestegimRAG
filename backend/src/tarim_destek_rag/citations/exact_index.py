@@ -72,6 +72,21 @@ def _check(row: dict, *, root: Path, manifest: Path) -> dict:
             page_1_indexed=page,
             exact_quote=quote,
         )
+        # A correct page is not sufficient: a quoted sentence under MADDE 2
+        # must never be mislabelled MADDE 1 merely because both share a page.
+        article = re.search(r"\bMADDE\s+(\d+)\b", section.upper())
+        if article:
+            import pymupdf
+
+            with pymupdf.open(stream=original_bytes, filetype="pdf") as doc:
+                page_text = " ".join(doc[page - 1].get_text(sort=True).split())
+            offset = page_text.index(proof.exact_quote)
+            headings = [
+                m for m in re.finditer(r"\bMADDE\s+(\d+)\s*[-–]", page_text, re.I)
+                if m.start() <= offset
+            ]
+            if not headings or headings[-1].group(1) != article.group(1):
+                raise ValueError("Quoted PDF text belongs to a different article")
     except (KeyError, TypeError, StopIteration, OSError, ValueError, ImportError, UnverifiableEvidence) as exc:
         raise ValueError("Original source quote cannot be independently verified") from exc
     return {
