@@ -7,7 +7,6 @@ import json
 from pathlib import Path
 
 import pytest
-
 from tarim_destek_rag.citations.visual_pdf import (
     lookup_visual_pdf_citation,
     render_visual_pdf_copy,
