@@ -1,0 +1,188 @@
+{
+  "schema_version": 1,
+  "as_of_date": "2026-10-09",
+  "scope": "2025-2027 plant-production support Decision 8859 and its implementing communique 2024/39; includes identified amendments and repeal targets",
+  "source_discovery_method": "TARGETED_GAZETTE_AND_MINISTRY_ARCHIVE_RESEARCH_NOT_EXHAUSTIVE",
+  "exhaustive_archive_index_scan_completed": false,
+  "all_required_documents_archived": false,
+  "coverage_status": "INCOMPLETE",
+  "legal_approval": false,
+  "automatic_rate_activation": false,
+  "documents": [
+    {
+      "id": "decision_8859",
+      "kind": "DECISION",
+      "number": "8859",
+      "published": "2024-08-29",
+      "rg_issue": "32647",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
+      "original_sha256": "89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f",
+      "amends": null,
+      "effective_date": null,
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "verification": "ORIGINAL_BYTES_PINNED"
+    },
+    {
+      "id": "communique_2024_39",
+      "kind": "COMMUNIQUE",
+      "number": "2024/39",
+      "published": "2024-12-31",
+      "rg_issue": "32769",
+      "rg_duplicate": "5.MÜKERRER",
+      "url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm",
+      "original_sha256": "efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530",
+      "implements": "decision_8859",
+      "effective_date": "2025-01-01",
+      "article_exceptions": {
+        "MADDE 10": "2025-05-01"
+      },
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "verification": "ORIGINAL_BYTES_PINNED"
+    },
+    {
+      "id": "communique_2025_13",
+      "kind": "COMMUNIQUE_AMENDMENT",
+      "number": "2025/13",
+      "published": "2025-08-05",
+      "rg_issue": "32977",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2025/08/20250805-4.htm",
+      "original_sha256": null,
+      "amends": "communique_2024_39",
+      "effective_date": "2025-08-05",
+      "retroactive_valid_from": "2025-01-01",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "modified": [
+        "MADDE 5(3)",
+        "MADDE 17(1)(e)",
+        "EK-25 arpa depolama başlangıcı"
+      ],
+      "verification": "OFFICIAL_PUBLICATION_LINK_IDENTIFIED_ORIGINAL_BYTES_UNPINNED"
+    },
+    {
+      "id": "decision_10394",
+      "kind": "DECISION_AMENDMENT",
+      "number": "10394",
+      "published": "2025-09-14",
+      "rg_issue": "33017",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2025/09/20250914-6.pdf",
+      "original_sha256": null,
+      "amends": "decision_8859",
+      "effective_date": "2026-01-01",
+      "preserves_prior_year": [
+        2025
+      ],
+      "production_years": [
+        2026,
+        2027
+      ],
+      "verification": "OFFICIAL_PDF_LINK_IDENTIFIED_ORIGINAL_BYTES_UNPINNED"
+    },
+    {
+      "id": "communique_2025_42",
+      "kind": "COMMUNIQUE_AMENDMENT",
+      "number": "2025/42",
+      "published": "2025-12-30",
+      "rg_issue": "33123",
+      "url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "original_sha256": "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269",
+      "amends": "communique_2024_39",
+      "effective_date": "2026-01-01",
+      "preserves_prior_year": [
+        2025
+      ],
+      "production_years": [
+        2026,
+        2027
+      ],
+      "modifies_annex": "EK-20",
+      "verification": "ORIGINAL_BYTES_PINNED"
+    },
+    {
+      "id": "decision_11781",
+      "kind": "DECISION_AMENDMENT",
+      "number": "11781",
+      "published": "2026-09-08",
+      "rg_issue": "33364",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+      "original_sha256": null,
+      "amends": "decision_8859",
+      "effective_date": "2027-01-01",
+      "article_effective_exceptions": {
+        "MADDE 1(a)": "2026-09-08",
+        "MADDE 1(ç)": "2026-09-08",
+        "MADDE 4": "2026-09-08"
+      },
+      "retroactive_validity_from": {
+        "MADDE 1(a)": "2026-01-01",
+        "MADDE 1(ç)": "2026-01-01",
+        "MADDE 4": "2025-01-01"
+      },
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "verification": "OFFICIAL_PDF_LINK_IDENTIFIED_ORIGINAL_BYTES_UNPINNED"
+    },
+    {
+      "id": "repealed_2022_32",
+      "kind": "REPEALED_COMMUNIQUE",
+      "number": "2022/32",
+      "published": "2022-11-04",
+      "rg_issue": "32003",
+      "url": null,
+      "original_sha256": null,
+      "repealed_by": "communique_2024_39",
+      "repeal_article": "MADDE 21(1)",
+      "requires_transition_review": true,
+      "verification": "REFERENCE_ONLY"
+    },
+    {
+      "id": "repealed_2022_34",
+      "kind": "REPEALED_COMMUNIQUE",
+      "number": "2022/34",
+      "published": "2022-11-25",
+      "rg_issue": "32024",
+      "url": null,
+      "original_sha256": null,
+      "repealed_by": "communique_2024_39",
+      "repeal_article": "MADDE 21(2)",
+      "requires_transition_review": true,
+      "verification": "REFERENCE_ONLY"
+    },
+    {
+      "id": "repealed_2023_48",
+      "kind": "REPEALED_COMMUNIQUE",
+      "number": "2023/48",
+      "published": "2024-01-09",
+      "rg_issue": "32424",
+      "url": null,
+      "original_sha256": null,
+      "repealed_by": "communique_2024_39",
+      "repeal_article": "MADDE 21(3)",
+      "requires_transition_review": true,
+      "verification": "REFERENCE_ONLY"
+    }
+  ],
+  "unresolved_requirements": [
+    "COMPLETE_OFFICIAL_GAZETTE_DATE_INDEX_SEARCH_2024_THROUGH_AS_OF_DATE",
+    "COMPLETE_MINISTRY_ANNOUNCEMENT_AND_ATTACHMENT_LINK_RECALL",
+    "PIN_2025_13_10394_11781_ORIGINAL_SHA256",
+    "VERIFY_2024_39_REPEALED_2022_32_2022_34_2023_48_ORIGINALS",
+    "VERIFY_EK20_VISUAL_TRANSCRIPTION_INDEPENDENTLY",
+    "REVIEW_11781_RETROACTIVE_EFFECT_AND_ARTICLE_LEVEL_APPLICATION",
+    "EXHAUSTIVE_APPLICABILITY_2025_2026_2027_AND_FUTURE_UPDATES"
+  ]
+}

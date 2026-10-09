@@ -1,0 +1,126 @@
+{
+  "schema_version": 1,
+  "source_document_id": "RG_AMENDMENT_2025_42_ANNEX",
+  "source_url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9-1.pdf",
+  "source_sha256": "6984c901775212e0500148cbbb2d87ea34ad3783e10d6c798fa9ca320bf06a79",
+  "source_bytes": 695625,
+  "source_pdf_page_count": 1,
+  "table_pdf_page": 1,
+  "basis_document": "2025/42 amendment to 2024/39, Article 15",
+  "production_year": 2026,
+  "unit": "TRY_PER_DECARE",
+  "transcription_method": "VISUAL_INSPECTION_OF_RENDERED_ORIGINAL_IMAGE",
+  "transcription_status": "VISUAL_TRANSCRIPTION_PENDING_INDEPENDENT_REVIEW",
+  "machine_text_extraction": "EMPTY_IMAGE_ONLY_PDF",
+  "automatic_rate_activation": false,
+  "independent_legal_reviewer_approved": false,
+  "title": "2026 YILI BİTKİSEL ÜRETİMDE BİYOLOJİK VE/VEYA BİYOTEKNİK MÜCADELE DESTEĞİ ÜRÜN-ETMEN VE DESTEK BİRİM TUTARLARI",
+  "package_support": {
+    "greenhouse_kobuks_tl_da": 4650,
+    "open_field_tl_da": 1550
+  },
+  "rows": [
+    {
+      "row_id": "greenhouse_mixed",
+      "product_pest": "Örtüaltı/Kapalı Ortam: Domates, Biber, Patlıcan, Hıyar, Kabak",
+      "biological_tl_da": 3800,
+      "biotechnical_tl_da": null,
+      "feromone_trap_tl_da": 850,
+      "feromone_only_tl_da": 400
+    },
+    {
+      "row_id": "citrus",
+      "product_pest": "Turunçgiller",
+      "biological_tl_da": 700,
+      "biotechnical_tl_da": null,
+      "feromone_trap_tl_da": 850,
+      "feromone_only_tl_da": 310
+    },
+    {
+      "row_id": "open_tomato",
+      "product_pest": "Açıkta Domates",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": null,
+      "feromone_trap_tl_da": 400,
+      "feromone_only_tl_da": 250
+    },
+    {
+      "row_id": "apple",
+      "product_pest": "Elma",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": 850,
+      "feromone_trap_tl_da": null,
+      "feromone_only_tl_da": null
+    },
+    {
+      "row_id": "vine",
+      "product_pest": "Bağ",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": 850,
+      "feromone_trap_tl_da": null,
+      "feromone_only_tl_da": null
+    },
+    {
+      "row_id": "olive",
+      "product_pest": "Zeytin",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": 310,
+      "feromone_trap_tl_da": null,
+      "feromone_only_tl_da": null
+    },
+    {
+      "row_id": "apricot",
+      "product_pest": "Kayısı",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": 850,
+      "feromone_trap_tl_da": null,
+      "feromone_only_tl_da": null
+    },
+    {
+      "row_id": "pomegranate",
+      "product_pest": "Nar",
+      "biological_tl_da": 700,
+      "biotechnical_tl_da": 850,
+      "feromone_trap_tl_da": null,
+      "feromone_only_tl_da": null
+    },
+    {
+      "row_id": "quince",
+      "product_pest": "Ayva",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": 850,
+      "feromone_trap_tl_da": null,
+      "feromone_only_tl_da": null
+    },
+    {
+      "row_id": "pear",
+      "product_pest": "Armut",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": 850,
+      "feromone_trap_tl_da": null,
+      "feromone_only_tl_da": null
+    },
+    {
+      "row_id": "peach",
+      "product_pest": "Şeftali",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": null,
+      "feromone_trap_tl_da": 850,
+      "feromone_only_tl_da": 310
+    },
+    {
+      "row_id": "nectarine",
+      "product_pest": "Nektarin",
+      "biological_tl_da": null,
+      "biotechnical_tl_da": null,
+      "feromone_trap_tl_da": 850,
+      "feromone_only_tl_da": 310
+    }
+  ],
+  "warnings": [
+    "A dash in the original means absent/unspecified; represented as null, never zero.",
+    "The image-based one-page PDF has no selectable text. Values were transcribed from the rendered original; an independent reviewer must verify every numeric cell and Latin pest label before use.",
+    "2026 EK-20 must not be extrapolated to 2025 or 2027 without an amendment/production-year applicability review.",
+    "No rows are imported into the payment engine."
+  ]
+}
