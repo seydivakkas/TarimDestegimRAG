@@ -88,14 +88,14 @@ def program_grounding_app(tmp_path, monkeypatch):
     app.dependency_overrides[get_db_session] = dependency
     try:
         with TestClient(app) as client:
-            yield client
+            yield client, engine
     finally:
         app.dependency_overrides.pop(get_db_session, None)
         engine.dispose()
 
 
 def test_get_grounding_by_program_success(program_grounding_app):
-    client = program_grounding_app
+    client, _engine = program_grounding_app
     resp = client.get("/api/v1/grounding/program/BASIC_SUPPORT", params={"year": 2030, "crop_code": "BUĞDAY"})
     assert resp.status_code == 200
     data = resp.json()
@@ -112,7 +112,7 @@ def test_get_grounding_by_program_success(program_grounding_app):
 
 
 def test_get_grounding_by_program_not_found(program_grounding_app):
-    client = program_grounding_app
+    client, _engine = program_grounding_app
     # Wrong program key
     resp = client.get("/api/v1/grounding/program/NON_EXISTENT", params={"year": 2030})
     assert resp.status_code == 404
@@ -120,3 +120,29 @@ def test_get_grounding_by_program_not_found(program_grounding_app):
     # Wrong year
     resp2 = client.get("/api/v1/grounding/program/BASIC_SUPPORT", params={"year": 2029})
     assert resp2.status_code == 404
+
+
+def test_program_lookup_rejects_ambiguous_geographic_candidates(program_grounding_app):
+    client, engine = program_grounding_app
+    with Session(engine) as session:
+        reference = session.query(DynamicRateModel).first()
+        session.add(DynamicRateModel(
+            program_key="BASIC_SUPPORT",
+            crop_code="BUĞDAY",
+            production_year=2030,
+            province="KONYA",
+            district="KARATAY",
+            base_coefficient=Decimal("550.00"),
+            category_multiplier=Decimal("1.0000"),
+            proposed_unit_amount=Decimal("550.00"),
+            unit="TRY/da",
+            effective_from=date(2030, 1, 1),
+            effective_to=date(2030, 12, 31),
+            source_sentence_id=reference.source_sentence_id,
+            review_status="DRAFT",
+        ))
+        session.commit()
+    for params in ({"year": 2030}, {"year": 2030, "crop_code": "BUĞDAY"}):
+        response = client.get("/api/v1/grounding/program/BASIC_SUPPORT", params=params)
+        assert response.status_code == 409
+        assert "belirsiz" in response.json()["detail"]
