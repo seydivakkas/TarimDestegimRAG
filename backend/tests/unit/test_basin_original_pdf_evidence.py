@@ -12,6 +12,7 @@ from tarim_destek_rag.citations.basin_visual import (
     locate_basin_crop,
     lookup_basin_crop_evidence,
 )
+
 from frontend_pc.formatters import render_reasons_markdown
 
 
