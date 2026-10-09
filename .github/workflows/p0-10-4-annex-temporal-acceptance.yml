@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - feat/p0-10-4-annex-temporal-coverage
+      - fix/p0-10-4-pin-source-hashes-and-ci
   pull_request:
     branches:
       - feat/p0-10-3-original-source-integrity
+      - main
   workflow_dispatch:
 
 permissions:
