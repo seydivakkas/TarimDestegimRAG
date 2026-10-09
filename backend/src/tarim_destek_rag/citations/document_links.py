@@ -467,8 +467,10 @@ def render_document_viewer_html(article_key: str) -> str:
     from html import escape
 
     data = get_article_preview(article_key)
-    title = escape(str(data.get("title", "Mevzuat kaynağı")))
-    source = escape(str(data.get("source", "Resmî Gazete")))
+    # Legacy ARTICLE_PREVIEWS has hand-written topic summaries, not original
+    # Gazette clause titles. Never show their guessed article titles as fact.
+    title = escape("Konu bağlantısı — madde/pasaj henüz eşleştirilmedi")
+    source = escape("İlgili resmî kaynak (doğrulanmış madde bağlantısı değildir)")
     url = escape(str(data.get("url", "")), quote=True)
     return (
         '<div class="legal-reader-container">'
