@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -47,7 +47,7 @@ def fetch_pdf_evidence(url: str, output: Path) -> dict:
     return {
         "source_url": url,
         "retrieved_url": final,
-        "retrieved_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "retrieved_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "pdf_bytes": len(raw),
         "pdf_pages": len(pdf.pages),
         "sha256_of_pdf_bytes": hashlib.sha256(raw).hexdigest(),

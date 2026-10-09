@@ -11,7 +11,7 @@ import hashlib
 import io
 import json
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -166,7 +166,7 @@ def main() -> int:
     raw = fetch_official_bytes()
     (folder / "source_2026_basin.pdf").write_bytes(raw)
     manifest = {
-        "retrieved_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "retrieved_utc": datetime.now(UTC).isoformat(timespec="seconds"),
         "source_url": OFFICIAL_URL,
         "sha256": hashlib.sha256(raw).hexdigest(),
     }

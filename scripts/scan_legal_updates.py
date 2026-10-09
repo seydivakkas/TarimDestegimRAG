@@ -3,9 +3,11 @@
 This does NOT update the official legal rates/conditions or mark data VERIFIED.
 """
 from __future__ import annotations
+
 import argparse
 import json
 from pathlib import Path
+
 from tarim_destek_rag.updates.discovery import read_portals, scan_official_sources
 
 

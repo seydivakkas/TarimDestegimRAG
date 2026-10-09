@@ -1,0 +1,2 @@
+# Ensure test fixtures preserve exact byte content across platforms
+backend/tests/fixtures/** -text

@@ -1,0 +1,39 @@
+name: P0-10.2 Real-Source Parser Acceptance
+
+on:
+  push:
+    branches:
+      - feat/p0-10-2-real-source-parser-fixes
+  pull_request:
+    branches:
+      - feat/p0-10-1-official-source-fixtures
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-source-parser-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TARIM_RAG_LEGAL_ACTIVATION_ENABLED: "false"
+      TARIM_RAG_LEGAL_SECURITY_PROFILE: "disabled"
+      TOKENIZERS_PARALLELISM: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install project development and PDF evidence dependencies
+        run: python -m pip install -e ".[dev,pdf-evidence]"
+      - name: Compile project and test modules
+        run: python -m compileall -q backend/src backend/tests frontend_pc
+      - name: Run strict Ruff without exemptions
+        run: ruff check backend/src backend/tests
+      - name: Require real-source parser assertions to pass (no XFAIL)
+        run: |
+          python -m pytest backend/tests/integration/test_p0_10_1_real_official_corpus.py -q --no-cov -rx
+      - name: Run full backend regression
+        run: |
+          python -m pytest backend/tests -q --no-cov

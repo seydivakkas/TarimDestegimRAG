@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "audit_phase": "P0-10.3",
+  "target_production_years": [
+    2025,
+    2026,
+    2027
+  ],
+  "complete_official_coverage_proven": false,
+  "origin_byte_manifest_status": "PINNED_5_OF_5_SEMANTIC_ANNEX_AND_YEAR_SCOPE_HOLD",
+  "governance": {
+    "review_required": true,
+    "legal_activation": false,
+    "payable_amount_approved": false
+  },
+  "notes": [
+    "Five direct TLS HTTPS original HTTP/PDF response byte SHA-256 digests corroborated by independent GitHub Actions push and PR runs; not third-party transformed HTML hashes.",
+    "PDF annexes must be validated as separate original documents; a matched source SHA does not prove OCR/layout completeness or EK-20 table semantics.",
+    "Actual 2025/42 appendix lacks extractable EK-20 marker. Byte integrity may PASS while annex semantics and legal-source completeness remain HOLD.",
+    "GitHub Actions artifacts expire after 90 days and are NOT permanent WORM evidence. Until institutional archival, legal review and exhaustive official-index search, never authorize payment."
+  ],
+  "sources": [
+    {
+      "id": "RG_DECISION_8859",
+      "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
+      "format": "pdf",
+      "role": "BASE_DECISION",
+      "parent_id": null,
+      "original_sha256": "89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f",
+      "gazette_date": "2024-08-29",
+      "gazette_issue": "32647",
+      "expected_legal_number": "8859",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "legal_effective_from": null,
+      "original_bytes": 1436150,
+      "provenance_evidence_run_ids": [
+        37906860240,
+        37906865615
+      ]
+    },
+    {
+      "id": "RG_COMMUNIQUE_2024_39",
+      "url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm",
+      "format": "html",
+      "role": "BASE_COMMUNIQUE",
+      "parent_id": null,
+      "original_sha256": "efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530",
+      "gazette_date": "2024-12-31",
+      "gazette_issue": "32769",
+      "gazette_special_issue": "5. Mükerrer",
+      "expected_legal_number": "2024/39",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "legal_effective_from": "2025-01-01",
+      "article_exceptions": {
+        "MADDE 10": "2025-05-01"
+      },
+      "original_bytes": 236810,
+      "provenance_evidence_run_ids": [
+        37906860240,
+        37906865615
+      ]
+    },
+    {
+      "id": "RG_COMMUNIQUE_2024_39_ANNEX",
+      "url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8-1.pdf",
+      "format": "pdf",
+      "role": "BASE_COMMUNIQUE_ANNEX",
+      "parent_id": "RG_COMMUNIQUE_2024_39",
+      "original_sha256": "3d290ad65a41d8c2cee49e50581c7eb0bb4a3c429af9e6191eaab4bf64d2eafe",
+      "gazette_date": "2024-12-31",
+      "gazette_issue": "32769",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "original_bytes": 3084837,
+      "provenance_evidence_run_ids": [
+        37906860240,
+        37906865615
+      ]
+    },
+    {
+      "id": "RG_AMENDMENT_2025_42",
+      "url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "format": "html",
+      "role": "AMENDMENT",
+      "amends": "RG_COMMUNIQUE_2024_39",
+      "parent_id": null,
+      "original_sha256": "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269",
+      "gazette_date": "2025-12-30",
+      "gazette_issue": "33123",
+      "expected_legal_number": "2025/42",
+      "production_years": [
+        2026,
+        2027
+      ],
+      "transition_years_preserve_prior_rules": [
+        2025
+      ],
+      "legal_effective_from": "2026-01-01",
+      "original_bytes": 45886,
+      "provenance_evidence_run_ids": [
+        37906860240,
+        37906865615
+      ]
+    },
+    {
+      "id": "RG_AMENDMENT_2025_42_ANNEX",
+      "url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9-1.pdf",
+      "format": "pdf",
+      "role": "AMENDMENT_ANNEX",
+      "parent_id": "RG_AMENDMENT_2025_42",
+      "original_sha256": "6984c901775212e0500148cbbb2d87ea34ad3783e10d6c798fa9ca320bf06a79",
+      "gazette_date": "2025-12-30",
+      "gazette_issue": "33123",
+      "expected_annex_reference": "EK-20",
+      "expected_pdf_text_marker": "EK-20",
+      "production_years": [
+        2026,
+        2027
+      ],
+      "original_bytes": 695625,
+      "provenance_evidence_run_ids": [
+        37906860240,
+        37906865615
+      ]
+    }
+  ],
+  "origin_byte_observation_runs": [
+    37906860240,
+    37906865615
+  ],
+  "origin_byte_pin_observed_date": "2026-10-09"
+}

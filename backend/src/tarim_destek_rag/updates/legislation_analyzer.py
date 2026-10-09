@@ -131,114 +131,122 @@ class LegislationAnalyzer:
         except Exception:
             return [""]
 
+
     @classmethod
     def classify_type(cls, text: str) -> LegislationType:
-        """Metin içeriğindeki başlık ve resmi formatlara göre mevzuat türünü belirler."""
-        folded = _turkish_lower(text)
+        """Classify the issuing document from its heading, not cited legislation.
 
-        # 1. Değişiklik tebliği kontrolü (öncelikli)
-        if (
-            "değişiklik yapılmasına dair tebliğ" in folded
-            or "degisiklik yapilmasina dair teblig" in folded
+        Mentions such as a Presidential Decision inside a Communique's body
+        are cross-references, never the issuing document's own type.
+        """
+        folded = _turkish_lower(text)
+        start_body = re.search(r"\bmadde\s+1\s*[-–—]", folded)
+        heading = folded[:start_body.start()] if start_body else folded[:4000]
+        heading = re.sub(r"\s+", " ", heading).strip()
+
+        if re.search(
+            r"değişiklik\s+yapılmasına\s+dair\s+tebliğ"
+            r"|degisiklik\s+yapilmasina\s+dair\s+teblig",
+            heading,
         ):
             return LegislationType.DEGISIKLIK_TEBLIGI
-
-        # 2. Cumhurbaşkanı Kararı kontrolü
         if (
-            "cumhurbaşkanı kararı" in folded
-            or "cumhurbaskani karari" in folded
-            or re.search(r"karar\s*sayısı\s*:\s*\d+", folded)
-        ):
-            return LegislationType.CUMHURBASKANI_KARARI
-
-        # 3. Bakanlık Tebliği kontrolü
-        if (
-            "dair tebliğ" in folded
-            or "tebliğ no:" in folded
-            or "teblig no:" in folded
-            or re.search(r"\btebliğ\b", folded)
+            re.search(r"\btebliğ\s+no\s*:", heading)
+            or re.search(r"\bdair\s+tebliğ\b", heading)
+            or re.search(r"\btebliğ\b", heading)
         ):
             return LegislationType.BAKANLIK_TEBLIGI
-
-        # 4. Yönetmelik kontrolü
-        if (
-            "yönetmeli" in folded
-            or "yonetmeli" in folded
-            or "yönetmelik" in folded
-            or "yonetmelik" in folded
+        if "cumhurbaşkanı kararı" in heading or re.search(
+            r"\bkarar\s+sayısı\s*:\s*\d+", heading
         ):
+            return LegislationType.CUMHURBASKANI_KARARI
+        if "yönetmeli" in heading or "yonetmeli" in heading:
             return LegislationType.YONETMELIK
-
-        # 5. Genelge kontrolü
-        if "genelge" in folded or "talimat" in folded:
+        if "genelge" in heading or "talimat" in heading:
             return LegislationType.GENELGE
-
-        # 6. Ek Tablo tek başına ise
-        if re.match(r"^\s*ek\s*[-–—]?\s*\d+", folded):
+        if re.match(r"^ek\s*[-–—]?\s*\d+", heading):
             return LegislationType.EK_TABLO
-
         return LegislationType.BILINMEYEN
+
 
     @classmethod
     def extract_identity(cls, full_text: str) -> LegislationIdentity:
-        """Resmî başlık, sayı, Resmî Gazete tarihi ve sayı bilgilerini çıkarır."""
+        """Extract the *issuing* document identity from the header region."""
         leg_type = cls.classify_type(full_text)
         lower_text = _turkish_lower(full_text)
-
-        # 1. Numara tespiti
-        number = None
-        # Tebliğ No: 2024/39 veya (Tebliğ No: 2025/42)
-        teblig_m = re.search(
-            r"tebliğ\s*no\s*:\s*(\d{4}/\d+|\d+)", lower_text
+        first_article = re.search(r"\bmadde\s+1\s*[-–—]", lower_text)
+        header = (
+            lower_text[:first_article.start()]
+            if first_article else lower_text[:4000]
         )
-        if teblig_m:
-            number = teblig_m.group(1).strip()
-        else:
-            # Karar Sayısı: 8859
-            karar_m = re.search(
-                r"karar\s*sayısı\s*:\s*(\d+)", lower_text
-            )
+        flat_header = re.sub(r"\s+", " ", header)
+
+        number = None
+        heading_teblig_numbers = re.findall(
+            r"tebliğ\s*no\s*:\s*(\d{4}/\d+|\d+)", flat_header
+        )
+        if leg_type == LegislationType.DEGISIKLIK_TEBLIGI:
+            # Real 2025/42 header names the AMENDED 2024/39 first, then
+            # introduces its own final "(Tebliğ No: 2025/42)".
+            if heading_teblig_numbers:
+                number = heading_teblig_numbers[-1]
+        elif leg_type == LegislationType.BAKANLIK_TEBLIGI:
+            if heading_teblig_numbers:
+                number = heading_teblig_numbers[0]
+        elif leg_type == LegislationType.CUMHURBASKANI_KARARI:
+            karar_m = re.search(r"karar\s*sayısı\s*:\s*(\d+)", flat_header)
             if karar_m:
-                number = karar_m.group(1).strip()
+                number = karar_m.group(1)
             else:
-                # 2024/8859 Sayılı
                 sayili_m = re.search(
-                    r"(\d{4}/\d+|\d{4})\s*sayılı", lower_text
+                    r"(\d{4}/\d+|\d{4})\s*sayılı", flat_header
                 )
                 if sayili_m:
-                    number = sayili_m.group(1).strip()
+                    number = sayili_m.group(1)
 
-        # 2. Resmî Gazete Tarihi ve Sayısı tespiti
         rg_date = None
         rg_number = None
-
-        # Format 1: 24 Ağustos 2024 TARİHLİ VE 32642 SAYILI RESMÎ GAZETE
-        rg_m1 = re.search(
-            r"(\d{1,2})\s+([a-zA-Zçğıöşü]+)\s+(\d{4})\s+tarihli\s+ve\s+(\d+)\s+sayılı\s+resm[iî]\s+gazete",
-            lower_text,
+        # Synthetic and legacy primary header format:
+        # "24 Ağustos 2024 TARİHLİ VE 32642 SAYILI RESMÎ GAZETE".
+        primary_rg = re.search(
+            r"(\d{1,2})\s+([a-zçğıöşü]+)\s+(\d{4})\s+tarihli"
+            r"\s+ve\s+(\d+)\s+sayılı\s+resm[iî]\s+gazete",
+            flat_header,
         )
-        if rg_m1:
-            rg_date = _normalize_turkish_date(rg_m1.group(1), rg_m1.group(2), rg_m1.group(3))
-            rg_number = rg_m1.group(4)
-        else:
-            # Format 2: 24/8/2024 tarihli ve 32642 sayılı Resmî Gazete
-            rg_m2 = re.search(
-                r"(\d{1,2}/\d{1,2}/\d{4})\s+tarihli\s+ve\s+(\d+)\s+sayılı\s+resm[iî]\s+gazete",
-                lower_text,
+        primary_slash = re.search(
+            r"(\d{1,2}/\d{1,2}/\d{4})\s+tarihli\s+ve\s+"
+            r"(\d+)\s+sayılı\s+resm[iî]\s+gazete",
+            flat_header,
+        )
+        if primary_rg:
+            rg_date = _normalize_turkish_date(
+                primary_rg.group(1), primary_rg.group(2), primary_rg.group(3)
             )
-            if rg_m2:
-                rg_date = _normalize_slash_date(rg_m2.group(1))
-                rg_number = rg_m2.group(2)
-            else:
-                # Sayı ve Tarih üstbilgide ayrı ayrı geçiyorsa
-                sayi_only = re.search(r"sayı\s*:\s*(\d{5})", lower_text)
-                if sayi_only:
-                    rg_number = sayi_only.group(1)
+            rg_number = primary_rg.group(4)
+        elif primary_slash:
+            rg_date = _normalize_slash_date(primary_slash.group(1))
+            rg_number = primary_slash.group(2)
+        else:
+            # Real Gazette HTML has: "30 Aralık 2025 SALI  Resmî Gazete  Sayı : 33123".
+            actual_heading = re.search(
+                r"(\d{1,2})\s+([a-zçğıöşü]+)\s+(\d{4})"
+                r"(?:\s+(?:pazartesi|salı|çarşamba|perşembe|cuma|cumartesi|pazar))?"
+                r"\s+resm[iî]\s+gazete",
+                flat_header,
+            )
+            if actual_heading:
+                rg_date = _normalize_turkish_date(
+                    actual_heading.group(1),
+                    actual_heading.group(2),
+                    actual_heading.group(3),
+                )
+            issue = re.search(r"sayı\s*:\s*(\d{5})", flat_header)
+            if issue:
+                rg_number = issue.group(1)
 
-        # 3. Başlık tespiti
         lines = [line.strip() for line in full_text.splitlines() if line.strip()]
         title = "Resmî Mevzuat Belgesi"
-        for line in lines[:15]:
+        for line in lines[:20]:
             line_fold = _turkish_lower(line)
             if any(
                 term in line_fold
@@ -247,13 +255,11 @@ class LegislationAnalyzer:
                 if len(line) > 10 and not line_fold.startswith("sayı"):
                     title = line
                     break
-
         authority = (
             "T.C. CUMHURBAŞKANLIĞI"
             if leg_type == LegislationType.CUMHURBASKANI_KARARI
             else "T.C. TARIM VE ORMAN BAKANLIĞI"
         )
-
         return LegislationIdentity(
             legislation_type=leg_type,
             title=title,
@@ -263,63 +269,93 @@ class LegislationAnalyzer:
             authority=authority,
         )
 
+
     @classmethod
     def extract_effective_dates(
         cls, full_text: str, default_rg_date: str | None = None
     ) -> EffectiveDateInfo:
-        """Yürürlük maddesini ve geçerli üretim yıllarını çıkarır."""
+        """Only a real effective-date clause can establish legal effectiveness.
+
+        Gazette publication time is not an effective-date fallback. When a
+        clause names an exception (e.g. 10th Article May 1 vs other articles
+        January 1), preserve that difference rather than invent one date
+        for every provision.
+        """
         lower_text = _turkish_lower(full_text)
-
-        yururluk_clause = None
-        # Metindeki tüm maddeleri tara ve 'yürürlüğe girer' ibaresi olanı bul
-        all_clauses = re.findall(
-            r"(madde\s+\d+)\s*[-–—]\s*(?:\(1\)\s*)?([^\n\r]+(?:yürürlüğe girer|gecerlidir)[^\n\r.]*\.?)",
-            lower_text,
-        )
-
+        flat_text = re.sub(r"\s+", " ", lower_text)
         effective_date = None
         is_pub_date = False
-        retroactive = False
+        effective_clause = None
+        exceptions: dict[str, str] = {}
 
-        if all_clauses:
-            madde_no, clause_content = all_clauses[-1]  # Yürürlük maddesi genelde sondan bir öncedir
-            yururluk_clause = f"{madde_no.upper()} - {clause_content.strip()}"
+        articles = re.finditer(
+            r"\bmadde\s+(\d+)\s*[-–—]\s*(.*?)"
+            r"(?=\bmadde\s+\d+\s*[-–—]|$)",
+            flat_text,
+            flags=re.DOTALL,
+        )
+        for article in articles:
+            clause = article.group(2)
+            if "yürürlüğe girer" not in clause:
+                continue
+            effective_clause = f"MADDE {article.group(1)} - {clause}"
+            effective_date = None
+            exceptions = {}
+            is_pub_date = False
 
-            if "yayımı tarihinde" in clause_content or "yayimi tarihinde" in clause_content:
+            if "yayımı tarihinde" in clause or "yayimi tarihinde" in clause:
                 is_pub_date = True
                 effective_date = default_rg_date
-            else:
-                date_match = re.search(r"(\d{1,2}/\d{1,2}/\d{4})\s+tarihinde", clause_content)
-                if date_match:
-                    effective_date = _normalize_slash_date(date_match.group(1))
+                continue
 
-        # Üretim yılları tespiti (Örn: "2025-2027 üretim yılları", "2026 üretim yılı")
+            explicit_dates = re.findall(
+                r"(\d{1,2}/\d{1,2}/\d{4})\s+tarihinde", clause
+            )
+            for special in re.finditer(
+                r"\b(\d+)\s+(?:inci|ıncı|uncu|üncü|nci|ncı)"
+                r"\s+maddesi\s+(\d{1,2}/\d{1,2}/\d{4})\s+tarihinde",
+                clause,
+            ):
+                exceptions[f"MADDE {int(special.group(1))}"] = (
+                    _normalize_slash_date(special.group(2))
+                )
+            general = re.search(
+                r"diğer\s+maddeleri\s+"
+                r"(\d{1,2}/\d{1,2}/\d{4})\s+tarihinde",
+                clause,
+            )
+            if general:
+                effective_date = _normalize_slash_date(general.group(1))
+            elif len(explicit_dates) == 1:
+                effective_date = _normalize_slash_date(explicit_dates[0])
+            # Multiple non-qualified dates are ambiguous; never guess.
+
         production_years: list[int] = []
         range_match = re.search(
-            r"(\d{4})\s*[-–—]\s*(\d{4})\s+üretim\s+yılları", lower_text
+            r"(\d{4})\s*[-–—]\s*(\d{4})\s+üretim\s+yılları",
+            lower_text,
         )
         if range_match:
-            start_y = int(range_match.group(1))
-            end_y = int(range_match.group(2))
+            start_y, end_y = int(range_match.group(1)), int(range_match.group(2))
             if 2020 <= start_y <= end_y <= 2100:
                 production_years = list(range(start_y, end_y + 1))
         else:
             single_year_matches = set(
-                re.findall(r"\b(202[4-9]|203\d)\s+(?:üretim\s+yılı|yılı)", lower_text)
+                re.findall(
+                    r"\b(202[4-9]|203\d)\s+(?:üretim\s+yılı|yılı)",
+                    lower_text,
+                )
             )
             if single_year_matches:
                 production_years = sorted(int(y) for y in single_year_matches)
 
-        if not effective_date and default_rg_date:
-            effective_date = default_rg_date
-            is_pub_date = True
-
         return EffectiveDateInfo(
             effective_date=effective_date,
-            effective_clause_text=yururluk_clause,
+            effective_clause_text=effective_clause,
             valid_production_years=production_years,
             is_publication_date=is_pub_date,
-            retroactive=retroactive,
+            retroactive=False,
+            article_effective_dates=exceptions,
         )
 
     @classmethod
@@ -333,9 +369,17 @@ class LegislationAnalyzer:
 
         # Hedeflenen ana tebliğ referansı:
         # Örn: 24/8/2024 tarihli ve 32642 sayılı Resmî Gazete'de yayımlanan Bitkisel Üretime Destekleme Ödemesi Yapılmasına Dair Tebliğ (Tebliğ No: 2024/39)
+
         ref_match = re.search(
-            r"(\d{1,2}/\d{1,2}/\d{4})\s+tarihli\s+ve\s+(\d+)\s+sayılı\s+resm[iî]\s+gazete['’]de\s+yayımlanan\s+([^\n(]+)\s*\(\s*tebliğ\s*no\s*:\s*(\d{4}/\d+|\d+)\s*\)",
+            r"(\d{1,2}/\d{1,2}/\d{4})\s+tarihli\s+ve\s+"
+            r"(\d{4,6})"
+            r"(?:\s+(?:(?:birinci|ikinci|üçüncü|dördüncü|beşinci|"
+            r"altıncı|yedinci|sekizinci|dokuzuncu|onuncu|\d+\.)\s+)?mükerrer)?"
+            r"\s+sayılı\s+resm[iî]\s+gazete\s*['’]de"
+            r"\s+yayımlanan\s+(.{8,500}?)\s*"
+            r"\(\s*tebliğ\s*no\s*:\s*(\d{4}/\d+|\d+)\s*\)",
             lower_text,
+            flags=re.DOTALL,
         )
 
         base_rg_date = None
@@ -442,7 +486,9 @@ class LegislationAnalyzer:
                         title=title_raw,
                         table_kind=kind,
                         page_number=idx,
-                        content_sha256=hashlib.sha256(page_content.encode("utf-8")).hexdigest(),
+                        # An EK-n reference or a page's text is NOT the
+                        # independently acquired annex. Never forge its digest.
+                        content_sha256=None,
                     )
                 )
 

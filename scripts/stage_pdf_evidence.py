@@ -4,6 +4,7 @@ This does not download arbitrary URLs or change payment rules. It stores
 DRAFT-only page geometry. Production provenance/authorization is separate.
 """
 from __future__ import annotations
+
 import argparse
 import os
 from pathlib import Path

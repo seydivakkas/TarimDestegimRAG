@@ -69,7 +69,9 @@ class EffectiveDateInfo:
     effective_clause_text: str | None = None       # Özgün yürürlük maddesi alıntısı
     valid_production_years: list[int] = field(default_factory=list)  # [2025, 2026, 2027]
     is_publication_date: bool = False              # Yayımı tarihinde mi yürürlüğe giriyor?
-    retroactive: bool = False                      # Geriye dönük hüküm var mı?
+    retroactive: bool = False
+    # Exceptions to the general effective date (e.g. Article 10 starts later).
+    article_effective_dates: dict[str, str] = field(default_factory=dict)                      # Geriye dönük hüküm var mı?
 
 
 @dataclass(frozen=True)

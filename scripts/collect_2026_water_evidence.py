@@ -8,7 +8,7 @@ legal evidence; it never fabricates a SHA-256 or approval.
 import hashlib
 import io
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -80,7 +80,7 @@ def run(output_dir: Path) -> None:
                 "source_url": url,
                 "sha256_of_fetched_bytes": hashlib.sha256(raw).hexdigest(),
                 "byte_count": len(raw),
-                "retrieved_at_utc": datetime.now(timezone.utc).isoformat(),
+                "retrieved_at_utc": datetime.now(UTC).isoformat(),
                 "status": "SOURCE_BYTES_CAPTURED_AND_CLAUSE_CHECKED_NOT_LEGALLY_APPROVED",
             }
             print(f"{key}: SHA256 {documents[key]['sha256_of_fetched_bytes']}")
