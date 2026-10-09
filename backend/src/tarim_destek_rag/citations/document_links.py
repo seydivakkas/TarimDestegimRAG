@@ -419,7 +419,8 @@ def format_highlighted_citation_card(
     status_code = str(citation.get("verification_status") or "")
     exact = status_code == "EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW"
     visual = status_code == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW"
-    located = exact or visual
+    html = status_code == "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW"
+    located = exact or visual or html
     original_url = str(citation.get("url") or "")
     # No invented page or section fallback is sufficient to create a proof.
     source_link = ""
@@ -439,10 +440,19 @@ def format_highlighted_citation_card(
         sha = str(citation.get("document_sha256") or "")
         page = citation.get("page_number")
         if (proof_path.startswith("/evidence/highlight/") and
-                sha in proof_path and isinstance(page, int) and page > 0):
+                sha in proof_path and (
+                    (isinstance(page, int) and page > 0)
+                    or (html and proof_path.startswith("/evidence/highlight/html/"))
+                )):
             public_api = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
             proof_link = escape(public_api + proof_path, quote=True)
-            if visual:
+            if html:
+                label = (
+                    "Özgün Resmî Gazete HTML metninde birebir bulunan fıkra "
+                    "— hukukî onay bekliyor"
+                )
+                text = escape(str(citation.get("snippet") or ""))
+            elif visual:
                 label = (
                     "Özgün Resmî Gazete PDF görüntüsünde işaretlenen pasaj "
                     "— bağımsız metin ve hukukî inceleme bekliyor"
@@ -451,9 +461,13 @@ def format_highlighted_citation_card(
             else:
                 label = "Özgün PDF'de birebir bulunan pasaj — hukukî onay bekliyor"
                 text = highlight_legal_text(str(citation.get("snippet") or ""), status)
+            mark_label = (
+                "HTML’de işaretli fıkrayı aç ↗" if html
+                else "PDF’de işaretli cümleyi aç ↗"
+            )
             source_link = (
                 f'<a href="{proof_link}" target="_blank" rel="noopener noreferrer" '
-                'class="legal-source-link">PDF’de işaretli cümleyi aç ↗</a> '
+                f'class="legal-source-link">{mark_label}</a> '
                 + source_link
             )
         else:
