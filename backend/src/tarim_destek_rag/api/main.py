@@ -588,6 +588,39 @@ def analyze_raw_legislation(
     return analysis.to_dict()
 
 
+@app.get("/evidence/highlight/html/{sha256}", tags=["Özgün HTML Kanıtı"])
+def show_exact_original_gazette_html(sha256: str, support_id: str) -> Response:
+    """Render a marked COPY of authentic Gazette 2024/39 HTML (not a PDF)."""
+    from tarim_destek_rag.citations.original_html import highlighted_html_copy
+    from tarim_destek_rag.updates.pdf_evidence import SHA_PATTERN
+
+    if not SHA_PATTERN.fullmatch(sha256):
+        raise HTTPException(status_code=422, detail="Geçersiz özgün HTML SHA-256")
+    try:
+        marked = highlighted_html_copy(support_id, expected_sha256=sha256)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Resmî Gazete HTML metninde birebir madde/fıkra bulunamadı",
+        ) from exc
+    # Render the original document, but isolate its DOM from API-origin access.
+    return Response(
+        content=marked,
+        media_type="text/html; charset=utf-8",
+        headers={
+            "Content-Disposition": 'inline; filename="resmi-gazete-2024-39-isaretli.html"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": (
+                "sandbox; default-src 'none'; style-src 'unsafe-inline'; "
+                "img-src data:; base-uri 'none'; form-action 'none'"
+            ),
+            "X-Original-Source-SHA256": sha256,
+            "X-Legal-Evidence": "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW",
+        },
+    )
+
+
 @app.get("/evidence/highlight/basin/{sha256}", tags=["PDF Belge Kanıtı"])
 def show_official_basin_crop_highlight(
     sha256: str, province: str, district: str, crop: str,
