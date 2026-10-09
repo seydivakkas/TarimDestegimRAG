@@ -1,9 +1,9 @@
-"""P0-10.1: pinned genuine-source replay, with explicit known regression RED cases.
+"""P0-10.1: pinned genuine-source replay, with six independent real-source parser regression contracts.
 
 The captures are third-party HTML representations of official Resmi Gazete pages,
 NOT byte-identical original legal documents. Their SHA-256 checks verify capture
 immutability only; none of these tests authorizes legal/rate publication.
-Known failed contracts use strict xfail so any unexpected XPASS forces a review.
+Former XFAIL contracts are now required to PASS on real captured source text.
 """
 from __future__ import annotations
 
@@ -60,20 +60,17 @@ def test_real_2025_42_is_recognized_as_amendment_type() -> None:
     assert LegislationAnalyzer.classify_type(text) == LegislationType.DEGISIKLIK_TEBLIGI
 
 
-@pytest.mark.xfail(strict=True, reason="P010-A01: citation of Decision 8859 in real 2024/39 must not turn a communique into a decision")
 def test_real_2024_39_classifies_by_own_heading_not_cited_presidential_decision() -> None:
     text = _real_source_text("communique_2024_39")
     assert LegislationAnalyzer.classify_type(text) == LegislationType.BAKANLIK_TEBLIGI
 
 
-@pytest.mark.xfail(strict=True, reason="P010-A02: own amendment number 2025/42 comes after cited base number 2024/39")
 def test_real_2025_42_own_number_is_not_base_2024_39() -> None:
     text = _real_source_text("amendment_2025_42")
     identity = LegislationAnalyzer.extract_identity(text)
     assert identity.number == "2025/42"
 
 
-@pytest.mark.xfail(strict=True, reason="P010-A03: 32769 beşinci mükerrer base reference needs a dedicated reference grammar")
 def test_real_2025_42_amends_actual_2024_39_fifth_duplicate_issue() -> None:
     text = _real_source_text("amendment_2025_42")
     amendment = LegislationAnalyzer.extract_amendment_target(text)
@@ -83,25 +80,61 @@ def test_real_2025_42_amends_actual_2024_39_fifth_duplicate_issue() -> None:
     assert amendment.base_rg_number == "32769"
 
 
-@pytest.mark.xfail(strict=True, reason="P010-A05: official 2025/42 entered force 1 Jan 2026, not publication day")
 def test_real_2025_42_effective_date_is_not_gazette_publication_date() -> None:
     text = _real_source_text("amendment_2025_42")
     effective = LegislationAnalyzer.extract_effective_dates(text, default_rg_date="2025-12-30")
     assert effective.effective_date == "2026-01-01"
 
 
-@pytest.mark.xfail(strict=True, reason="P010-A05: 2024/39 Article 22 has separate 1 Jan/1 May 2025 effective dates")
 def test_real_2024_39_article_22_is_not_publication_day() -> None:
     text = _real_source_text("communique_2024_39")
     effective = LegislationAnalyzer.extract_effective_dates(text, default_rg_date="2024-12-31")
     assert effective.effective_date == "2025-01-01"
     assert effective.is_publication_date is False
+    assert effective.article_effective_dates["MADDE 10"] == "2025-05-01"
 
 
-@pytest.mark.xfail(strict=True, reason="P010-A07: a reference to EK-20 is not a hashed independently acquired annex")
 def test_real_2025_42_annex_is_not_substituted_with_entire_page_hash() -> None:
     text = _real_source_text("amendment_2025_42")
     annexes = LegislationAnalyzer.extract_annex_tables([text])
     assert any(a.annex_code == "EK-20" for a in annexes)
     page_hash = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    assert all(a.content_sha256 != page_hash for a in annexes if a.annex_code == "EK-20")
+    assert all(a.content_sha256 is None for a in annexes if a.annex_code == "EK-20")
+    assert page_hash not in {a.content_sha256 for a in annexes}
+
+
+def test_real_2025_42_issuing_gazette_metadata_is_not_amended_gazette() -> None:
+    text = _real_source_text("amendment_2025_42")
+    identity = LegislationAnalyzer.extract_identity(text)
+    assert identity.rg_date == "2025-12-30"
+    assert identity.rg_number == "33123"
+
+
+def test_real_2024_39_original_gazette_metadata_is_from_own_heading() -> None:
+    text = _real_source_text("communique_2024_39")
+    identity = LegislationAnalyzer.extract_identity(text)
+    assert identity.rg_date == "2024-12-31"
+    assert identity.rg_number == "32769"
+
+
+def test_unknown_effective_date_is_not_fabricated_from_gazette() -> None:
+    document = "RESMÎ GAZETE 1/2/2026\nTEBLİĞ NO: 2026/1\nMADDE 1- Usul."
+    dates = LegislationAnalyzer.extract_effective_dates(
+        document, default_rg_date="2026-02-01"
+    )
+    assert dates.effective_date is None
+    assert dates.is_publication_date is False
+    assert dates.article_effective_dates == {}
+
+
+def test_publication_day_clause_is_supported_when_explicit() -> None:
+    document = (
+        "TEBLİĞ NO: 2026/2\n"
+        "MADDE 1- Kapsam.\n"
+        "MADDE 2- Bu Tebliğ yayımı tarihinde yürürlüğe girer."
+    )
+    dates = LegislationAnalyzer.extract_effective_dates(
+        document, default_rg_date="2026-02-01"
+    )
+    assert dates.effective_date == "2026-02-01"
+    assert dates.is_publication_date is True

@@ -96,6 +96,7 @@ class LegislationCatalogRepository:
                 valid_production_years=dates_data.get("valid_production_years", []),
                 is_publication_date=dates_data.get("is_publication_date", False),
                 retroactive=dates_data.get("retroactive", False),
+                article_effective_dates=dates_data.get("article_effective_dates", {}),
             )
             amend_data = raw.get("amendment_target")
             amend = None
