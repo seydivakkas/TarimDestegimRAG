@@ -193,6 +193,9 @@ def collect(
             body, mime = fetch(doc["url"])
             structure = _assert_structure(doc, body, mime)
             digest = hashlib.sha256(body).hexdigest()
+            known_size = doc.get("original_bytes")
+            if known_size is not None and known_size != len(body):
+                raise SourceIntegrityError("Official byte length differs from pinned manifest")
             expected = doc.get("original_sha256")
             if mode == "verify":
                 if not isinstance(expected, str) or not re.fullmatch(r"[a-f0-9]{64}", expected):
@@ -228,17 +231,31 @@ def collect(
     for doc in source_rows:
         if doc.get("parent_id"):
             parent = doc["parent_id"]
-            if doc["url"] not in html_links.get(parent, set()):
+            if parent in html_links and doc["url"] not in html_links[parent]:
                 failures.append(
                     {"id": doc["id"], "stage": "PARENT_ANNEX_LINK",
                      "error": "Attachment URL absent from independently fetched parent HTML"}
                 )
     status = "PASS" if not failures and len(results) == len(source_rows) else "HOLD"
+    hard_failures = [
+        item for item in failures if item["stage"] != "ANNEX_SEMANTIC_CONTENT"
+    ]
+    byte_integrity = (
+        "PASS"
+        if not hard_failures and len(results) == len(source_rows)
+        and (mode != "verify" or all(row["pinned"] for row in results))
+        else "HOLD"
+    )
     report = {
         "schema_version": 1,
         "fetched_utc": datetime.now(UTC).isoformat(),
         "mode": mode,
         "source_status": status,
+        "original_byte_integrity_status": byte_integrity,
+        "annex_table_semantics_status": (
+            "HOLD" if any(e["stage"] == "ANNEX_SEMANTIC_CONTENT" for e in failures)
+            else "STRUCTURALLY_CHECKED_NOT_LEGALLY_REVIEWED"
+        ),
         "year_scope_completeness": "NOT_PROVEN",
         "legal_activation": False,
         "payable_authorization": False,
@@ -309,6 +326,10 @@ def main() -> int:
     parser.add_argument("--manifest", type=Path, default=Path("configs/p0_10_3_original_source_manifest.json"))
     parser.add_argument("--out", type=Path, default=Path("data/p0_10_3_original_source_evidence"))
     parser.add_argument("--mode", choices=("collect", "verify"), default="verify")
+    parser.add_argument(
+        "--byte-contract-only", action="store_true",
+        help="Exit successful only for exact pinned original bytes; annex semantics remain HOLD",
+    )
     args = parser.parse_args()
     manifest = json.loads(args.manifest.read_text(encoding="utf-8"))
     result = collect(manifest, args.out, mode=args.mode)
@@ -329,7 +350,17 @@ def main() -> int:
         )
     for err in result["errors"]:
         print("SOURCE_ERROR id={id} stage={stage} error={error}".format(**err), flush=True)
-    print("SOURCE_STATUS", result["source_status"], "YEAR_COVERAGE", result["year_scope_completeness"])
+    print(
+        "SOURCE_STATUS", result["source_status"],
+        "ORIGINAL_BYTE_INTEGRITY", result["original_byte_integrity_status"],
+        "ANNEX_SEMANTICS", result["annex_table_semantics_status"],
+        "YEAR_COVERAGE", result["year_scope_completeness"],
+    )
+    if args.byte_contract_only:
+        # Byte-only approval is never a legal-year, annex content or payout gate.
+        return 0 if args.mode == "verify" and (
+            result["original_byte_integrity_status"] == "PASS"
+        ) else 2
     return 0 if result["source_status"] == "PASS" else 2
 
 
