@@ -520,6 +520,65 @@ def scan_future_legal_changes(
     return result
 
 
+class AnalyzeRawLegislationRequest(BaseModel):
+    source_url: str
+    text_or_base64: str
+    mime_type: str = "text/html"
+
+
+@app.get("/admin/legal-updates/legislation", tags=["Gelecek Yıl Mevzuat Takibi"])
+def list_discovered_legislation(
+    year: int | None = None,
+    legislation_type: str | None = None,
+    _admin: None = Depends(require_admin_key),
+) -> list[dict[str, Any]]:
+    """Taranıp yapısal olarak çözümlenmiş resmî mevzuat belgelerini listeler."""
+    from tarim_destek_rag.updates.legislation_repository import LegislationCatalogRepository
+
+    repo = LegislationCatalogRepository(
+        Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    )
+    return repo.list_all(year=year, legislation_type=legislation_type)
+
+
+@app.get("/admin/legal-updates/legislation/{document_sha256}", tags=["Gelecek Yıl Mevzuat Takibi"])
+def get_discovered_legislation_detail(
+    document_sha256: str,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Belirli bir resmî mevzuat belgesinin maddelerini, ek tablolarını ve yürürlük tarihlerini döner."""
+    from tarim_destek_rag.updates.legislation_repository import LegislationCatalogRepository
+
+    repo = LegislationCatalogRepository(
+        Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    )
+    leg = repo.load(document_sha256)
+    if leg is None:
+        raise HTTPException(status_code=404, detail="Mevzuat kaydı bulunamadı")
+    return leg.to_dict()
+
+
+@app.post("/admin/legal-updates/analyze-raw", tags=["Gelecek Yıl Mevzuat Takibi"])
+def analyze_raw_legislation(
+    payload: AnalyzeRawLegislationRequest,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """Resmî metni (HTML veya base64 PDF) anında yapısal analize tabi tutar."""
+    import base64
+
+    from tarim_destek_rag.updates.legislation_analyzer import LegislationAnalyzer
+
+    raw_bytes = (
+        base64.b64decode(payload.text_or_base64)
+        if payload.mime_type == "application/pdf"
+        else payload.text_or_base64.encode("utf-8")
+    )
+    analysis = LegislationAnalyzer.analyze_document(
+        raw_bytes, payload.source_url, payload.mime_type
+    )
+    return analysis.to_dict()
+
+
 @app.get("/evidence/highlight/{sha256}", tags=["PDF Belge Kanıtı"])
 def show_exact_pdf_evidence(
     sha256: str, page: int, quote: str,

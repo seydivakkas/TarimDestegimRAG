@@ -212,5 +212,34 @@ class ApiClient:
         except Exception as exc:
             return {"status": "ERROR", "message": str(exc)}
 
+    def list_discovered_legislation(
+        self, year: int | None = None, legislation_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Fetch list of structural official legislation discovered from portals."""
+        try:
+            params: dict[str, Any] = {}
+            if year:
+                params["year"] = year
+            if legislation_type:
+                params["legislation_type"] = legislation_type
+            response = self._request(
+                "GET", "/admin/legal-updates/legislation", params=params,
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception:
+            return []
+
+    def get_discovered_legislation_detail(self, document_sha256: str) -> dict[str, Any]:
+        """Fetch detailed structural info (articles, annexes, dates) for legislation."""
+        try:
+            response = self._request(
+                "GET", f"/admin/legal-updates/legislation/{document_sha256}",
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
 
 
