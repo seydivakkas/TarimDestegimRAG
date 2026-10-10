@@ -189,7 +189,7 @@ class SupportDetailScreen extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => WhyCitationsDialog.show(context, explanation!),
               icon: const Icon(Icons.help_center_rounded),
-              label: const Text("Neden Bu Karar Verildi? (Resmî Atıflar)"),
+              label: const Text("Neden Bu Ön Değerlendirme? (Kanıt Durumu)"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accentAmber,
                 foregroundColor: Colors.black,
