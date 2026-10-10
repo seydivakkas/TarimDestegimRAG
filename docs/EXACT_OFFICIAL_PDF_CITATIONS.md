@@ -104,3 +104,13 @@ python -m tarim_destek_rag.citations.original_html --import-file "C:\\LegalSourc
 ```
 
 İçeri alma yalnız sabit kaynak kimliği, `html` formatı, azami boyut ve `efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530` SHA-256 eşleştiğinde gerçekleşir. Dosyanın arşivde bulunması, ilgili kanunun hukukî geçerliliğini veya EK-20 tablosunu onaylamaz. **Kaynağın yeniden üretilmesi, sentetik test baytının gerçek kaynak olarak gösterilmesi ve hash kontrolünün atlanması yasaktır.** Yerelde dosyanın doğrulanmış olması, GitHub runner'ın da onu içerdiği anlamına gelmez; CI canlı kaynak kapısının ayrıca PASS olması zorunludur.
+
+### SHA doğrulanmış P0-10.3 GitHub artefaktından kurtarma
+
+9 Ekim 2026 tarihli <https://github.com/seydivakkas/TarimDestegimRAG/actions/runs/37907432091> çalışmasının **live-original-official-byte-collection** işi `SUCCESS` olup resmî HTTP yanıtlarından doğrudan alınan beş belgenin özgün SHA-256 değerlerini raporladı. `p0-10-3-original-official-bytes` adlı ZIP artefaktı, `originals/<SHA>.pdf/.html` dosyalarını içerir. Özellikle:
+- 8859 özgün PDF: `89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f`, 1.436.150 bayt
+- 2024/39 özgün HTML: `efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530`, 236.810 bayt
+
+`exact-evidence` işi bu **sabit run-id** artefaktını indirip değişmeyen yerel arşive açmayı dener. Artefakt erişilemezse mevcut özgün resmî HTTPS indiriciler denenir. Her iki durumda da boyut/SHA ve belge metni/sayfa eşleştirme kontrolleri devam eder; doğrulanmamış dosyaya **PASS verilmez**. Artefakt 90 günlük saklama süresine tabidir; kalıcı ve bağımsız kaynak arşivi yerine geçmez. Daha sonraki bir tarihte artefakt sona ererse güvenli başarısızlık (**HOLD**) normaldir; yeni onaylı, özgün-byte kaynak temini gerekir.
+
+**Kabul sınırı:** CI artefaktı yalnız kaynak baytı kökeni ve bütünlük için teknik izdir; özgün metnin yürürlük, değişiklik zinciri, EK-20 veya hukukî çiftçi hak edişi bağımsız onayı değildir.

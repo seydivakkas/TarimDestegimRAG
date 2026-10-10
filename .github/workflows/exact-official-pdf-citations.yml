@@ -13,6 +13,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 # A green offline suite never substitutes for verified original government bytes.
 # Both jobs are required for the workflow to pass.
@@ -50,6 +51,17 @@ jobs:
           python-version: "3.12"
       - name: Install project and exact PDF layout dependencies
         run: python -m pip install -e ".[dev,pdf-evidence]"
+      - name: Restore independently SHA-audited 2024/2025 Gazette originals
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: p0-10-3-original-official-bytes
+          run-id: 37907432091
+          github-token: ${{ github.token }}
+          path: data/legal_update_archive
+      - name: Verify recovered original source bytes before dependent tools
+        run: |
+          python -c "from pathlib import Path; import hashlib; root=Path('data/legal_update_archive/originals'); pins=[('89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f','.pdf',1436150),('efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530','.html',236810)]; present=[(s,e,n) for s,e,n in pins if (root/(s+e)).is_file()]; [(lambda p,s,n: (_ for _ in ()).throw(ValueError('Pinned archive digest/size mismatch')) if len(p.read_bytes())!=n or hashlib.sha256(p.read_bytes()).hexdigest()!=s else None)(root/(s+e),s,n) for s,e,n in present]; print('Prior audited originals restored and SHA checked:',len(present),'of',len(pins))"
       - name: Install original 8859 scanned Gazette PDF and verify pinned source bytes
         run: python -m tarim_destek_rag.citations.visual_pdf --install-8859
       - name: Restore SHA-pinned original Gazette HTML cache
