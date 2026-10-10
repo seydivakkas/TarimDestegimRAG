@@ -197,12 +197,14 @@ def test_html_installer_retries_transient_timeouts_with_exact_sha(
     monkeypatch.setenv("TARIM_RAG_UPDATE_ARCHIVE", str(archive))
     monkeypatch.setenv("TARIM_RAG_ORIGINAL_SOURCE_MANIFEST", str(manifest))
     monkeypatch.setattr(original_html.time, "sleep", lambda _: None)
-    attempts: list[int] = []
+    attempts: list[str] = []
 
     class FakeResponse:
         status_code = 200
-        url = original_html.SOURCE_URL
         headers = {"Content-Encoding": "identity", "Content-Type": "text/html"}
+
+        def __init__(self, url: str):
+            self.url = url
 
         def iter_raw(self):
             yield fixture
@@ -218,15 +220,22 @@ def test_html_installer_retries_transient_timeouts_with_exact_sha(
             return False
 
         @contextmanager
-        def stream(self, *args, **kwargs):
-            attempts.append(1)
+        def stream(self, method: str, url: str, **kwargs):
+            assert method == "GET"
+            attempts.append(url)
             if len(attempts) < 3:
                 raise httpx.ReadTimeout("Temporary upstream timeout")
-            yield FakeResponse()
+            yield FakeResponse(url)
 
     monkeypatch.setattr(httpx, "Client", FakeClient)
     result = original_html.install_html_original()
-    assert len(attempts) == 3
+    assert attempts == [
+        original_html.SOURCE_URL,
+        original_html.SOURCE_URL,
+        original_html.SOURCE_URL.replace(
+            "://resmigazete.gov.tr/", "://www.resmigazete.gov.tr/", 1
+        ),
+    ]
     assert result["sha256"] == sha
     assert (archive / "originals" / (sha + ".html")).read_bytes() == fixture
 
