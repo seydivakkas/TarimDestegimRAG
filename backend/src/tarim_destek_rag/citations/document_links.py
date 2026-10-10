@@ -64,91 +64,17 @@ DOCUMENT_LOCATIONS: dict[str, dict[str, str]] = {
     },
 }
 
+# Legacy topic selector retained for UI compatibility. Never store fabricated
+# legal paragraphs or rates: an unverified topic is NOT a quotation.
 ARTICLE_PREVIEWS: dict[str, dict[str, str]] = {
-    "MADDE 1": {
-        "title": "2026 Resmî Gazete Kararı — MADDE 1: Temel Destek ve ÇKS Esasları",
-        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1",
-        "source": "Resmî Gazete Sayı: 32647",
-        "text": (
-            "MADDE 1 - (1) 2026 üretim yılında Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan ve tarımsal "
-            "üretim yapan çiftçilere, mazot ve gübre maliyetlerini karşılamak amacıyla temel girdi desteği "
-            "(Temel Destek) ödenir.\n"
-            "(2) Temel destekleme başvuruları ve ÇKS güncellemeleri 1 Eylül 2026 - 31 Aralık 2026 tarihleri "
-            "arasında İl/İlçe Tarım ve Orman Müdürlüklerine veya e-Devlet kapısı üzerinden yapılır.\n"
-            "(3) ÇKS kaydı bulunmayan veya kaydı pasif olan üreticiler hiçbir tarımsal destekleme ödemesinden yararlanamaz."
-        ),
-    },
-    "MADDE 2": {
-        "title": "2026 Resmî Gazete Kararı & BÜGEM — MADDE 2: Tarım Havzaları Planlı Üretim Desteği",
-        "url": "https://www.tarimorman.gov.tr/BUGEM/Menu/14/Tarim-Havzalari-Uretim-Ve-Destekleme-Modeli",
-        "source": "BÜGEM Tarım Havzaları Tebliği & RG Sayı: 32647",
-        "text": (
-            "MADDE 2 - (1) Bakanlıkça ilan edilen Türkiye Tarım Havzaları Üretim ve Destekleme Modeli "
-            "kapsamında, belirlenen havzalarda öncelikli stratejik ürünleri (Buğday, Arpa, Mısır, Ayçiçeği, "
-            "Pamuk, Soya, Mercimek, Nohut vb.) üreten üreticilere temel desteğe ilave olarak Planlı Üretim Desteği ödenir.\n"
-            "(2) İlgili il/ilçe havzasında planlı üretim kapsamında yer almayan ürünlerin ekilmesi durumunda, üreticiye "
-            "planlı üretim desteği ödenmez ve birim destek katsayısı uygulanmaz.\n"
-            "(3) Münavebe şartı: Üst üste üç yıl aynı parselde aynı tek yıllık ürünün ekilmesi durumunda üçüncü yıl destekleme yapılmaz."
-        ),
-    },
-    "MADDE 3": {
-        "title": "2026 Resmî Gazete Kararı — MADDE 3: Sertifikalı Tohum Kullanım Desteği",
-        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
-        "source": "Resmî Gazete Sayı: 32647",
-        "text": (
-            "MADDE 3 - (1) Yetkili tohumluk bayilerinden faturalı sertifikalı tohum satın alarak ekim yapan "
-            "ÇKS kayıtlı üreticilere Sertifikalı Tohum Kullanım Desteği verilir.\n"
-            "(2) Tohum faturasının ve sertifika etiket kopyasının ÇKS başvuru dosyasına eklenmesi zorunludur.\n"
-            "(3) Sertifikasız tohum kullanan veya faturası bulunmayan parsellere tohum desteği ödenmez."
-        ),
-    },
-    "MADDE 4": {
-        "title": "2026 Resmî Gazete Kararı & BÜGEM — MADDE 4: Yeraltı Su Kısıtı Olan Havzalar Desteği",
-        "url": "https://www.tarimorman.gov.tr/BUGEM/Menu/17/Yeralti-Sularinin-Yetersiz-Oldugu-Havzalar",
-        "source": "DSİ & BÜGEM Yeraltı Su Kısıtı Havzalar Kararı",
-        "text": (
-            "MADDE 4 - (1) Yeraltı su seviyesinin yetersiz olduğu ilan edilen havzalarda, su tüketimi az olan "
-            "münavebe ürünlerini (Mercimek, Nohut vb.) eken çiftçilere dekar başına 250 TL ilave Su Kısıtı Desteği verilir.\n"
-            "(2) Bu havzalarda sulu şartlarda yüksek su tüketen ürünlerin (dane mısır vb.) ekilmesi durumunda planlı destekler ödenmez."
-        ),
-    },
-    "MADDE 5": {
-        "title": "2026 Resmî Gazete Kararı — MADDE 5: Kadın ve Genç Çiftçi İlave Desteği",
-        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
-        "source": "Resmî Gazete Sayı: 32647",
-        "text": (
-            "MADDE 5 - (1) Başvuru tarihi itibarıyla 41 yaşından gün almamış genç çiftçilere temel destek tutarının "
-            "%50'si oranında ilave genç çiftçi desteği ödenir.\n"
-            "(2) ÇKS kaydı bulunan kadın çiftçilere temel destek tutarının %50'si oranında ilave destek ödenir.\n"
-            "(3) Hem genç hem kadın olan üreticiler her iki avantajdan birleşerek yararlanır."
-        ),
-    },
-    "MADDE 6": {
-        "title": "2026 Resmî Gazete Kararı & BÜGEM — MADDE 6: Sertifikalı Fidan ve Kapama Bahçe Şartı",
-        "url": "https://www.tarimorman.gov.tr/BUGEM/Menu/16/Sertifikali-Fidan-Kullanim-Destegi",
-        "source": "BÜGEM Sertifikalı Fidan Kullanım Rehberi",
-        "text": (
-            "MADDE 6 - (1) Yetkili fidan üreticilerinden temin edilen sertifikalı/standart fidanlar ile en az 5 dekar "
-            "alanda kapama meyve bahçesi tesis eden üreticilere fidan kullanım desteği verilir.\n"
-            "(2) Münferit ağaç dikimlerine veya dağınık dikimlere fidan desteği ödenmez."
-        ),
-    },
-    "EK TABLO": {
-        "title": "2026 Destekleme Kararı Ek Tablo — Ürün Bazlı Birim Fiyat Kataloğu",
-        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
-        "source": "Resmî Gazete Sayı: 32647 Ek Tablo",
-        "text": (
-            "2026 ÜRETİM YILI BİRİM DESTEKLEME TUTARLARI (TL/da):\n"
-            "• BUĞDAY / ARPA: Temel Destek 310 TL/da, Planlı Üretim 465 TL/da\n"
-            "• MISIR: Temel Destek 310 TL/da, Planlı Üretim 465 TL/da\n"
-            "• AYÇİÇEĞİ: Temel Destek 310 TL/da, Planlı Üretim 465 TL/da\n"
-            "• PAMUK (KÜTLÜ): Temel Destek 310 TL/da, Planlı Üretim 540 TL/da\n"
-            "• FINDIK: Temel Destek 310 TL/da (Geleneksel üretim havzaları)\n"
-            "• MERCİMEK / NOHUT: Temel Destek 310 TL/da, Planlı Üretim 465 TL/da, Su Kısıtı İlave 250 TL/da"
-        ),
-    },
+    key: {
+        "title": "Konu kaydı — özgün madde doğrulanmadı",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
+        "source": "8859 sayılı özgün belge (ilgili maddeyle eşleşme doğrulanmadı)",
+        "text": "Bu konu için özgün kaynakta birebir madde, fıkra ve metin eşleşmesi henüz doğrulanmadı.",
+    }
+    for key in ("MADDE 1", "MADDE 2", "MADDE 3", "MADDE 4", "MADDE 5", "MADDE 6", "EK TABLO")
 }
-
 
 def resolve_check_link(check_text: str, support_id: str | None = None) -> dict[str, str]:
     """Herhangi bir kontrol şartı için en uygun belge URL'si ve atıf bilgisini çözer."""
@@ -206,54 +132,47 @@ def format_clickable_check(
     status_icon: str = "✅",
     support_id: str | None = None,
 ) -> str:
-    """Kontrol maddesini tıklanabilir HTML bağlantısına dönüştürür.
+    """Show rule outcome, but NEVER invent a legal clause/page from keywords.
 
-    Kullanıcı tıkladığında doğrudan ilgili belgenin ilgili maddesini yeni sekmede açar.
+    An exact original-PDF evidence link appears in the separately verified
+    citation card only after source SHA, quote, article and page validation.
     """
-    loc = resolve_check_link(check_text, support_id)
-    url = loc["url"]
-    badge = loc["badge"]
-    title = f"{loc['title']} — {loc['section']}"
+    from html import escape
 
-    is_fail = status_icon in ["❌", "⚠️"]
-    extra_class = "doc-fail" if is_fail else "doc-pass"
-    badge_class = "doc-badge-fail" if is_fail else "doc-badge-pass"
-
+    is_fail = status_icon in ("❌", "⚠️")
+    extra = "doc-fail" if is_fail else "doc-pass"
+    safe_icon = escape(status_icon)
+    safe_check = escape(check_text)
     return (
-        f'<a href="{url}" target="_blank" rel="noopener noreferrer" class="doc-link-item {extra_class}" '
-        f'title="{title} — Resmî Belgeyi Aç">\n'
-        f'  <span class="doc-icon">{status_icon}</span>\n'
-        f'  <span class="doc-text">{check_text}</span>\n'
-        f'  <span class="doc-badge-tag {badge_class}">{badge} ↗</span>\n'
-        f'</a>'
+        f'<div class="doc-link-item {extra}">'
+        f'<span class="doc-icon">{safe_icon}</span>'
+        f'<span class="doc-text">{safe_check}</span>'
+        '<span class="doc-badge-tag">Madde/pasaj henüz doğrulanmadı</span>'
+        '</div>'
     )
 
 
 def format_clickable_action(action_text: str, support_id: str | None = None) -> str:
-    """Yapılması gereken başvuru adımını tıklanabilir rehber bağlantısına dönüştürür."""
-    loc = resolve_check_link(action_text, support_id)
-    url = loc["url"]
-    badge = loc["badge"]
-    title = f"{loc['title']} — {loc['section']}"
+    """A next step is guidance, never a guessed legal source link."""
+    from html import escape
 
+    safe_action = escape(action_text)
     return (
-        f'<a href="{url}" target="_blank" rel="noopener noreferrer" class="doc-link-item doc-action" '
-        f'title="{title} — Başvuru ve Mevzuat Rehberini Aç">\n'
-        f'  <span class="doc-icon">📌</span>\n'
-        f'  <span class="doc-text">{action_text}</span>\n'
-        f'  <span class="doc-badge-tag doc-badge-action">{badge} ↗</span>\n'
-        f'</a>'
+        '<div class="doc-link-item doc-action">'
+        '<span class="doc-icon">📌</span>'
+        f'<span class="doc-text">{safe_action}</span>'
+        '<span class="doc-badge-tag">Başvuru önerisi — madde doğrulanmadı</span>'
+        '</div>'
     )
 
 
 def format_citation_section_header(url: str | None = None) -> str:
-    """'Resmî Mevzuat Maddesi ve Alıntı (Kanıt Zinciri)' başlığını tıklanabilir yapar."""
-    target_url = url or DOCUMENT_LOCATIONS["DEFAULT_RG"]["url"]
+    """Use a non-clickable heading; only validated citations get proof links."""
     return (
-        f'<a href="{target_url}" target="_blank" rel="noopener noreferrer" class="doc-citation-header-link" '
-        f'title="2026 Bitkisel Üretim Destekleme Resmî Mevzuatı — Belgeyi Aç">\n'
-        f'  <b>Resmî Mevzuat Maddesi ve Alıntı (Kanıt Zinciri)</b> <span class="doc-badge-tag">Resmî Belge ↗</span>\n'
-        f'</a>'
+        '<span class="doc-citation-header-link">'
+        '<b>Mevzuat kaynakları ve kanıt doğrulama durumu</b> '
+        '<span class="doc-badge-tag">Doğrulanan pasajlar ayrı işaretlidir</span>'
+        '</span>'
     )
 
 
@@ -261,42 +180,17 @@ def format_clickable_citation(
     citation: dict[str, Any],
     default_support_id: str | None = None,
 ) -> tuple[str, str]:
-    """Resmî mevzuat atfını tıklanabilir başlık kartı ve alıntı metnine dönüştürür."""
-    title = citation.get("title", "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)")
-    sec = citation.get("section", "Madde")
-    year = citation.get("year", 2026)
-    snip = citation.get("snippet", "")
-    url = citation.get("url")
+    """Legacy entry point delegates to the same fail-closed evidence renderer."""
+    from html import escape
 
-    if not url:
-        sec_low = sec.lower()
-        if "madde 1" in sec_low or "temel" in sec_low:
-            url = DOCUMENT_LOCATIONS["CKS_M1"]["url"]
-        elif "madde 2" in sec_low or "havza" in sec_low:
-            url = DOCUMENT_LOCATIONS["HAVZA_M2"]["url"]
-        elif "madde 3" in sec_low or "tohum" in sec_low:
-            url = DOCUMENT_LOCATIONS["TOHUM_M3"]["url"]
-        elif "madde 4" in sec_low or "su kısıt" in sec_low:
-            url = DOCUMENT_LOCATIONS["SU_KISITI_M4"]["url"]
-        elif "madde 5" in sec_low or "kadın" in sec_low or "genç" in sec_low:
-            url = DOCUMENT_LOCATIONS["KADIN_GENC_M5"]["url"]
-        elif "madde 6" in sec_low or "fidan" in sec_low:
-            url = DOCUMENT_LOCATIONS["FIDAN_M6"]["url"]
-        else:
-            loc = resolve_check_link(sec, default_support_id)
-            url = loc["url"]
-
-    header_html = (
-        f'<a href="{url}" target="_blank" rel="noopener noreferrer" class="doc-citation-link" '
-        f'title="{title} — Resmî Belgeyi Aç">'
-        f'🏛️ <b>{title} ({year}) — {sec}</b> <span class="doc-badge-tag">Resmî Belgeyi Aç ↗</span>'
-        f'</a>'
+    return (
+        format_highlighted_citation_card(citation, status="REVIEW", support_id=default_support_id),
+        escape(str(citation.get("snippet") or "")),
     )
-    return header_html, snip
 
 
 def get_article_preview(article_key: str) -> dict[str, str]:
-    """Belirtilen madde veya ek tablonun tam metnini ve bağlantısını döner."""
+    """Return only an unverified topic record, never a guessed article text."""
     for key, data in ARTICLE_PREVIEWS.items():
         if key.lower() in article_key.lower():
             return data
@@ -402,46 +296,148 @@ def highlight_legal_text(text: str, status: str | None = None) -> str:
     return escaped
 
 
+def _verified_highlight_path(
+    citation: dict[str, Any], support_id: str | None,
+) -> str | None:
+    """Only allow exact backend proof routes with matching digest and arguments.
+
+    Route checks never replace backend SHA/source/position verification; they
+    prevent a status label or partial SHA substring becoming a fake UI citation.
+    """
+    from urllib.parse import parse_qs, urlsplit
+
+    sha = citation.get("document_sha256")
+    link = citation.get("highlighted_pdf_url")
+    if not isinstance(sha, str) or not re.fullmatch(r"[a-f0-9]{64}", sha):
+        return None
+    if not isinstance(link, str) or not link.startswith("/evidence/highlight/"):
+        return None
+    parts = urlsplit(link)
+    if parts.scheme or parts.netloc or parts.path.startswith("//"):
+        return None
+    params = parse_qs(parts.query, keep_blank_values=True)
+    if any(len(values) != 1 for values in params.values()):
+        return None
+
+    verification = citation.get("verification_status")
+    if verification == "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW":
+        if (parts.path != f"/evidence/highlight/html/{sha}"
+            or set(params) != {"support_id"}
+            or parts.fragment != "tarim-evidence-highlight"):
+            return None
+        actual_support = params["support_id"][0]
+        if not actual_support or (support_id is not None and actual_support != support_id):
+            return None
+    elif verification == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW":
+        page = citation.get("page_number")
+        if (type(page) is not int or page < 1
+            or parts.path != f"/evidence/highlight/visual/{sha}"
+            or set(params) != {"support_id"}
+            or parts.fragment != f"page={page}"):
+            return None
+        actual_support = params["support_id"][0]
+        if not actual_support or (support_id is not None and actual_support != support_id):
+            return None
+    elif verification == "EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW":
+        page = citation.get("page_number")
+        if (type(page) is not int or page < 1
+            or parts.path != f"/evidence/highlight/{sha}"
+            or set(params) != {"page", "quote"}
+            or parts.fragment
+            or params["page"][0] != str(page)
+            or params["quote"][0] != str(citation.get("snippet") or "")
+            or not params["quote"][0]):
+            return None
+    else:
+        return None
+    return link
+
+
 def format_highlighted_citation_card(
     citation: dict[str, Any],
     status: str = "ELIGIBLE",
     support_id: str | None = None,
 ) -> str:
-    """Resmî mevzuat atfını ve metin içindeki işaret edilen kısmı renkli kart olarak biçimlendirir."""
-    title = citation.get("title", "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)")
-    sec = citation.get("section", "Madde")
-    year = citation.get("year", 2026)
-    snip = citation.get("snippet", "")
-    url = citation.get("url")
+    """Render confirmed proof routes; label every other text as non-quotation."""
+    from html import escape
+    from os import getenv
+    from urllib.parse import urlsplit
 
-    if not url:
-        loc = resolve_check_link(sec, support_id)
-        url = loc["url"]
-
+    title = escape(str(citation.get("title") or "Mevzuat kaynağı"))
+    section = escape(str(citation.get("section") or "Madde"))
+    year = escape(str(citation.get("year") or ""))
+    status_code = str(citation.get("verification_status") or "")
+    visual = status_code == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW"
+    html = status_code == "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW"
+    proof_path = _verified_highlight_path(citation, support_id)
+    located = proof_path is not None
+    original_url = str(citation.get("url") or "")
+    # Without confirmed page/phrase grounding, a generic source URL must not
+    # imply the guessed article position is correct.
+    if not located:
+        original_url = original_url.split("#", 1)[0]
+    source_link = ""
+    if (original_url.startswith("https://") and
+            (urlsplit(original_url).hostname or "") in (
+                "www.resmigazete.gov.tr", "resmigazete.gov.tr", "www.tarimorman.gov.tr",
+            )):
+        clean_url = escape(original_url, quote=True)
+        source_link = (
+            f'<a href="{clean_url}" target="_blank" rel="noopener noreferrer" '
+            'class="legal-source-link">'
+            + ('Özgün kaynağı aç ↗' if located else 'Genel belgeyi aç (madde doğrulanmadı) ↗')
+            + '</a>'
+        )
+    label = "Ön değerlendirme açıklaması — resmî alıntı değildir"
+    text = escape(str(citation.get("snippet") or ""))
+    if located:
+        public_api = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+        proof_link = escape(public_api + proof_path, quote=True)
+        if html:
+            label = "Özgün Resmî Gazete HTML metninde birebir bulunan fıkra — hukukî onay bekliyor"
+        elif visual:
+            label = (
+                "Özgün PDF görüntüsünde konumu işaretlenen pasaj — "
+                "metin ve hukukî inceleme bekliyor"
+            )
+        else:
+            label = "Özgün PDF'de birebir bulunan pasaj — hukukî onay bekliyor"
+            text = highlight_legal_text(str(citation.get("snippet") or ""), status)
+        mark_label = (
+            "HTML’de işaretli fıkrayı aç ↗" if html
+            else "PDF’de işaretli cümleyi aç ↗"
+        )
+        source_link = (
+            f'<a href="{proof_link}" target="_blank" rel="noopener noreferrer" '
+            f'class="legal-source-link">{mark_label}</a> '
+            + source_link
+        )
     card_class = "pass" if status == "ELIGIBLE" else ("warn" if status == "REVIEW" else "fail")
-    highlighted_snip = highlight_legal_text(snip, status)
-
+    body = (
+        f'📜 <i>“{text}”</i>' if located and not visual
+        else f'📝 {text}'
+    )
     return (
         f'<div class="legal-quote-card {card_class}">\n'
         f'  <div class="legal-quote-header">\n'
-        f'    <span class="legal-doc-badge">🏛️ {title} ({year}) — {sec}</span>\n'
-        f'    <a href="{url}" target="_blank" rel="noopener noreferrer" class="legal-source-link" '
-        f'title="Resmî Orijinal Belgeyi Aç">Resmî Belgede Gör ↗</a>\n'
+        f'    <span class="legal-doc-badge">🏛️ {title} ({year}) — {section}</span>\n'
+        f'    {source_link}\n'
         f'  </div>\n'
         f'  <div class="legal-quote-body">\n'
-        f'    📜 <i>"{highlighted_snip}"</i>\n'
+        f'    <strong>{label}</strong><div>{body}</div>\n'
         f'  </div>\n'
         f'</div>'
     )
-
 
 def render_document_viewer_html(article_key: str) -> str:
     """Yalnız resmî belge bağlantısını gösterir; sentetik özetleri alıntı gibi sunmaz."""
     from html import escape
 
     data = get_article_preview(article_key)
-    title = escape(str(data.get("title", "Mevzuat kaynağı")))
-    source = escape(str(data.get("source", "Resmî Gazete")))
+    # Legacy ARTICLE_PREVIEWS has hand-written topic summaries, not original
+    # Gazette clause titles. Never show their guessed article titles as fact.
+    title = escape("Konu kaydı — madde/pasaj henüz eşleştirilmedi")
+    source = escape("İlgili resmî kaynak (doğrulanmış madde bağlantısı değildir)")
     url = escape(str(data.get("url", "")), quote=True)
     return (
         '<div class="legal-reader-container">'
@@ -453,9 +449,9 @@ def render_document_viewer_html(article_key: str) -> str:
         '<strong>Mevzuat cümlesi doğrulanmadı.</strong> '
         'Önceki örnek önizlemeler resmî PDF metniyle birebir eşleştirilmediğinden, '
         'doğrulanmış yasal madde alıntısı olarak sunulmaz. '
-        'Geçerli mevzuat metnini açarak inceleyiniz.'
+        'Genel kaynak belgesini bağımsız olarak inceleyiniz.'
         '</p>'
         f'<a class="legal-source-link" href="{url}" '
-        'target="_blank" rel="noopener noreferrer">Resmî kaynağı aç ↗</a>'
+        'target="_blank" rel="noopener noreferrer">Genel belgeyi aç (madde doğrulanmadı) ↗</a>'
         '</div>'
     )

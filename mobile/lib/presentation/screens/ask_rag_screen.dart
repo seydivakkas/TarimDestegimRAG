@@ -116,7 +116,7 @@ class _AskRagScreenState extends State<AskRagScreen> {
                     Icon(Icons.verified_rounded, color: AppTheme.primaryGreen, size: 20),
                     SizedBox(width: 8),
                     Text(
-                      "Resmî Mevzuat Cevabı (Zero-LLM)",
+                      "Mevzuat Ön Bilgisi (Bağımsız Kaynak İncelemesi Gerekir)",
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.bold,
@@ -137,7 +137,7 @@ class _AskRagScreenState extends State<AskRagScreen> {
         const SizedBox(height: 16),
         if (result.matchedChunks.isNotEmpty) ...[
           const Text(
-            "İlgili Resmî Gazete Maddeleri",
+            "Aday Kaynak Parçaları (Doğrulanmış Alıntı Değildir)",
             style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from html import escape
 from typing import Any
 
 import pandas as pd
@@ -32,12 +33,12 @@ def get_faq_banner_text(client: ApiClient | None = None) -> str:
     cats = len(stats.get("category_counts", {}))
     if total > 0:
         return (
-            f"📚 **Doğrulanmış Tarımsal Çözüm Veritabanı:** Toplam **{total} adet** kayıt "
+            f"📚 **Tarımsal Soru-Cevap Veritabanı:** Toplam **{total} adet** kayıt "
             f"({verified} doğrulanmış olarak işaretli, {cats} kategori). Bu kayıtların mevzuatla güncelliği ayrıca kontrol edilmelidir. "
             "Aşağıdaki tablodan soru seçebilir veya yukarıdaki sohbet alanına serbestçe yazabilirsiniz."
         )
     return (
-        "📚 **Doğrulanmış Tarımsal Çözüm Veritabanı:** Yürürlükteki mevzuat ve ziraî rehberler indekslenmiştir."
+        "📚 **Tarımsal Soru-Cevap Veritabanı:** Yürürlükteki mevzuat ve ziraî rehberler indekslenmiştir."
     )
 
 
@@ -85,26 +86,33 @@ def ask_assistant(
     )
     chunks = resp.get("matched_chunks") or resp.get("citations", [])
 
-    formatted_reply = f"{answer}\n\n"
+    formatted_reply = f"{escape(str(answer))}\n\n"
     if chunks:
-        formatted_reply += "---\n#### 🏛️ Doğrulanmış Resmî Mevzuat Dayanakları & Alıntılar (İşaretli Kanıt Metni):\n"
+        formatted_reply += "---\n#### 📚 Aday kaynak metinleri (yalnız eşleşen pasajlar kanıttır):\n"
         for i, c in enumerate(chunks[:3], 1):
             if isinstance(c, dict):
                 src = c.get("source_id", "RG")
                 title = c.get("title", "Resmî Gazete")
                 sec = c.get("section") or c.get("article_ref", "") or "Madde"
-                raw_t = c.get("text", "")
-                url = c.get("url")
+                raw_t = str(c.get("snippet") or c.get("text") or "")
+                status = c.get("verification_status") or "UNVERIFIED_EXPLANATION"
                 cit_dict = {
                     "title": f"[{i}] {title}",
                     "section": f"{sec} ({src})",
-                    "year": 2026,
-                    "snippet": raw_t if len(raw_t) <= 260 else raw_t[:260] + "...",
-                    "url": url,
+                    "year": c.get("year", 2026),
+                    "snippet": raw_t if status != "UNVERIFIED_EXPLANATION"
+                    else (raw_t if len(raw_t) <= 260 else raw_t[:260] + "..."),
+                    "url": c.get("url"),
+                    "verification_status": status,
+                    "highlighted_pdf_url": c.get("highlighted_pdf_url"),
+                    "document_sha256": c.get("document_sha256"),
+                    "page_number": c.get("page_number"),
                 }
-                formatted_reply += f"{format_highlighted_citation_card(cit_dict, 'ELIGIBLE')}\n\n"
+                formatted_reply += f"{format_highlighted_citation_card(cit_dict, 'REVIEW')}\n\n"
             else:
-                formatted_reply += f'\n> **[{i}]** *"{c}"*\n'
+                formatted_reply += (
+                    f"\n**[{i}] Ön bilgi (resmî alıntı değildir):** {escape(str(c))}\n"
+                )
 
     new_history = list(chat_history)
     new_history.append({"role": "user", "content": user_message})

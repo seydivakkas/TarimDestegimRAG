@@ -2,7 +2,9 @@
 // ÖZEL LİSANS — TÜM HAKLAR SAKLIDIR
 
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../core/constants/api_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../data/models/support_models.dart';
 
@@ -53,7 +55,7 @@ class WhyCitationsDialog extends StatelessWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      "Resmî Karar Gerekçesi & Atıf",
+                      "Ön Değerlendirme Gerekçesi & Kanıt Durumu",
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: AppTheme.primaryGreen,
@@ -82,14 +84,14 @@ class WhyCitationsDialog extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               const Text(
-                "Doğrulanan Mevzuat Kaynakları (Citations):",
+                "Mevzuat Kaynakları ve Kanıt Durumları:",
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               if (explanation.citations.isEmpty)
                 const Text("Doğrulanmış atıf bulunamadı.", style: TextStyle(color: Colors.grey))
               else
-                ...explanation.citations.map((c) => _buildCitationCard(c)),
+                ...explanation.citations.map((c) => _buildCitationCard(context, c)),
               const SizedBox(height: 20),
             ],
           ),
@@ -98,11 +100,17 @@ class WhyCitationsDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildCitationCard(CitationDetail citation) {
+  Widget _buildCitationCard(BuildContext context, CitationDetail citation) {
+    final proofPath = citation.verifiedHighlightPath(supportId: explanation.supportId);
+    final hasEvidence = proofPath != null;
+    final exactText = citation.verificationStatus ==
+            'EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW' ||
+        citation.verificationStatus ==
+            'ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW';
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       elevation: 0,
-      color: const Color(0xFFF4F8F4),
+      color: hasEvidence ? const Color(0xFFF4F8F4) : Colors.grey.shade50,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: const BorderSide(color: Color(0xFFC8E6C9)),
@@ -114,7 +122,8 @@ class WhyCitationsDialog extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.gavel_rounded, size: 16, color: AppTheme.primaryGreen),
+                Icon(hasEvidence ? Icons.gavel_rounded : Icons.info_outline,
+                    size: 16, color: hasEvidence ? AppTheme.primaryGreen : Colors.grey),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -142,19 +151,49 @@ class WhyCitationsDialog extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              "Bölüm/Madde: ${citation.section}",
+              hasEvidence ? "Eşleşen bölüm: ${citation.section}" :
+                  "Konu etiketi (doğrulanmadı): ${citation.section}",
               style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade800),
             ),
             const SizedBox(height: 4),
             Text(
-              '"${citation.snippet}"',
-              style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.black87),
+              hasEvidence
+                  ? (exactText
+                      ? 'Özgün metnin konumu bulundu — hukukî onay bekliyor.'
+                      : 'PDF görüntüsü işaretlendi — bağımsız metin incelemesi bekliyor.')
+                  : 'Ön değerlendirme açıklaması — resmî alıntı değildir.',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
+            const SizedBox(height: 4),
+            Text(
+              hasEvidence && exactText ? '“${citation.snippet}”' : citation.snippet,
+              style: const TextStyle(fontSize: 13, height: 1.4, color: Colors.black87),
+            ),
+            if (hasEvidence) ...[
+              const SizedBox(height: 8),
+              TextButton.icon(
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Sarı işaretli özgün belgeyi aç'),
+                onPressed: () async {
+                  final target = Uri.tryParse('${ApiConstants.baseUrl}$proofPath');
+                  if (target == null ||
+                      !['http', 'https'].contains(target.scheme)) return;
+                  final opened = await launchUrl(
+                    target, mode: LaunchMode.externalApplication,
+                  );
+                  if (!opened && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('İşaretli belge açılmadı. API adresini kontrol edin.')),
+                    );
+                  }
+                },
+              ),
+            ],
             if (citation.url != null) ...[
               const SizedBox(height: 6),
               Text(
-                "Resmî Gazete Linki: ${citation.url}",
-                style: const TextStyle(fontSize: 11, color: Colors.blueAccent, decoration: TextDecoration.underline),
+                "Genel kaynak adresi (tek başına madde kanıtı değildir): ${citation.url}",
+                style: const TextStyle(fontSize: 11, color: Colors.black54),
               ),
             ],
           ],
