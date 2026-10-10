@@ -164,7 +164,8 @@ def test_format_highlighted_citation_card():
     card_html = format_highlighted_citation_card(citation, status="ELIGIBLE")
     assert '<div class="legal-quote-card pass">' in card_html
     assert 'class="legal-source-link"' in card_html
-    assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1"' in card_html
+    assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf"' in card_html
+    assert "#page=1" not in card_html
     assert "resmî alıntı değildir" in card_html
     assert "PDF’de işaretli cümleyi aç" not in card_html
     assert '<mark class="legal-hl-pass">' not in card_html
