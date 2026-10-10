@@ -181,7 +181,6 @@ def test_html_installer_retries_transient_timeouts_with_exact_sha(
     from contextlib import contextmanager
 
     import httpx
-
     from tarim_destek_rag.citations import original_html
 
     fixture = b"<html><body>Offline retry fixture</body></html>"

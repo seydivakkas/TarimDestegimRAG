@@ -76,37 +76,39 @@ def test_format_clickable_check():
 
 
 def test_format_clickable_action():
-    """format_clickable_action'ın başvuru adımları için doğru bağlantı ürettiğini test eder."""
+    """Unverified follow-up guidance must not create a guessed article link."""
     action_html = format_clickable_action(
         "Mevzuat koşullarını ve desteklenen havza/ürün kriterlerini inceleyiniz."
     )
     assert "📌" in action_html
-    assert 'target="_blank"' in action_html
-    assert "doc-action" in action_html
+    assert 'class="doc-link-item doc-action"' in action_html
+    assert "madde doğrulanmadı" in action_html
+    assert "href=" not in action_html
+    assert "&lt;script&gt;" in format_clickable_action("<script>")
 
 
 def test_format_citation_section_header():
-    """'Resmî Mevzuat Maddesi ve Alıntı' başlığının tıklanabilirliğini test eder."""
+    """A section label alone is not proof of a paragraph in any source."""
     header_html = format_citation_section_header()
-    assert "Resmî Mevzuat Maddesi ve Alıntı (Kanıt Zinciri)" in header_html
-    assert 'target="_blank"' in header_html
-    assert "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf" in header_html
+    assert "Mevzuat kaynakları ve kanıt doğrulama durumu" in header_html
+    assert "href=" not in header_html
 
 
 def test_format_clickable_citation():
-    """Resmî mevzuat atfının başlık kartı ve alıntı metnini test eder."""
+    """Legacy citation rendering must reject guessed page-and-article anchors."""
     citation = {
         "title": "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         "section": "MADDE 2 - Tarım Havzaları Planlı Üretim Desteği",
         "year": 2026,
-        "snippet": "Bakanlıkça ilan edilen Tarım Havzalarında öncelikli stratejik ürünleri üreten üreticilere...",
+        "snippet": "Konuya ilişkin açıklama; birebir resmî alıntı değildir.",
         "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1",
     }
     hdr, snip = format_clickable_citation(citation)
-    assert 'target="_blank"' in hdr
-    assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1"' in hdr
-    assert "MADDE 2 - Tarım Havzaları Planlı Üretim Desteği" in hdr
-    assert "Bakanlıkça ilan edilen Tarım Havzalarında" in snip
+    assert "resmî alıntı değildir" in hdr
+    assert "PDF’de işaretli cümleyi aç" not in hdr
+    assert "#page=1" not in hdr
+    assert "href=" in hdr  # general source only, not a guessed location
+    assert "birebir resmî alıntı değildir" in snip
 
 
 def test_get_article_preview():
@@ -174,7 +176,84 @@ def test_render_document_viewer_html():
 
     viewer_html = render_document_viewer_html("MADDE 1")
     assert '<div class="legal-reader-container">' in viewer_html
-    assert 'Resmî kaynağı aç' in viewer_html
+    assert 'Genel belgeyi aç (madde doğrulanmadı)' in viewer_html
     assert 'doğrulanmış' in viewer_html
-    assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1"' in viewer_html
+    assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf"' in viewer_html
     assert '<mark class=' not in viewer_html
+
+def test_only_exact_sha_and_route_arguments_enable_yellow_source_links():
+    """Fail closed for forged status, wrong quote/page, or SHA substring links."""
+    from tarim_destek_rag.citations.document_links import format_highlighted_citation_card
+
+    sha = "a" * 64
+    quote = "Özgün PDF'de tam karşılığı bulunan örnek cümle."
+    valid = {
+        "title": "Özgün belgeden test alıntısı",
+        "section": "MADDE 2",
+        "snippet": quote,
+        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
+        "verification_status": "EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW",
+        "document_sha256": sha,
+        "page_number": 2,
+        "highlighted_pdf_url": f"/evidence/highlight/{sha}?page=2&quote=%C3%96zg%C3%BCn%20PDF%27de%20tam%20kar%C5%9F%C4%B1l%C4%B1%C4%9F%C4%B1%20bulunan%20%C3%B6rnek%20c%C3%BCmle.",
+    }
+    assert "PDF’de işaretli cümleyi aç" in format_highlighted_citation_card(valid)
+    for key, replacement in (
+        ("highlighted_pdf_url", f"/evidence/highlight/visual/{sha}?page=2&quote=wrong"),
+        ("highlighted_pdf_url", f"/evidence/highlight/{sha}?page=3&quote=wrong"),
+        ("document_sha256", "b" * 64),
+        ("page_number", 1),
+        ("verification_status", "UNVERIFIED_EXPLANATION"),
+    ):
+        forged = dict(valid, **{key: replacement})
+        shown = format_highlighted_citation_card(forged)
+        assert "PDF’de işaretli cümleyi aç" not in shown
+        assert "resmî alıntı değildir" in shown
+        assert "📜 <i>" not in shown
+        assert "#page=" not in shown
+
+
+def test_visual_source_is_a_located_image_not_an_exact_quote():
+    from tarim_destek_rag.citations.document_links import format_highlighted_citation_card
+
+    sha = "b" * 64
+    base = {
+        "snippet": "İnsan denetimi bekleyen görsel pasajın transkripsiyonu",
+        "verification_status": "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW",
+        "document_sha256": sha,
+        "page_number": 2,
+        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
+        "highlighted_pdf_url": (
+            f"/evidence/highlight/visual/{sha}?support_id=BASIC_SUPPORT_2026#page=2"
+        ),
+    }
+    card = format_highlighted_citation_card(base, support_id="BASIC_SUPPORT_2026")
+    assert "PDF’de işaretli cümleyi aç" in card
+    assert "📜 <i>" not in card
+    assert "metin ve hukukî inceleme bekliyor" in card
+    assert "PDF’de işaretli cümleyi aç" not in format_highlighted_citation_card(
+        base, support_id="CERTIFIED_SEED_2026"
+    )
+
+
+def test_html_evidence_must_have_exact_anchor_and_support_identifier():
+    from tarim_destek_rag.citations.document_links import format_highlighted_citation_card
+
+    sha = "c" * 64
+    data = {
+        "snippet": "Özgün Tebliğ metninde birebir geçen örnek",
+        "verification_status": "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW",
+        "document_sha256": sha,
+        "url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm",
+        "highlighted_pdf_url": (
+            f"/evidence/highlight/html/{sha}?support_id=BASIC_SUPPORT_2026"
+            "#tarim-evidence-highlight"
+        ),
+    }
+    assert "HTML’de işaretli fıkrayı aç" in format_highlighted_citation_card(
+        data, support_id="BASIC_SUPPORT_2026"
+    )
+    wrong = dict(data, highlighted_pdf_url=data["highlighted_pdf_url"].replace(
+        "#tarim-evidence-highlight", "#wrong-anchor"
+    ))
+    assert "HTML’de işaretli fıkrayı aç" not in format_highlighted_citation_card(wrong)

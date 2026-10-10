@@ -62,7 +62,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             )
 
             gr.Markdown(
-                "Aşağıdaki konu bağlantıları henüz birebir madde alıntısı değildir. "
+                "Aşağıdaki konu seçimi birebir mevzuat alıntısı değildir. "
                 "Doğrulanmış konum kanıtı varsa yukarıdaki gerekçe kartında işaretli PDF veya HTML bağlantısı bulunur:"
             )
             article_selector = gr.Dropdown(
@@ -76,7 +76,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                     "EK TABLO - Ürün Bazlı Birim Fiyat Kataloğu",
                 ],
                 value="MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
-                label="İncelenecek Resmî Mevzuat Maddesi",
+                label="İncelenecek konu (doğrulanmış madde değildir)",
             )
 
             article_display = gr.HTML(
