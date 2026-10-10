@@ -254,7 +254,7 @@ def test_html_download_exhaustion_preserves_fail_closed_archive(
             assert kwargs["follow_redirects"] is False
             assert kwargs["trust_env"] is False
 
-        def __enter__(self) -> "TimedOutClient":
+        def __enter__(self) -> TimedOutClient:
             return self
 
         def __exit__(self, *_args: object) -> None:
