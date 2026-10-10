@@ -132,6 +132,25 @@ class TemplateExplainer:
         elif primary_citation:
             citations.append(primary_citation)
 
+        # 2024/39 was officially published as HTML, not a PDF. Show its
+        # actual article 4(1) only when pinned HTML bytes are available.
+        if rule_res.support_id == "BASIC_SUPPORT_2026":
+            from tarim_destek_rag.citations.original_html import lookup_html_clause
+
+            html_proof = lookup_html_clause(rule_res.support_id)
+            if html_proof:
+                citations.append(CitationDetail(
+                    source_id=html_proof["source_id"],
+                    title=html_proof["title"],
+                    section=html_proof["section"],
+                    year=html_proof["year"],
+                    url=html_proof["source_url"],
+                    snippet=html_proof["exact_quote"],
+                    verification_status=html_proof["verification_status"],
+                    highlighted_pdf_url=html_proof["highlighted_html_url"],
+                    document_sha256=html_proof["source_sha256"],
+                ))
+
         # 2. Vektör / Semantik arama ile eşleşen ek mevzuat parçalarını ekle
         if retrieved_chunks:
             for c in retrieved_chunks:

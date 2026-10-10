@@ -72,3 +72,23 @@ python -m tarim_destek_rag.citations.basin_visual --install
 - **Önemli:** Bu katalog `DRAFT_REQUIRES_HUMAN_ROW_AND_FOOTNOTE_REVIEW` durumundadır. Kaynak satırının gerçek PDF'de bulunması, çiftçinin başvuru hakkı, münavebe/ÇKS, sulama şartı ya da ödeme tutarı için tek başına onay değildir. `ELIGIBLE` ya da `NOT_ELIGIBLE` üretmez.
 - Görünüm için `GET /evidence/highlight/basin/{sha256}?province=KONYA&district=KARATAY&crop=BUĞDAY&production_year=2026#page=53`. URI yalnız kaynak hash, tam ilçe adı, tam ürün adı ve yılla yeniden doğrulanır.
 - PDF sunucusu ile PC arayüzü farklı makinelerdeyse `API_PUBLIC_BASE_URL` tarayıcının erişebildiği gerçek API adresi olmalı. İstemciye kaynak koordinatları serbestçe yazdırılmaz.
+
+## Özgün Tebliğ 2024/39 — birebir HTML madde/fıkra işaretleme
+
+Tebliğ, Resmî Gazete'de PDF değil **özgün HTML** olarak yayımlandı:
+https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm
+
+**Doğrudan indirilen resmî HTML orijinal bayt SHA-256:** `efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530`. Orijinal belge 236.810 bayt; daha önce bağımsız P0-10.3 GitHub CI indirmelerinde sabitlenmiştir. Bu SHA, HTML'den üretilen kopyaya değil değişmeyen özgün yanıt baytlarına aittir.
+
+**İlk birebir kaynak:** `MADDE 4 (1)`, üretim yılında Bakanlığın ilgili kayıt sistemlerine kayıtlı olma şartı. Tam cümle `configs/p0_10_6_2024_39_html_clauses.json` içinde kaynak kimliği ve tarihsel inceleme statüsüyle tutulur. `original_html.py` cümleyi özgün HTML metin düğümünde **tekil olarak**, gerçek `MADDE 4-` başlığının altında ve `(1)` fıkrasında arar. Metin uyuşmazsa veya kaynak hash'i bozulursa işaretli kanıt bağlantısı verilmez.
+
+```powershell
+# Backend'in kullandığı arşive sabit SHA'lı 2024/39 özgün HTML'yi kurar.
+python -m tarim_destek_rag.citations.original_html --install
+```
+
+Başarılı kurulumda `BASIC_SUPPORT_2026` için **Neden?** bölümündeki ikinci atıf `HTML'de işaretli fıkrayı aç` bağlantısını verir: `/evidence/highlight/html/{sha256}?support_id=BASIC_SUPPORT_2026#tarim-evidence-highlight`. HTML'nin özgün sayfa düzeninde gerçek cümle sarı işaretlenir; **Resmî Gazete'nin değiştirilmemiş HTML adresi** ayrıca gösterilir. İçeriğin aynı API alanında zararlı kod çalıştırmaması için işaretli kopya CSP sandbox ile servis edilir; orijinal veriye yazma yapılmaz.
+
+Bu özgün cümle kanıtı, MADDE 4(1)'in **hüküm yürürlük, değişiklik ve başvuru özel koşullarının hukukî doğrulandığı anlamına gelmez**. Tebliğ üzerindeki 2025/13 ve 2025/42 değişikliklerinin ilgili fıkralara etkisi ayrıca incelenmelidir. Diğer maddelere atıf, orijinal metin eşleşmeden otomatik açılmaz.
+
+**Artık aynı kullanıcı senaryosunda üç farklı gerçek kaynak açılabilir:** 8859 PDF'deki ilgili görsel cümle, 2024/39 HTML'deki birebir fıkra ve Bakanlığın havza–ürün PDF'sindeki seçilen ilçe+ürün hücresi. Bir belge arşivde yoksa ilgili kanıt bağlantısı görünmez; başka belgeden cümle uydurulmaz.

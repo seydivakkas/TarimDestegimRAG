@@ -37,10 +37,10 @@ def test_build_ui_has_exactly_five_user_tasks():
     app_blocks = build_ui()
     assert app_blocks is not None
 
-    # Bloklar içerisindeki TabItem bileşenlerini filtrele
+    # Ana görev sekmelerini say; yönetici sayfasındaki iki alt sekme ayrı kalır.
     tab_items = [
         b for b in app_blocks.blocks.values()
-        if isinstance(b, gr.TabItem)
+        if isinstance(b, gr.TabItem) and str(getattr(b, "id", "")).startswith("tab_")
     ]
     assert len(tab_items) == 5, f"Beklenen 5 sekme, bulunan: {len(tab_items)}"
 

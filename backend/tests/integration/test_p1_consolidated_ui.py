@@ -12,7 +12,9 @@ def test_support_detail_and_reason_are_not_duplicate_top_level_tabs():
     comps = cfg["components"]
     tabs = [
         comp.get("props", {}).get("label", "")
-        for comp in comps if comp.get("type", "").lower() == "tabitem"
+        for comp in comps
+        if comp.get("type", "").lower() == "tabitem"
+        and str(comp.get("props", {}).get("id") or "").startswith("tab_")
     ]
     assert len(tabs) == 5, tabs
     assert any("Çiftçi & Parsellerim" in label for label in tabs)
