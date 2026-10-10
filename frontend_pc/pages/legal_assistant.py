@@ -17,7 +17,7 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
     """Mevzuat Asistanı sekmesini inşa eder ve bileşen sözlüğünü döner."""
     with gr.TabItem("💬 Mevzuat Asistanı", id="tab_legal_assistant"):
         gr.Markdown("""
-        ### 🌾 2026 Tarımsal Destek Mevzuat ve Hak Ediş Asistanı (Sıfır LLM - Doğrulanmış Kararlar)
+        ### 🌾 2026 Tarımsal Destek Ön Bilgi Asistanı (Sıfır LLM — Kaynak Doğrulaması Gereklidir)
         Sorunuzu doğrudan doğal dille yazın. Sistem yürürlükteki 2026 Resmî Gazete destekleme mevzuatı,
         5488 sayılı Tarım Kanunu, ÇKS yönetmeliği ve mevcut veritabanından kaynaklı ön bilgi sunar; güncel mevzuatla bağımsız teyit edilmelidir.
         """)

@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import gradio as gr
-import pandas as pd
-
 from tarim_destek_rag.citations.document_links import render_document_viewer_html
 
 
@@ -39,18 +37,20 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             <div class="legal-reader-container" style="margin-top: 4px; margin-bottom: 16px; border-left: 6px solid #047857;">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <h4 style="margin: 0; color: #064e3b; font-size: 1.15rem;">
-                        ⚖️ %100 Belgeye Dayanan Şeffaf Karar & Renkli İşaretleme Mimarisi
+                        ⚖️ Kanıt Durumu & Resmî Belge İnceleme
                     </h4>
-                    <span class="doc-badge-tag doc-badge-pass">Sıfır LLM &middot; %100 Doğrulanabilir</span>
+                    <span class="doc-badge-tag doc-badge-pass">Sıfır LLM &middot; Birebir kaynak denetimi</span>
                 </div>
                 <p style="margin: 8px 0 12px 0; font-size: 0.92rem; color: #334155; line-height: 1.55;">
-                    Bu sistemde üreticiye sunulan her karar, dekar başı hesaplama ve hak ediş gerekçesi doğrudan
-                    <b>Resmî Gazete</b> ve <b>BÜGEM</b> mevzuatındaki orijinal metinle delillendirilir. İlgili kanun maddesindeki
-                    şartlar ve ret gerekçeleri sistem tarafından <b>renk kodlarıyla işaretlenmiştir</b>.
+                    Kuralların Türkçe açıklaması ile resmî mevzuatın birebir alıntısı ayrı gösterilir.
+                    <b>Özgün PDF'de SHA-256, sayfa ve pasaj; özgün HTML'de SHA-256,
+                    madde/fıkra ve birebir metin eşleşmesi doğrulanan</b> kanıtlar
+                    işaretli belge bağlantısıyla açılır. Diğer metinler <b>ön değerlendirme açıklamasıdır</b>;
+                    geçerli hukukî sonuç ya da birebir alıntı olarak sunulmaz.
                 </p>
                 <div class="legal-legend-bar" style="margin-bottom: 0;">
-                    <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil Vurgu:</b> Sağlanan Şartlar & Hak Kazanma Hükmü</span>
-                    <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı Vurgu:</b> Ret Gerekçesi & Yasal Yasaklar</span>
+                    <span class="legend-item"><span class="legend-dot dot-pass"></span> 🟢 <b>Yeşil Vurgu:</b> Ön Değerlendirmede Sağlanan Şartlar</span>
+                    <span class="legend-item"><span class="legend-dot dot-fail"></span> 🔴 <b>Kırmızı Vurgu:</b> Sağlanmayan Şartlar & İnceleme Gerektiren Durumlar</span>
                     <span class="legend-item"><span class="legend-dot dot-gold"></span> 🟡 <b>Kehribar Vurgu:</b> Birim Destek Tutarları & Katsayılar</span>
                     <span class="legend-item"><span class="legend-dot dot-ref"></span> 🔵 <b>Mavi Vurgu:</b> Resmî Gazete / Madde Numarası Dayanağı</span>
                 </div>
@@ -62,8 +62,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             )
 
             gr.Markdown(
-                "Aşağıdaki listeden incelemek istediğiniz maddeyi seçiniz. Resmî belgedeki şartlar, "
-                "hak kazanma hükümleri ve ret gerekçeleri **renkli olarak işaretlenmiştir**:"
+                "Aşağıdaki konu seçimi birebir mevzuat alıntısı değildir. "
+                "Doğrulanmış konum kanıtı varsa yukarıdaki gerekçe kartında işaretli PDF veya HTML bağlantısı bulunur:"
             )
             article_selector = gr.Dropdown(
                 choices=[
@@ -76,7 +76,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                     "EK TABLO - Ürün Bazlı Birim Fiyat Kataloğu",
                 ],
                 value="MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
-                label="İncelenecek Resmî Mevzuat Maddesi",
+                label="İncelenecek konu (doğrulanmış madde değildir)",
             )
 
             article_display = gr.HTML(

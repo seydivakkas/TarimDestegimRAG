@@ -26,6 +26,8 @@ class FullEvaluationResponse(BaseModel):
     calculations: list[CalculationResult]
     explanations: list[ExplanationResult]
     total_estimated_amount: Decimal | None
+    # Only a source row/crop-text location, not an eligibility or payment ruling.
+    basin_evidence: dict[str, Any] | None = None
 
 
 class AskQuestionRequest(BaseModel):
