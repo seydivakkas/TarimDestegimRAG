@@ -56,7 +56,7 @@ def test_exact_original_html_renders_marked_source_without_changing_original(
         "document_sha256": proof["source_sha256"],
     })
     assert "HTML’de işaretli fıkrayı aç" in html
-    assert "Resmî kaynağı aç" in html
+    assert "Özgün kaynağı aç" in html
 
 
 def test_html_mismatch_unknown_program_and_wrong_section_fail_closed(
