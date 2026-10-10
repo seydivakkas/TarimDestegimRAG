@@ -92,3 +92,15 @@ Başarılı kurulumda `BASIC_SUPPORT_2026` için **Neden?** bölümündeki ikinc
 Bu özgün cümle kanıtı, MADDE 4(1)'in **hüküm yürürlük, değişiklik ve başvuru özel koşullarının hukukî doğrulandığı anlamına gelmez**. Tebliğ üzerindeki 2025/13 ve 2025/42 değişikliklerinin ilgili fıkralara etkisi ayrıca incelenmelidir. Diğer maddelere atıf, orijinal metin eşleşmeden otomatik açılmaz.
 
 **Artık aynı kullanıcı senaryosunda üç farklı gerçek kaynak açılabilir:** 8859 PDF'deki ilgili görsel cümle, 2024/39 HTML'deki birebir fıkra ve Bakanlığın havza–ürün PDF'sindeki seçilen ilçe+ürün hücresi. Bir belge arşivde yoksa ilgili kanıt bağlantısı görünmez; başka belgeden cümle uydurulmaz.
+
+## Resmî HTML erişim engeli ve çevrimdışı kaynak kurulumu (2026-10-11)
+
+**Zorunlu kapı:** `.github/workflows/exact-official-pdf-citations.yml` iki ayrı işi çalıştırır. `offline-code-regressions` statik analiz, sahte kaynak ve regresyonları internetten bağımsız sınar. `exact-evidence`, bağımsız olarak özgün 8859 PDF'sini, 2024/39 HTML'sini ve Bakanlığın havza PDF'sini sabit SHA ile arşivlemeli ve gerçek kaynak görüntülemelerini doğrulamalıdır. İki işten **biri bile başarısız olursa** iş akışı PASS değildir. Eksik canlı kaynak testinin `SKIPPED` olması kabul kanıtı değildir.
+
+GitHub Actions üzerinden resmî HTML isteği `ReadTimeout` verebilir. Kurumun özgün resmî HTML dosyasını (tarayıcıda oluşturulan, yeniden kodlanan veya üçüncü tarafın değiştirdiği HTML değil; **kaynak HTTP yanıtının özgün baytları**) güvenilir biçimde daha önce edinmişseniz internet kullanmadan içeri alabilirsiniz:
+
+```powershell
+python -m tarim_destek_rag.citations.original_html --import-file "C:\\LegalSources\\20241231M5-8.htm"
+```
+
+İçeri alma yalnız sabit kaynak kimliği, `html` formatı, azami boyut ve `efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530` SHA-256 eşleştiğinde gerçekleşir. Dosyanın arşivde bulunması, ilgili kanunun hukukî geçerliliğini veya EK-20 tablosunu onaylamaz. **Kaynağın yeniden üretilmesi, sentetik test baytının gerçek kaynak olarak gösterilmesi ve hash kontrolünün atlanması yasaktır.** Yerelde dosyanın doğrulanmış olması, GitHub runner'ın da onu içerdiği anlamına gelmez; CI canlı kaynak kapısının ayrıca PASS olması zorunludur.

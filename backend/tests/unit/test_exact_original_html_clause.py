@@ -281,3 +281,43 @@ def test_html_download_exhaustion_preserves_fail_closed_archive(
         ),
     ]
     assert not (tmp_path / "originals").exists()
+
+
+def test_offline_import_requires_exact_pinned_bytes_and_source_identity(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    """Operator import never bypasses source hash, MIME identity, or immutability."""
+    from tarim_destek_rag.citations import original_html
+
+    fixture = b"<html><body>Offline pinned original fixture</body></html>"
+    sha = hashlib.sha256(fixture).hexdigest()
+    monkeypatch.setattr(original_html, "SOURCE_SHA", sha)
+    manifest = tmp_path / "manifest.json"
+    identity = {
+        "id": original_html.SOURCE_ID,
+        "url": original_html.SOURCE_URL,
+        "format": "html",
+        "original_sha256": sha,
+    }
+    manifest.write_text(json.dumps({"sources": [identity]}), encoding="utf-8")
+    monkeypatch.setenv("TARIM_RAG_ORIGINAL_SOURCE_MANIFEST", str(manifest))
+    archive = tmp_path / "archive"
+    monkeypatch.setenv("TARIM_RAG_UPDATE_ARCHIVE", str(archive))
+    candidate = tmp_path / "official.html"
+    candidate.write_bytes(fixture)
+    result = original_html.install_html_original(import_file=candidate)
+    assert result == {"sha256": sha, "bytes": len(fixture), "already_present": False}
+    archived = archive / "originals" / (sha + ".html")
+    assert archived.read_bytes() == fixture
+
+    tampered = tmp_path / "tampered.html"
+    tampered.write_bytes(fixture + b"tampered")
+    with pytest.raises(ValueError, match="pinned SHA-256"):
+        original_html.install_html_original(import_file=tampered)
+    assert archived.read_bytes() == fixture
+
+    identity["format"] = "pdf"
+    manifest.write_text(json.dumps({"sources": [identity]}), encoding="utf-8")
+    with pytest.raises(ValueError, match="Unpinned"):
+        original_html.install_html_original(import_file=candidate)
+    assert archived.read_bytes() == fixture

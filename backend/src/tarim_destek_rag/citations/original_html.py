@@ -124,63 +124,79 @@ def highlighted_html_copy(support_id: str, *, expected_sha256: str) -> bytes:
     return str(document).encode("utf-8")
 
 
-def install_html_original() -> dict:
+def install_html_original(*, import_file: Path | None = None) -> dict:
     """Explicit installation, pinned HTTPS TLS and SHA, never at request time."""
     import httpx
 
     root, manifest, _ = _paths()
     sources = json.loads(manifest.read_text(encoding="utf-8"))["sources"]
     rows = [r for r in sources if r.get("id") == SOURCE_ID]
-    if len(rows) != 1 or rows[0].get("original_sha256") != SOURCE_SHA:
+    if (len(rows) != 1
+        or rows[0].get("original_sha256") != SOURCE_SHA
+        or rows[0].get("url") != SOURCE_URL
+        or rows[0].get("format") != "html"):
         raise ValueError("Unpinned HTML source")
+    # Offline installation accepts raw bytes only from an operator-provided
+    # file. Byte identity is enforced before any existing archive shortcut.
+    imported_bytes: bytes | None = None
+    if import_file is not None:
+        source_file = Path(import_file)
+        if not source_file.is_file() or not 0 < source_file.stat().st_size <= MAX_BYTES:
+            raise ValueError("Imported original HTML size is invalid")
+        imported_bytes = source_file.read_bytes()
+        if hashlib.sha256(imported_bytes).hexdigest() != SOURCE_SHA:
+            raise ValueError("Imported official HTML does not match pinned SHA-256")
     path = root / "originals" / (SOURCE_SHA + ".html")
     if path.exists():
         existing = path.read_bytes()
         if hashlib.sha256(existing).hexdigest() != SOURCE_SHA:
             raise ValueError("Existing immutable original does not match SHA")
         return {"sha256": SOURCE_SHA, "bytes": len(existing), "already_present": True}
-    # Use only the two official HTTPS hosts. A cached original has already
-    # been checked against SOURCE_SHA above. Do not accept redirects, changed
-    # MIME, unexpected encodings or unpinned source bytes.
-    official_urls = (
-        SOURCE_URL,
-        SOURCE_URL.replace("://resmigazete.gov.tr/", "://www.resmigazete.gov.tr/", 1),
-    )
-    last_transport_error: httpx.TransportError | None = None
-    for official_url in official_urls:
-        for attempt in range(2):
-            try:
-                timeout = httpx.Timeout(35.0, connect=12.0)
-                with httpx.Client(timeout=timeout, follow_redirects=False, trust_env=False) as client:
-                    with client.stream(
-                        "GET", official_url, headers={"Accept-Encoding": "identity"},
-                    ) as response:
-                        if (response.status_code != 200 or str(response.url) != official_url
-                            or response.headers.get("Content-Encoding", "identity").lower() != "identity"
-                            or "html" not in response.headers.get("Content-Type", "").lower()):
-                            raise ValueError("Original HTML server identity or MIME mismatch")
-                        chunks, size = [], 0
-                        for block in response.iter_raw():
-                            size += len(block)
-                            if size > MAX_BYTES:
-                                raise ValueError("Original HTML exceeds maximum allowed bytes")
-                            chunks.append(block)
-                raw = b"".join(chunks)
-                if hashlib.sha256(raw).hexdigest() != SOURCE_SHA:
-                    raise ValueError("Official HTML now differs from pinned original")
-                break
-            except httpx.TransportError as exc:
-                last_transport_error = exc
-                if attempt == 0:
-                    time.sleep(1)
-        else:
-            continue
-        break
+    if imported_bytes is not None:
+        raw = imported_bytes
     else:
-        raise RuntimeError(
-            "Pinned official HTML unavailable from both official HTTPS hosts; "
-            "original evidence remains HOLD"
-        ) from last_transport_error
+        # Use only the two official HTTPS hosts. A cached original has already
+        # been checked against SOURCE_SHA above. Do not accept redirects, changed
+        # MIME, unexpected encodings or unpinned source bytes.
+        official_urls = (
+            SOURCE_URL,
+            SOURCE_URL.replace("://resmigazete.gov.tr/", "://www.resmigazete.gov.tr/", 1),
+        )
+        last_transport_error: httpx.TransportError | None = None
+        for official_url in official_urls:
+            for attempt in range(2):
+                try:
+                    timeout = httpx.Timeout(35.0, connect=12.0)
+                    with httpx.Client(timeout=timeout, follow_redirects=False, trust_env=False) as client:
+                        with client.stream(
+                            "GET", official_url, headers={"Accept-Encoding": "identity"},
+                        ) as response:
+                            if (response.status_code != 200 or str(response.url) != official_url
+                                or response.headers.get("Content-Encoding", "identity").lower() != "identity"
+                                or "html" not in response.headers.get("Content-Type", "").lower()):
+                                raise ValueError("Original HTML server identity or MIME mismatch")
+                            chunks, size = [], 0
+                            for block in response.iter_raw():
+                                size += len(block)
+                                if size > MAX_BYTES:
+                                    raise ValueError("Original HTML exceeds maximum allowed bytes")
+                                chunks.append(block)
+                    raw = b"".join(chunks)
+                    if hashlib.sha256(raw).hexdigest() != SOURCE_SHA:
+                        raise ValueError("Official HTML now differs from pinned original")
+                    break
+                except httpx.TransportError as exc:
+                    last_transport_error = exc
+                    if attempt == 0:
+                        time.sleep(1)
+            else:
+                continue
+            break
+        else:
+            raise RuntimeError(
+                "Pinned official HTML unavailable from both official HTTPS hosts; "
+                "original evidence remains HOLD"
+            ) from last_transport_error
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as stream:
         tmp = Path(stream.name)
@@ -200,6 +216,13 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--install", action="store_true", required=True)
-    parser.parse_args()
-    print(json.dumps(install_html_original(), ensure_ascii=False, indent=2))
+    source = parser.add_mutually_exclusive_group(required=True)
+    source.add_argument("--install", action="store_true",
+                        help="Fetch raw official HTTPS bytes and verify the pinned SHA")
+    source.add_argument("--import-file", type=Path,
+                        help="Import locally obtained original bytes (exact SHA required)")
+    args = parser.parse_args()
+    print(json.dumps(
+        install_html_original(import_file=args.import_file),
+        ensure_ascii=False, indent=2,
+    ))
