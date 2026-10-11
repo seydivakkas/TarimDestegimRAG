@@ -282,6 +282,71 @@ def verdict(row: str, field: str) -> dict[str, Any]:
         return {"status": "CELL_REVIEW_HOLD", "reason": type(exc).__name__, "proposal": None}
 
 
+
+def render_review_overlay(selected: str | None) -> str:
+    """Show authentic page ROI: amber if proposed, yellow only if dual signed."""
+    from html import escape
+
+    if not isinstance(selected, str) or selected.count(":") != 1:
+        return "<p>HOLD — EK-20 hücre kimliği seçilmedi.</p>"
+    row, field = selected.split(":")
+    result = verdict(row, field)
+    status, proposal = result.get("status"), result.get("proposal")
+    if not isinstance(proposal, dict):
+        return (
+            '<p><strong>HOLD — Seçilen EK-20 hücresinin kaynak piksel ROI '
+            'haritası henüz doğrulanmadı.</strong> '
+            f'Durum: <code>{escape(str(status))}</code>. '
+            "Sarı işaretleme üretilmez; özgün tablo yukarıda görülebilir.</p>"
+        )
+    try:
+        from PIL import ImageDraw
+        context = _original_context(row, field)
+        if prepare_roi(row, field, proposal["pixel_bbox"]) != proposal:
+            raise ValueError("Source changed since review")
+        verified = status == "CELL_VISUAL_DUAL_VERIFIED"
+        image = context["image"].copy().convert("RGBA")
+        rect = proposal["pixel_bbox"]
+        pen = ImageDraw.Draw(image, "RGBA")
+        if verified:
+            # A digitally signed visual transcription, not legal applicability.
+            pen.rectangle(rect, fill=(255, 221, 0, 80), outline=(255, 195, 0, 255), width=5)
+        else:
+            pen.rectangle(rect, outline=(217, 119, 6, 255), width=5)
+        out = io.BytesIO()
+        image.convert("RGB").save(out, format="PNG")
+        encoded = base64.b64encode(out.getvalue()).decode("ascii")
+        content_label = (
+            "İKİ BAĞIMSIZ GÖRSEL İNCELEME İMZASI DOĞRULANDI"
+            if verified else "HOLD — GÖRSEL HÜCRE ADAYI; İKİNCİ İNCELEME BEKLENİYOR"
+        )
+        visual_class = "sarı" if verified else "turuncu"
+        return (
+            '<section style="border:1px solid #cbd5e1;padding:14px;background:white">'
+            f'<strong>{escape(content_label)}</strong>'
+            f'<p>İşaret rengi: {visual_class}. ROI yalnız özgün PDF SHA ve '
+            "görüntü piksellerinden yeniden doğrulandı. "
+            "Bu işlem mevzuatın ilgili yılda yürürlükte olduğunu, hak edişi "
+            "veya tutarın ödenebilirliğini kanıtlamaz: hukukî/ödeme HOLD.</p>"
+            f'<p>EK-20 satırı: <code>{escape(row)}</code>; sütun: '
+            f'<code>{escape(field)}</code>; sayfa: 1; DPI: {DPI}; '
+            f'koordinatlar: <code>{escape(str(rect))}</code></p>'
+            f'<img src="data:image/png;base64,{encoded}" '
+            'style="width:100%;height:auto;max-width:1100px" '
+            'alt="Özgün sayfa piksellerinde ROI inceleme çerçevesi"/>'
+            f'<p>Özgün SHA-256: <code>{escape(context["sha"])}</code>; '
+            f'ROI RGB SHA-256: <code>{escape(proposal["roi_rgb_sha256"])}</code></p>'
+            f'<p><a href="{escape(context["record"].official_url, quote=True)}" '
+            'rel="noopener noreferrer" target="_blank">'
+            'Özgün resmî PDF sayfasını aç ↗</a></p>'
+            "<p>Sarı alan iki ayrı yetkili anahtarın görsel içerik ve konum "
+            "beyanını gösterir; resmî PDF dosyası değiştirilmez. "
+            "Çiftçi olguları, yıl-mevzuat bağı ve ödeme yetkisi HOLD.</p>"
+            "</section>"
+        )
+    except (OSError, ValueError, KeyError, RuntimeError, ImportError, TypeError):
+        return "<p>HOLD — Kaynak piksel hücresi yeniden doğrulanamadı.</p>"
+
 def _write_new(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive create forbids quietly replacing a signed review/proposal.
