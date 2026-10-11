@@ -254,7 +254,17 @@ def format_highlighted_citation_card(
 
 
 def render_document_viewer_html(article_key: str) -> str:
-    """Route only explicit verified source-page IDs; no keyword-driven preview."""
-    from tarim_destek_rag.citations.pdf_page_indexer import render_evidence_by_key
+    """Never import RAG / guess a page for arbitrary article names."""
+    if not isinstance(article_key, str) or not re.fullmatch(
+        r"[A-Z][A-Z0-9_]+:[1-9][0-9]*", article_key,
+    ):
+        return (
+            '<p>HOLD — Özgün PDF, birebir pasaj ve gerçek sayfa '
+            'bağımsız olarak doğrulanmadı.</p>'
+        )
+    try:
+        from tarim_destek_rag.citations.pdf_page_indexer import render_evidence_by_key
 
-    return render_evidence_by_key(article_key)
+        return render_evidence_by_key(article_key)
+    except (ImportError, OSError, ValueError):
+        return '<p>HOLD — Gerçek kaynak arşivi kullanılamıyor.</p>'
