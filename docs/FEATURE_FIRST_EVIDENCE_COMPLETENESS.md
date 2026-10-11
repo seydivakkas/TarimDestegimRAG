@@ -20,7 +20,7 @@
 | F06 | PDF/HTML ortak kanıt gezgini | KISMİ: PDF görüntüsü, SHA-doğrulanmış HTML pasajı | Her iki belge türü aynı kanıt kimliği ve kaynak bağlantı kontratıyla gezilebilir |
 | F07 | Tekil gerekçe → kaynak | KISMİ: her gerekçe seçimi, sadece mevcut curated claim_bindings | Bütün sonuç metinleri kaynak paragrafı/ek hücresi/yıl ile ayrı ayrı eşlenir; bulunamayan HOLD |
 | F08 | Yıllara göre değişiklik zinciri | KISMİ: 2025/42 bazı pasajlar, 2025 geçiş | 2024/39, 2025/13, 2025/42, 8859, 10394, 11781 ve diğer uygulanabilir revizyonların etkisi hüküm bazlı izlenir |
-| F09 | EK-20 satır/hücre kanıtı | KISMİ: 2026 taslak 12x4, gerçek PDF görüntüsü | Her sayısal hücrenin tam ROI, iki bağımsız görsel okuma ve geçerli yıl kaydı olmadan hukukî/ödeme PASS olmaz |
+| F09 | EK-20 satır/hücre kanıtı | KISMİ: 2026 taslak 12x4, gerçek sayfa ROI önizleme, 48 hücre durumu, iki ayrı Ed25519 inceleme imzası ve imza sonrası görsel sarı alan; gerçek 48 ROI için onay henüz yok | Her sayısal hücrenin tam ROI, iki bağımsız görsel okuma ve geçerli yıl kaydı olmadan hukukî/ödeme PASS olmaz |
 | F10 | Neden / SSS / rapor / mobil birlikteliği | KISMİ: Neden + raporda tekil claim_id; SSS/mobil henüz değil | Tüm açıklamalar tekil aynı claim_id, source_id, SHA, sayfa ve pasaj/ROI bağını kullanır |
 | F11 | Offline Windows kullanım paketi | KISMİ: özgün kaynak yükleme, opsiyonel Tesseract | İlk kurulumdan indeks yenilemeye kadar ücretli API/bulut gerektirmeden Türkçe OCR ve resmî dosya yönetimi |
 | F12 | Kaynak değişikliği ve doğrulama yönetimi | KISMİ: manifest, draft hukukî eşleşmeler | Yeni resmî belgeden eski kuralı iptal/değiştirme, fark inceleme, insan onayına sunma ve geri alma |
@@ -65,6 +65,34 @@ Bu paketteki **uygulanan** işlevler:
 
 **Doğrulama sınırı:** RASTER_GRID_CANDIDATES_UNREVIEWED ve OCR_LAYOUT_UNREVIEWED yalnız taslak konum/metin adaylarıdır. EK-20 aktarım satırı bu aşamada görüntü hücresine otomatik bağlanmaz. Bağımsız ikinci görsel inceleme, üretim yılına göre hukukî yürürlük, çiftçi koşulları ve ödeme kararları HOLD kalır. Turuncu kutu resmî sarı kanıt vurgusu değildir.
 
-**Kalan işler:** çizgisiz/raster tablo bölütlemesi; birden fazla alt tablo; EK-20'nin 12×4 kayıtlarının orijinal hücre ROI'siyle insan onaylı eşlemesi; iki bağımsız incelemeci protokolü; bütün değişiklik/yıl/kural bağlantıları; ortak PDF/HTML kanıt kontratı; SSS ve mobil senkronizasyonu; Windows paketleme. F04 ve F09 henüz TAMAM değil.
+**Kalan işler:** çizgisiz/raster tablo bölütlemesi; birden fazla alt tablo; EK-20'nin 48 alanının gerçek kaynak ROI'si üzerinde iki gerçek insan tarafından fiilen incelenip imzalanması; bağımsız insan kimliği/yetki kontrolü ve onayların kurumsal arşivlenmesi; bütün değişiklik/yıl/kural bağlantıları; ortak PDF/HTML kanıt kontratı; SSS ve mobil senkronizasyonu; Windows paketleme. F04 ve F09 henüz TAMAM değil.
 
 **Sıra:** F01–F13 özellikler ve bütünleşme → en son F14 kapsamlı test, gerçek Windows kabul, hukukî ve güvenlik onayı. PR #41 taslak kalır, main değişmez.
+
+
+## PR #41 — F04/F09 gerçek ROI + iki imzalı hücre onayı altyapısı
+
+- EK-20 `12×4=48` hücre ayrı kanıt birimi; **null tireyi 0 TL olarak yorumlama yok**.
+- Tam SHA-doğrulanmış gerçek PDF sayfasının 180 DPI piksel koordinatları
+  ile manuel ROI öneri/önizleme ekranı eklendi; kullanıcı girişi tek başına
+  doğru tablo hücresi konumu veya sarı kanıt VURGUSU DEĞİL.
+- Her ROI önerisi: kaynağın SHA-256 ve URL'si, sayfa kimliği, görüntünün RGB
+  hash'i, hücre RGB hash'i, tam piksel kutusu, satır/sütun ve 2026 taslak
+  alan değeriyle bağlanıyor; kaynak değişirse eski onay kullanılamaz.
+- Yerel yönetici tarafından tanınan iki farklı Ed25519 genel anahtarı, iki ayrı
+  `primary/independent` kişi rolü ve aynı payload üzerine iki ayrı imzalı
+  inceleme kaydı gereklidir. Eksik/bozuk/REJECT/kaynak uyuşmazlığı HOLD.
+- Sadece iki imza doğrulanırsa gerçek orijinal sayfanın **görüntü kopyası**
+  üzerindeki gerçek ROI sarı işaretli açılır. Bu sarı görsel **hukukî yürürlük
+  veya ödeme izni değildir**; kanıt durumu `CELL_VISUAL_DUAL_VERIFIED`
+  katmanıyla sınırlandırılmıştır.
+- 48 hücre envanteri oluşturuldu; özel reviewer key'ler repository dışında
+  tutulur; herhangi bir varsayılan reviewer onayı veya uydurma bbox eklenmedi.
+- Bağımsız iki gerçek kişinin imzalarının fiilen toplanması, 48 ayrı hücrenin
+  birebir kaynak ROI'sinin belirlenmesi ve kurumsal onay henüz yapılmadı.
+  Mevcut özellik `F04 KISMİ / F09 KISMİ` statüsündedir.
+- İşletim prosedürü: [F04_F09_EK20_TWO_REVIEWER_ROI.md](F04_F09_EK20_TWO_REVIEWER_ROI.md).
+
+**Sonraki özellik:** 48 kaynak hücrenin fiilî koordinat ve bağımsız incelemesi,
+ardından F07/F08 mevzuat sürüm–yıl–kural zinciri ve F10 ortak SSS/rapor/mobil
+kanıt kontratı. Son F14 kapsamlı regression, gerçek Windows ve hukukî kabul.
