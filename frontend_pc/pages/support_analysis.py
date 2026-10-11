@@ -159,7 +159,31 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
 
             from tarim_destek_rag.citations.ek20_cell_provenance import (
                 render_ek20_review_coverage,
+                render_candidate_roi,
             )
+
+
+            with gr.Accordion(
+                "EK-20 piksel koordinatı öner ve gerçek sayfada önizle (HOLD)",
+                open=False,
+            ):
+                gr.Markdown(
+                    "180 DPI özgün PDF sayfasındaki x0, y0, x1, y1 tam piksel "
+                    "koordinatlarını girin. Bu işlem bir ROI adayı gösterir; "
+                    "bağımsız iki incelemeci imzası veya hukukî onay vermez."
+                )
+                with gr.Row():
+                    roi_x0 = gr.Number(value=0, precision=0, label="x0")
+                    roi_y0 = gr.Number(value=0, precision=0, label="y0")
+                    roi_x1 = gr.Number(value=0, precision=0, label="x1")
+                    roi_y1 = gr.Number(value=0, precision=0, label="y1")
+                btn_roi_preview = gr.Button(
+                    "Seçili hücre için orijinal piksel ROI önizle",
+                    variant="secondary",
+                )
+                roi_preview_display = gr.HTML(
+                    "<p>Özgün görüntü koordinatları girilmedi. HOLD.</p>"
+                )
 
             gr.Markdown(
                 "**48 hücre kanıt envanteri:** Her EK-20 tutar alanının özgün "
@@ -252,6 +276,11 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 inputs=[article_selector],
                 outputs=[ocr_spatial_display],
             )
+            btn_roi_preview.click(
+                render_candidate_roi,
+                inputs=[ek20_selector, roi_x0, roi_y0, roi_x1, roi_y1],
+                outputs=[roi_preview_display],
+            )
             btn_ek20_coverage.click(
                 render_ek20_review_coverage,
                 inputs=[],
@@ -306,6 +335,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "ek20_selector": ek20_selector,
         "ek20_display": ek20_display,
         "ek20_coverage_display": ek20_coverage_display,
+        "roi_preview_display": roi_preview_display,
         "btn_report": btn_report,
         "file_report": file_report,
         "out_disclaimer": out_disclaimer,
