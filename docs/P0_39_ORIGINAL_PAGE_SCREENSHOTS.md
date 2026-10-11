@@ -41,3 +41,7 @@ python -m tarim_destek_rag.citations.verified_ocr_index --source-id RG_DECISION_
 Motor PDF'deki **her sayfanın gerçek baytlarını yeniden doğrular**, metin katmanını veya varsa gerçek Tesseract OCR çıktısını `data/indexes/verified_ocr_<original-sha>.json` içerisine kaydeder. Yerel OCR/dil paketi eksikse dosya `INCOMPLETE_OCR_HOLD` olur ve komut başarılı kabul ile sonuçlanmaz. Eski sentetik JSON veya sadece URL bilgisi geçerli OCR indeksi sayılamaz.
 
 Metin aramasında PDF-native kesin eşleşme yoksa OCR indeksi yalnızca `OCR_CANDIDATE_UNREVIEWED` sonucunu önerebilir. Kullanıcıya gerçek sayfa görüntüsü açılır, **metin otomatik işaretlenmez**; OCR hatası veya kelime çarpıtmasıyla yanlış hukukî alıntı üretilemez. Tablolarda satır/hücre semantiği ve grafik yorumlama bağımsız görsel inceleme olmadan `PENDING_INDEPENDENT_REVIEW` kalır.
+
+## CI orijinal PDF ile bağımsız görsel kanıt testi
+
+`.github/workflows/p0-39-authentic-original-screenshots.yml` önceki bağımsız SHA-denetimli **özgün Resmî Gazete bayt** arşivini alır ve üzerinde 8859'un gerçek 89 sayfası ile 2025/42 EK-20'nin gerçek 1 sayfasını kontrol eder. Bunlardan orijinal PDF'ye dokunmadan PNG görüntü çıkarır. İki gerçek ekran görüntüsünü GitHub Actions artefaktı olarak saklar. İş akışının kaynağı alınamazsa veya tam SHA eşleşmezse iş **FAIL / HOLD** olur; sentetik belge üretip yeşile dönmez. Bu, resmî tablodaki OCR hücrelerinin bağımsız insan incelemesi yerine geçmez.
