@@ -18,6 +18,7 @@ from tarim_destek_rag.citations.pdf_page_indexer import (
     normalize_tr,
 )
 from tarim_destek_rag.citations.ocr_spatial_layout import extract_ocr_geometry
+from tarim_destek_rag.citations.raster_table_review import REVIEW_DPI, detect_ruled_cells
 
 INDEX_SCHEMA = 1
 
@@ -44,6 +45,14 @@ def index_official_document(
         # Revalidate every page's original PDF and position before accepting
         # either native text or OCR bytes. This does not validate OCR semantics.
         indexer.screenshot(page, dpi=120)
+        # The measured raster grid (if present) is re-derived solely from the
+        # same SHA-pinned original PDF, never from a 12x4 transcription layout.
+        raster_png, raster_hits, raster_sha = indexer.screenshot(page, dpi=REVIEW_DPI)
+        if raster_hits or raster_sha != source["original_sha256"]:
+            raise ValueError("Untrusted raster screenshot")
+        raster_layout = detect_ruled_cells(raster_png)
+        raster_layout["source_sha256"] = raster_sha
+        raster_layout["page_number"] = page.page_number
         spatial: dict[str, Any] = {
             "status": "NATIVE_PDF_TEXT_LAYOUT",
             "words": [],
@@ -66,6 +75,7 @@ def index_official_document(
             "method": method,
             "text": text,
             "ocr_spatial_layout": spatial,
+            "raster_table_geometry": raster_layout,
             "tables_extracted_from_native_pdf": [
                 {
                     "table_id": t.table_id,
