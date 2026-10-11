@@ -124,4 +124,29 @@ void main() {
       expect(response.explanations[0].citations[0].sourceId, 'RG-2026-BITKISEL');
     });
   });
+  test('mobile proof route requires exact hash, page and quote', () {
+    const sha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    final exact = CitationDetail(
+      sourceId: 'RG_DECISION_8859', title: 'Özgün PDF', section: 'MADDE 2',
+      year: 2026, snippet: 'Doğru birebir cümle',
+      verificationStatus: 'EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW',
+      documentSha256: sha, pageNumber: 2,
+      highlightedPdfUrl: '/evidence/highlight/$sha?page=2&quote=Do%C4%9Fru%20birebir%20c%C3%BCmle',
+    );
+    expect(exact.verifiedHighlightPath(), isNotNull);
+    final forged = CitationDetail(
+      sourceId: exact.sourceId, title: exact.title, section: exact.section,
+      year: exact.year, snippet: exact.snippet,
+      verificationStatus: exact.verificationStatus,
+      documentSha256: sha, pageNumber: 2,
+      highlightedPdfUrl: '/evidence/highlight/$sha?page=3&quote=wrong',
+    );
+    expect(forged.verifiedHighlightPath(), isNull);
+    final unverified = CitationDetail(
+      sourceId: exact.sourceId, title: exact.title,
+      section: exact.section, year: exact.year, snippet: exact.snippet,
+    );
+    expect(unverified.verifiedHighlightPath(), isNull);
+  });
+
 }

@@ -95,6 +95,7 @@ def test_pr8_modular_ui_kept_with_admin_pdf_controls():
         x.get("props", {}).get("label", "")
         for x in config["components"]
         if x.get("type", "").lower() == "tabitem"
+        and str(x.get("props", {}).get("id") or "").startswith("tab_")
     ]
     assert len(tabs) == 5
     assert any("Yönetim & Doğrulama" in tab for tab in tabs)
@@ -113,7 +114,11 @@ def test_program_lookup_is_present_in_modular_five_tab_ui():
 
     config = build_ui().get_config_file()
     components = config["components"]
-    tabs = [c for c in components if c.get("type", "").lower() == "tabitem"]
+    tabs = [
+        c for c in components
+        if c.get("type", "").lower() == "tabitem"
+        and str(c.get("props", {}).get("id") or "").startswith("tab_")
+    ]
     assert len(tabs) == 5
     radios = [
         c.get("props", {}) for c in components

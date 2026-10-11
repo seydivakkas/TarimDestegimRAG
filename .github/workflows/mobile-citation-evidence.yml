@@ -1,0 +1,28 @@
+name: Mobile Source Citation Contract
+
+on:
+  pull_request:
+    paths:
+      - "mobile/**"
+      - ".github/workflows/mobile-citation-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  flutter-citation-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve mobile dependencies
+        working-directory: mobile
+        run: flutter pub get
+      - name: Test mobile citation deserialization and fail-closed highlighted links
+        working-directory: mobile
+        run: flutter test test/model_test.dart

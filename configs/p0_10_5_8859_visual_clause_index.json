@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "support_id": "BASIC_SUPPORT_2026",
+      "source_id": "RG_DECISION_8859",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
+      "source_sha256": "89df0b6222edb4eddf3d5f588a4007061458adec8d518e3fbdb86b46ae5ba85f",
+      "page_number": 2,
+      "article": "MADDE 2",
+      "paragraph": "1",
+      "title": "8859 sayılı Cumhurbaşkanı Kararı — Bitkisel üretimin desteklenmesi",
+      "production_year": 2026,
+      "exact_visible_text": "MADDE 2- (1) Bitkisel üretimin desteklenmesi kapsamında yer alan desteklemelerden yararlanmak için ilgili üretim yılında Tarım ve Orman Bakanlığı (Bakanlık) tarafından belirlenen kayıt sistemlerine kayıtlı olma şartı aranır.",
+      "highlight_rectangles_pdf_points": [
+        [
+          50,
+          153,
+          357,
+          163
+        ],
+        [
+          27,
+          164,
+          357,
+          175
+        ],
+        [
+          27,
+          175.5,
+          250,
+          186.5
+        ]
+      ],
+      "quote_evidence_status": "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW",
+      "source_type": "ORIGINAL_PDF_SCANNED_PAGE",
+      "manual_visual_location_approved": false,
+      "legal_provision_approved": false,
+      "notes": "Rectangle locations manually inspected on original PDF page 2 rendered from SHA-pinned exact original. PDF page 2 has no extractable text. Record identifies the registration requirement, NOT a verified 2026 payment entitlement, rate or article exception."
+    }
+  ]
+}

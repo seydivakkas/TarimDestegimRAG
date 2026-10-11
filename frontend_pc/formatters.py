@@ -4,18 +4,16 @@ from __future__ import annotations
 
 import logging
 import time
-import uuid
 from datetime import datetime
 from typing import Any
 
 import pandas as pd
-
+from tarim_destek_rag.citations.evidence_contract import verified_highlight_path
 from tarim_destek_rag.citations.document_links import (
     format_citation_section_header,
     format_clickable_action,
     format_clickable_check,
     format_highlighted_citation_card,
-    resolve_check_link,
 )
 
 logger = logging.getLogger("frontend_pc.formatters")
@@ -360,6 +358,41 @@ def render_reasons_markdown(resp: dict[str, Any] | None) -> str:
     exp_map = {e.get("support_id"): e for e in explanations}
 
     reasons_markdown = "### 📜 Kural Motoru İşletim Gerekçeleri ve Resmî Mevzuat Dayanakları\n\n"
+    # Province + district + crop evidence is its own source-dependent finding.
+    # It does not certify farmer eligibility or any payable amount.
+    from html import escape
+    from os import getenv
+
+    basin = resp.get("basin_evidence")
+    if isinstance(basin, dict) and basin.get("verification_status") == (
+        "ORIGINAL_PDF_ROW_AND_CROP_LOCATED_DRAFT_REVIEW"
+    ):
+        link = str(basin.get("highlighted_pdf_url") or "")
+        if verified_highlight_path(basin) == link:
+            public_api = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+            proof_link = escape(public_api + link, quote=True)
+            original = escape(str(basin.get("source_url") or ""), quote=True)
+            province = escape(str(basin.get("province") or ""))
+            district = escape(str(basin.get("district") or ""))
+            crop = escape(str(basin.get("crop_label") or ""))
+            page = escape(str(basin.get("page_number") or ""))
+            reasons_markdown += (
+                "### 📍 Seçilen İlçe ve Ürün — Özgün Bakanlık PDF Kanıtı\n\n"
+                f"**{province} / {district} — {crop}** · PDF sayfa {page}\n\n"
+                f'<a href="{proof_link}" target="_blank" rel="noopener noreferrer">'
+                "İlçeyi mavi, ürünü sarı işaretli PDF'de aç ↗</a> · "
+                f'<a href="{original}" target="_blank" rel="noopener noreferrer">'
+                "Değiştirilmemiş resmî PDF ↗</a>\n\n"
+                "**Kaynak durumu:** İlçe/ürün satırı özgün PDF'de bulundu; "
+                "satır henüz bağımsız uzman onaylı değildir ve tek başına "
+                "destek uygunluğu/ödeme kanıtı değildir.\n\n---\n\n"
+            )
+    else:
+        reasons_markdown += (
+            "**İlçe/ürün kaynak kanıtı:** Seçilen ilçe ve ürün için özgün PDF'de "
+            "birebir işaretleme şu anda doğrulanamadı (belge kurulmamış, "
+            "ürün alt türü belirsiz veya kaynak yılı farklı olabilir).\n\n---\n\n"
+        )
     for ev in rules:
         sid = ev.get("support_id")
         sname = ev.get("support_name", sid)
@@ -502,7 +535,7 @@ def generate_report_markdown(
         "",
         f"**Rapor Tarihi:** {now_str}",
         "**Doğrulama Motoru:** TarımDestekRAG Deterministik Kural Motoru (Zero-LLM)",
-        "**Yasal Dayanak:** 2026 Resmî Gazete Bitkisel Üretim Kararları & BÜGEM Havza Tebliğleri",
+        "**İncelenen mevzuat kaynakları (tekil madde kanıtı değildir):** Resmî Gazete ve BÜGEM kayıtları; doğrulanmış pasajlar aşağıda ayrı gösterilir.",
         "",
         "---",
         "### 👤 1. Üretici ve Parsel Kayıt Özeti",
@@ -534,7 +567,7 @@ def generate_report_markdown(
         uamt = c.get("unit_amount", 0.0)
         st_tr = "✅ UYGUN" if st == "ELIGIBLE" else ("⚠️ İNCELEME" if st == "REVIEW" else "❌ UYGUN DEĞİL")
         report_lines.append(
-            f"| {sname} | {st_tr} | {format_currency(uamt)}/da | {area_da:.1f} da | {format_currency(amt)} | 2026 Resmî Gazete |"
+            f"| {sname} | {st_tr} | {format_currency(uamt)}/da | {area_da:.1f} da | {format_currency(amt)} | Kanıt durumu aşağıda |"
         )
 
     report_lines.extend([
@@ -551,29 +584,80 @@ def generate_report_markdown(
         reason = exp.get("detailed_reason_tr") or exp.get("summary_tr", "Kural değerlendirmesi tamamlandı.")
         report_lines.append(f"#### 📌 {sname}")
         report_lines.append(f"- **Gerekçe:** {reason}")
-        if exp.get("passed_checks"):
-            p_items = [
-                f"[{p} ↗]({resolve_check_link(p, sid)['url']})"
-                for p in exp.get("passed_checks")
-            ]
-            report_lines.append(f"- **Sağlanan Şartlar:** {' · '.join(p_items)}")
-        if exp.get("failed_checks"):
-            f_items = [
-                f"[{f} ↗]({resolve_check_link(f, sid)['url']})"
-                for f in exp.get("failed_checks")
-            ]
-            report_lines.append(f"- **Sağlanamayan Şartlar:** {' · '.join(f_items)}")
-        if exp.get("missing_fields"):
-            m_items = [
-                f"[{m} ↗]({resolve_check_link(m, sid)['url']})"
-                for m in exp.get("missing_fields")
-            ]
-            report_lines.append(f"- **Eksik Bilgi/Belgeler:** {', '.join(m_items)}")
-        if exp.get("citations"):
-            for cit in exp.get("citations", []):
-                cit_url = cit.get("url") or resolve_check_link(cit.get("section", ""), sid)["url"]
-                report_lines.append(f"- **Yasal Dayanak:** [{cit.get('title')} ({cit.get('section', '')}) ↗]({cit_url})")
+        # The RULE result, not a keyword match, supplies passed/failed checks.
+        # No check is advertised as a source quotation without separate evidence.
+        for key, label in (
+            ("passed_checks", "Sağlanan Şartlar"),
+            ("failed_checks", "Sağlanamayan Şartlar"),
+            ("missing_fields", "Eksik Bilgi/Belgeler"),
+        ):
+            items = r.get(key) or []
+            if items:
+                report_lines.append(
+                    f"- **{label} — kural sonucu, resmî alıntı değildir:** "
+                    + " · ".join(str(item) for item in items)
+                )
+        citations = exp.get("citations") or []
+        if not citations:
+            report_lines.append("- **Yasal Dayanak:** Birebir madde/fıkra henüz doğrulanmadı; kanıt bağlantısı yok.")
+        for cit in citations:
+            if not isinstance(cit, dict):
+                report_lines.append("- **Yasal Dayanak:** Geçersiz kaynak kaydı; kanıt bağlantısı yok.")
+                continue
+            proof = verified_highlight_path(cit, sid)
+            if not proof:
+                report_lines.append(
+                    "- **Yasal Dayanak:** Ön değerlendirme açıklaması; "
+                    "resmî cümle ve madde/fıkra doğrulanmadı. Kanıt bağlantısı yok."
+                )
+                continue
+            from html import escape
+            from os import getenv
+
+            base_url = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+            safe_link = escape(base_url + proof, quote=True)
+            safe_title = escape(str(cit.get("title") or "Özgün kaynak"))
+            safe_section = escape(str(cit.get("section") or ""))
+            status = cit.get("verification_status")
+            label = (
+                "PDF görüntü pasajı bulundu; bağımsız metin incelemesi bekliyor"
+                if status == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW"
+                else "Kaynak metindeki pasaj bulundu; hukukî inceleme bekliyor"
+            )
+            report_lines.append(
+                f'- **Yasal Dayanak ({label}):** '
+                f'<a href="{safe_link}">{safe_title} — {safe_section} '
+                '— işaretli özgün belgeyi aç</a>'
+            )
+            if status != "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW":
+                report_lines.append(
+                    "- **Özgün metinde birebir konumlanan pasaj:** "
+                    + str(cit.get("snippet") or "")
+                )
         report_lines.append("")
+
+    # Basin cell evidence must have the same strict route contract as citations.
+    basin = resp.get("basin_evidence")
+    report_lines.append("### İlçe ve ürün — özgün Bakanlık PDF satırı")
+    basin_proof = verified_highlight_path(basin) if isinstance(basin, dict) else None
+    if basin_proof:
+        from html import escape
+        from os import getenv
+
+        base_url = getenv("API_PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+        safe_url = escape(base_url + basin_proof, quote=True)
+        report_lines.append(
+            f'<a href="{safe_url}">İlçe ve ürünün aynı PDF satırındaki işaretlerini aç</a>'
+        )
+        report_lines.append(
+            "Bu bağlantı planlama satırının konumunu gösterir; "
+            "kesin uygunluk veya ödeme hakkı anlamına gelmez."
+        )
+    else:
+        report_lines.append(
+            "İlçe/ürün için özgün PDF satırı doğrulanmadı; işaretli bağlantı yok."
+        )
+    report_lines.append("")
 
     report_lines.extend([
         "---",
