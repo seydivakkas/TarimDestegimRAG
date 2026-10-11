@@ -14,8 +14,8 @@
 |---|---|---|---|
 | F01 | Orijinal kaynak deposu | KISMİ: beş SHA-pinli belge | Birincil mevzuat ve tüm sürüm/değişiklik/ekler doğrulanmış orijinli; sentetik/türetilmiş belge dışlanmış |
 | F02 | Gerçek PDF ekran görüntüsü | VAR, PR40 | Sayfa numarası, original SHA ve tam kaynak URL sayfaya bağlanır |
-| F03 | PDF metin/OCR indeksleme | KISMİ: native metin, seçili Tesseract ve toplu taslak | Bütün sayfalara tarama durumu, OCR geometrisi, indeks sürümü, görsel inceleme akışı ekli |
-| F04 | Tablolar ve hücreler | KISMİ: native find_tables ve OCR sözcük kutuları | Born-digital ve raster tabloların satır/sütun/hücre konumları özgün piksel/point sistemine bağlı; hata/boş/dash belirsizlikleri korunur |
+| F03 | PDF metin/OCR indeksleme | KISMİ: native metin, toplu OCR taslağı, gerçek sayfa üzerinde turuncu OCR satır kutusu önizlemesi | Bütün sayfalara tarama durumu, OCR geometrisi, indeks sürümü, görsel inceleme akışı ekli |
+| F04 | Tablolar ve hücreler | KISMİ: native find_tables, OCR sözcük kutuları, görüntü piksellerinden ölçülen çizgili-ızgara hücre adayları ve kaynak SHA'lı orijinal hücre kırpımı | Born-digital ve raster tabloların satır/sütun/hücre konumları özgün piksel/point sistemine bağlı; hata/boş/dash belirsizlikleri korunur |
 | F05 | Grafik/şekil/çizim | KISMİ: bölge kırpımı | Gerçek sayfa görselleri ve bölgeler bulunur; semantik iddialar yalnız kanıtlı inceleme ile |
 | F06 | PDF/HTML ortak kanıt gezgini | KISMİ: PDF görüntüsü, SHA-doğrulanmış HTML pasajı | Her iki belge türü aynı kanıt kimliği ve kaynak bağlantı kontratıyla gezilebilir |
 | F07 | Tekil gerekçe → kaynak | KISMİ: her gerekçe seçimi, sadece mevcut curated claim_bindings | Bütün sonuç metinleri kaynak paragrafı/ek hücresi/yıl ile ayrı ayrı eşlenir; bulunamayan HOLD |
@@ -53,3 +53,18 @@
 4. Bütün backend, Gradio, API, rapor, mobil ve GitHub CI; ardından bağımsız hukukî kabul.
 
 CI sistemin otomatik tetiklenmesi kod tamamlanmasına eşit sayılmayacak; bu belgenin temel kapsam hedefi **önce işlevleri tamamlamak**.
+
+
+## PR #41 — Raster tablo/OCR inceleme ek paketi (özellik geliştirme)
+
+Bu paketteki **uygulanan** işlevler:
+- Raster hücre inceleme: özgün PDF SHA'sı her çağrıda yeniden doğrulandıktan sonra 180 DPI gerçek sayfa PNG pikselleri incelenir. Yatay/dikey ızgara çizgilerinin sürekliliği ve kesişimi ölçülür; yalnız fiziksel çizgiler arasından gerçek piksel kutusu *adayları* çıkarılır. Eksik/bölünmüş veya çizgisiz tablo için koordinat icat edilmez; HOLD.
+- Destek Analizi > Neden: kullanıcı seçtiği gerçek PDF sayfasında isteğe bağlı ızgara taraması yapar; hücre adayını seçince aynı kaynaktan yeniden kırpılmış bölge ve turuncu inceleme çerçevesi görünür. Tam SHA-256 + sayfa + DPI + piksel kutusu gösterilir. İndeks varsa aynı SHA/sayfa/DPI bağlı OCR sözcükleri gösterilir.
+- Toplu indeks: her özgün sayfanın indeks kaydına raster_table_geometry (SHA, sayfa, DPI, gerçek piksel kutuları veya açıkça HOLD) eklendi.
+- OCR incelemesi: seçilen gerçek sayfada Tesseract TSV satır koordinatları turuncu kutularla orijinal sayfanın geçici görüntü kopyası üzerinde gösterilir. Kaynak PDF değiştirilmez.
+
+**Doğrulama sınırı:** RASTER_GRID_CANDIDATES_UNREVIEWED ve OCR_LAYOUT_UNREVIEWED yalnız taslak konum/metin adaylarıdır. EK-20 aktarım satırı bu aşamada görüntü hücresine otomatik bağlanmaz. Bağımsız ikinci görsel inceleme, üretim yılına göre hukukî yürürlük, çiftçi koşulları ve ödeme kararları HOLD kalır. Turuncu kutu resmî sarı kanıt vurgusu değildir.
+
+**Kalan işler:** çizgisiz/raster tablo bölütlemesi; birden fazla alt tablo; EK-20'nin 12×4 kayıtlarının orijinal hücre ROI'siyle insan onaylı eşlemesi; iki bağımsız incelemeci protokolü; bütün değişiklik/yıl/kural bağlantıları; ortak PDF/HTML kanıt kontratı; SSS ve mobil senkronizasyonu; Windows paketleme. F04 ve F09 henüz TAMAM değil.
+
+**Sıra:** F01–F13 özellikler ve bütünleşme → en son F14 kapsamlı test, gerçek Windows kabul, hukukî ve güvenlik onayı. PR #41 taslak kalır, main değişmez.
