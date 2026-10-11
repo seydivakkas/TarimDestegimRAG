@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "audit_phase": "P0-10.7",
+  "legal_approval": false,
+  "spans": [
+    {
+      "span_id": "BASE_2024_39_ART4_P1",
+      "source_id": "RG_COMMUNIQUE_2024_39",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm",
+      "source_sha256": "efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530",
+      "article": "MADDE 4",
+      "target_provision": "MADDE 4(1)",
+      "exact_quote": "Desteklemelerden yararlanmak için destekleme uygulamalarında ayrıntıları verilen Bakanlık kayıt sistemlerine ilgili üretim yılında kayıtlı olma şartı aranır.",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "amendment_review_required": [
+        "2025/13",
+        "2025/42",
+        "11781"
+      ],
+      "claim_bindings": [
+        {
+          "rule_id": "RULE_BASIC_SUPPORT_2026",
+          "support_id": "BASIC_SUPPORT_2026",
+          "field": "passed_checks",
+          "exact_claim_text": "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif."
+        },
+        {
+          "rule_id": "RULE_BASIC_SUPPORT_2026",
+          "support_id": "BASIC_SUPPORT_2026",
+          "field": "failed_checks",
+          "exact_claim_text": "Çiftçi Kayıt Sistemi (ÇKS) kaydı bulunmuyor."
+        }
+      ]
+    },
+    {
+      "span_id": "AMEND_2025_42_ART2_BASE_ART4_P3",
+      "source_id": "RG_AMENDMENT_2025_42",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "source_sha256": "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269",
+      "article": "MADDE 2",
+      "target_provision": "2024/39 MADDE 4(3)",
+      "exact_quote": "Temel, planlı üretim, üretimi geliştirme ve biyolojik ve/veya biyoteknik mücadele desteği destekleme tutarı, destek katsayı değeri ile destek katsayısının çarpımı sonucu elde edilir.",
+      "production_years": [
+        2026,
+        2027
+      ],
+      "amendment_effect": "REPLACES_2024_39_ARTICLE_4_PARAGRAPH_3",
+      "claim_bindings": []
+    },
+    {
+      "span_id": "AMEND_2025_42_ART15_EK20",
+      "source_id": "RG_AMENDMENT_2025_42",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "source_sha256": "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269",
+      "article": "MADDE 15",
+      "target_provision": "EK-20",
+      "exact_quote": "EK-20’si ekteki şekilde değiştirilmiştir.",
+      "production_years": [
+        2026
+      ],
+      "amendment_effect": "REPLACES_2024_39_ANNEX_EK20",
+      "claim_bindings": []
+    }
+  ],
+  "ek20": {
+    "source_id": "RG_AMENDMENT_2025_42_ANNEX",
+    "source_sha256": "6984c901775212e0500148cbbb2d87ea34ad3783e10d6c798fa9ca320bf06a79",
+    "production_year": 2026,
+    "pdf_page": 1,
+    "cell_count_status": "VISUAL_TRANSCRIPTION_PENDING_INDEPENDENT_REVIEW",
+    "approved_payment": false
+  }
+}
