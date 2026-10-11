@@ -196,8 +196,10 @@ def test_legacy_2026_preview_does_not_fabricate_quote_as_law():
     source = Path(__file__).resolve().parents[2] / "src/tarim_destek_rag/citations/document_links.py"
     render_document_viewer_html = runpy.run_path(str(source))["render_document_viewer_html"]
     output = render_document_viewer_html("MADDE 1")
-    assert "Resmî Gazete PDF Doğrulanmış Mevzuat Metni" in output
-    assert "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1" in output
-    assert "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan" in output
-    assert "Mevzuat cümlesi doğrulanmadı" not in output
+    # No matching original document/article-page proof was provided.
+    # A synthetic screenshot or a hard-coded 8859 article is forbidden.
+    assert "HOLD" in output
+    assert "Resmî Gazete PDF Doğrulanmış Mevzuat Metni" not in output
+    assert "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1" not in output
+    assert "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan" not in output
 
