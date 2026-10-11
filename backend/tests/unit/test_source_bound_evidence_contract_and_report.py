@@ -64,7 +64,7 @@ def test_report_and_pc_show_same_exact_pdf_evidence_link(monkeypatch: pytest.Mon
     assert link.replace("&", "&amp;") in report
     assert link.replace("&", "&amp;") in pc
     assert "Özgün metinde birebir konumlanan pasaj" in report
-    assert "Kaynak eşleşmesi aşağıda" in report
+    assert "Kanıt durumu aşağıda" in report
 
 
 def test_report_unverified_explanations_have_no_guessed_madde_or_page() -> None:
@@ -141,5 +141,5 @@ def test_html_clause_and_basin_use_same_source_bound_contract() -> None:
 def test_no_match_never_becomes_legal_entitlement() -> None:
     empty = _report(_response([]))
     assert "Birebir madde/fıkra henüz doğrulanmadı" in empty
-    assert "ilçe/ürün" in empty.lower()
+    assert "özgün PDF satırı doğrulanmadı" in empty
     assert "işaretli belge" not in empty
