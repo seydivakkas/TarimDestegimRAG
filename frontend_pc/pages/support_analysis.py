@@ -157,6 +157,23 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 "görüntüsüyle karşılaştırılabilir.</p>"
             )
 
+            from tarim_destek_rag.citations.ek20_cell_provenance import (
+                render_ek20_review_coverage,
+            )
+
+            gr.Markdown(
+                "**48 hücre kanıt envanteri:** Her EK-20 tutar alanının özgün "
+                "PDF piksel konumu ve iki bağımsız görsel incelemeci imzası "
+                "ayrıca denetlenir. Kaynak eksikse bütün hücreler HOLD kalır."
+            )
+            btn_ek20_coverage = gr.Button(
+                "EK-20 12×4 hücrenin kanıt durumlarını göster",
+                variant="secondary",
+            )
+            ek20_coverage_display = gr.HTML(
+                "<p>48 hücre kapsamını görmek için denetimi açın.</p>"
+            )
+
             from tarim_destek_rag.citations.ocr_spatial_layout import (
                 render_ocr_spatial_review,
             )
@@ -235,6 +252,11 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 inputs=[article_selector],
                 outputs=[ocr_spatial_display],
             )
+            btn_ek20_coverage.click(
+                render_ek20_review_coverage,
+                inputs=[],
+                outputs=[ek20_coverage_display],
+            )
             btn_page_ocr.click(
                 render_ocr_page_by_key,
                 inputs=[article_selector],
@@ -283,6 +305,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "raster_cell_display": raster_cell_display,
         "ek20_selector": ek20_selector,
         "ek20_display": ek20_display,
+        "ek20_coverage_display": ek20_coverage_display,
         "btn_report": btn_report,
         "file_report": file_report,
         "out_disclaimer": out_disclaimer,
