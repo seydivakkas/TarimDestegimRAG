@@ -53,3 +53,15 @@ Bu sürüm her tekil passed/failed/missing kuralını sayar, kaynakta bulunmuş 
 - **Gerçek kaynak indirme `ReadTimeout` ile başarısızsa yeşil kabul yazılmaz; test atlanarak veya sahte belgeyle geçilmez.** Ticari/üretim kabulü ve `main` merge işlemi HOLD kalır.
 
 > Kaynak metinde bulunma, hukukî onay veya çiftçi hak edişi değildir.
+
+## P0-10.7 — Kural/check kimliği, gerçek değişiklik metni ve yılı birbirinden ayırma
+
+**Kaynak incelemesi:** SHA sabitli özgün `2025/42` Resmî Gazete HTML (74a911…9269) üzerinde `MADDE 2` metninin temel `2024/39 MADDE 4(3)` fıkrasının katsayı çarpımı formülünü değiştirdiği; `MADDE 15` metninin `EK-20`yi değiştirdiği; **GEÇİCİ MADDE 2**'nin 2025 üretim yılı başlatılmış işlemler için önceki hükümleri koruduğu ayrı ayrı gözlendi. 2026 EK-20'ye ilişkin değişiklik, kayıt zorunluluğunu düzenleyen `2024/39 MADDE 4(1)` için otomatik bir değişiklik ispatı değildir.
+
+- `configs/p0_10_7_claim_source_matrix.json`: Özgün belge kimliği, SHA, değişiklik **MADDE**'si, hedef madde/fıkra, birebir pasaj ve kısıtlı üretim yılları. Kaynak kaydı onay değildir; imza ve içerik/yürürlük analizi ayrı.
+- `citations/claim_source_matrix.py`: Kaynağın **özgün HTML bayt** SHA'sını, manifest kimliğini, DOM'da tam ve tekil pasajı ve doğru değişiklik maddesini kontrol eder. `MADDE 2`deki pasajı `MADDE 4(1)` olarak etiketlemek, farklı yıl veya farklı `rule_id` ile taşıma **HOLD**.
+- İlk kontrollü örnek: `RULE_BASIC_SUPPORT_2026` / `BASIC_SUPPORT_2026` / 2026 / `passed_checks` metni “Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif.” için `2024/39 MADDE 4(1)` **yalnız normatif kayıt şartının konum kanıtı**. Bu belge, gerçek çiftçinin ÇKS kaydının aktif olduğunu **ispatlamaz**; `fact_verified=false`, `claim_verified=false`, `acceptance=HOLD`. Veri eksik veya ifade farklıysa eşleşme üretilmez.
+- `EK-20`: 2025/42 MADDE 15 değişiklik kaydı + bir sayfalık orijinal raster PDF + 12 satırlık görsel transkripsiyon teknik olarak ayrıştırılmıştır. Hücrelerin ikinci bağımsız doğrulaması, ürün/etmen uygunluğu ve hukukî geçerlilik olmadan hiçbir değeri `payable_amount` veya onaylı oran olarak kullanma.
+- CLI `python -m tarim_destek_rag.citations.claim_coverage --input evaluation.json --output evidence-claim-audit.json --strict` çıktılarına kaynak adayları da eklenir. Gerçek her gerekçe için ayrı `claim_id` (kural+destek+alan+metin temelli), sabit yıl, aday span, olgusal doğrulama ve hukukî kontrol statüsü raporlanır. Eşleşme olsun olmasın genel kabul **HOLD**.
+
+**Önemli sınır:** Bu kod hiçbir `VERIFIED` veya otomatik ödemeye geçiş yaratmaz. 2025/13, 10394, 11781 etkileri ve EK-20 içindeki her satır/hücre için bağımsız hukuki/görsel değerlendirme tamamlanmadan genel yayına izin verilmez.

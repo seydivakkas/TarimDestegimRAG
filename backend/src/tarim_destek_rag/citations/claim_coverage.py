@@ -20,7 +20,12 @@ CLAIM_FIELDS = {
 }
 
 
-def audit_evaluation_claims(evaluation: dict[str, Any]) -> dict[str, Any]:
+def audit_evaluation_claims(
+    evaluation: dict[str, Any], *,
+    claim_matrix: dict[str, Any] | None = None,
+    source_manifest: dict[str, Any] | None = None,
+    archive_root: Path | None = None,
+) -> dict[str, Any]:
     """Report claim-level coverage without inventing any source passage."""
     explanations = {
         e["support_id"]: e for e in evaluation.get("explanations", [])
@@ -57,9 +62,41 @@ def audit_evaluation_claims(evaluation: dict[str, Any]) -> dict[str, Any]:
                     "status": "CLAIM_TO_SOURCE_SPAN_NOT_VERIFIED",
                     "highlighted_pdf_url": None,
                 })
+    # A support-level citation NEVER fills claim-level evidence automatically.
+    # Only an exact curated rule/field/text/year binding may identify a
+    # normative original span; factual truth and legal effect still HOLD.
+    claim_matrix_report = None
+    if claim_matrix is not None:
+        if source_manifest is None or archive_root is None:
+            raise ValueError("Original source manifest and archive root required")
+        from tarim_destek_rag.citations.claim_source_matrix import audit_claim_matrix
+
+        claim_matrix_report = audit_claim_matrix(
+            evaluation, claim_matrix, source_manifest, archive_root,
+        )
+        keyed = {
+            (x["rule_id"], x["support_id"], x["claim_type"], x["claim_text"]): x
+            for x in claim_matrix_report["claims"]
+        }
+        for claim in claims:
+            item = keyed.get((
+                claim["rule_id"], claim["support_id"],
+                {
+                    "PASSED_CHECK": "passed_checks",
+                    "FAILED_CHECK": "failed_checks",
+                    "MISSING_FIELD": "missing_fields",
+                }[claim["claim_type"]],
+                claim["claim_text"],
+            ))
+            if item is not None:
+                claim["claim_id"] = item["claim_id"]
+                claim["candidate_span_id"] = item["candidate_span_id"]
+                claim["source_location_status"] = item["source_location_status"]
+                claim["fact_verified"] = False
+                claim["temporal_legal_verified"] = False
     basin = evaluation.get("basin_evidence")
     basin_path = verified_highlight_path(basin) if isinstance(basin, dict) else None
-    return {
+    result = {
         "schema_version": 1,
         "decision_claim_count": len(claims),
         "claim_level_verified_count": 0,
@@ -75,6 +112,9 @@ def audit_evaluation_claims(evaluation: dict[str, Any]) -> dict[str, Any]:
             "claim-to-span mapping is still required."
         ),
     }
+    if claim_matrix_report is not None:
+        result["claim_source_matrix"] = claim_matrix_report
+    return result
 
 
 def main() -> int:
@@ -82,8 +122,19 @@ def main() -> int:
     parser.add_argument("--input", required=True, type=Path, help="Saved /evaluate JSON response")
     parser.add_argument("--output", type=Path, help="Optional JSON audit destination")
     parser.add_argument("--strict", action="store_true", help="Exit 2 while any claims remain unmapped")
+    parser.add_argument("--matrix", type=Path,
+                        default=Path("configs/p0_10_7_claim_source_matrix.json"))
+    parser.add_argument("--source-manifest", type=Path,
+                        default=Path("configs/p0_10_3_original_source_manifest.json"))
+    parser.add_argument("--archive-root", type=Path,
+                        default=Path("data/legal_update_archive"))
     args = parser.parse_args()
-    report = audit_evaluation_claims(json.loads(args.input.read_text(encoding="utf-8")))
+    report = audit_evaluation_claims(
+        json.loads(args.input.read_text(encoding="utf-8")),
+        claim_matrix=json.loads(args.matrix.read_text(encoding="utf-8")),
+        source_manifest=json.loads(args.source_manifest.read_text(encoding="utf-8")),
+        archive_root=args.archive_root,
+    )
     rendered = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
