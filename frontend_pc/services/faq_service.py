@@ -38,7 +38,7 @@ def get_faq_banner_text(client: ApiClient | None = None) -> str:
             "Aşağıdaki tablodan soru seçebilir veya yukarıdaki sohbet alanına serbestçe yazabilirsiniz."
         )
     return (
-        "📚 **Tarımsal Soru-Cevap Veritabanı:** Yürürlükteki mevzuat ve ziraî rehberler indekslenmiştir."
+        "📚 **Tarımsal Soru-Cevap Veritabanı:** Kaynak parçalarının madde, fıkra ve güncellik doğrulaması ayrıca gereklidir."
     )
 
 
@@ -62,7 +62,7 @@ def get_faq_table(
                 "Kategori": f.get("category", "-"),
                 "Soru": f.get("question", "-"),
                 "Özet Cevap": ans_short,
-                "Resmî Yasal Dayanak": citation,
+                "Kaynak Atıf Notu (Madde Konumu Doğrulanmadı)": citation,
             }
         )
     return pd.DataFrame(rows)
@@ -73,7 +73,7 @@ def ask_assistant(
     chat_history: list[dict[str, str]],
     client: ApiClient | None = None,
 ) -> tuple[str, list[dict[str, str]]]:
-    """Chatbot / Semantik Arama Asistanı (Sıfır LLM - Doğrulanmış Mevzuat)."""
+    """Chatbot kaynak parçaları: exact proof yoksa ön bilgi olarak gösterilir."""
     if not user_message or not user_message.strip():
         return "", chat_history
 

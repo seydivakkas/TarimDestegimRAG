@@ -13,6 +13,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+
 DOCUMENT_LOCATIONS: dict[str, dict[str, str]] = {
     "CKS_M1": {
         "title": "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
@@ -296,63 +297,6 @@ def highlight_legal_text(text: str, status: str | None = None) -> str:
     return escaped
 
 
-def _verified_highlight_path(
-    citation: dict[str, Any], support_id: str | None,
-) -> str | None:
-    """Only allow exact backend proof routes with matching digest and arguments.
-
-    Route checks never replace backend SHA/source/position verification; they
-    prevent a status label or partial SHA substring becoming a fake UI citation.
-    """
-    from urllib.parse import parse_qs, urlsplit
-
-    sha = citation.get("document_sha256")
-    link = citation.get("highlighted_pdf_url")
-    if not isinstance(sha, str) or not re.fullmatch(r"[a-f0-9]{64}", sha):
-        return None
-    if not isinstance(link, str) or not link.startswith("/evidence/highlight/"):
-        return None
-    parts = urlsplit(link)
-    if parts.scheme or parts.netloc or parts.path.startswith("//"):
-        return None
-    params = parse_qs(parts.query, keep_blank_values=True)
-    if any(len(values) != 1 for values in params.values()):
-        return None
-
-    verification = citation.get("verification_status")
-    if verification == "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW":
-        if (parts.path != f"/evidence/highlight/html/{sha}"
-            or set(params) != {"support_id"}
-            or parts.fragment != "tarim-evidence-highlight"):
-            return None
-        actual_support = params["support_id"][0]
-        if not actual_support or (support_id is not None and actual_support != support_id):
-            return None
-    elif verification == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW":
-        page = citation.get("page_number")
-        if (type(page) is not int or page < 1
-            or parts.path != f"/evidence/highlight/visual/{sha}"
-            or set(params) != {"support_id"}
-            or parts.fragment != f"page={page}"):
-            return None
-        actual_support = params["support_id"][0]
-        if not actual_support or (support_id is not None and actual_support != support_id):
-            return None
-    elif verification == "EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW":
-        page = citation.get("page_number")
-        if (type(page) is not int or page < 1
-            or parts.path != f"/evidence/highlight/{sha}"
-            or set(params) != {"page", "quote"}
-            or parts.fragment
-            or params["page"][0] != str(page)
-            or params["quote"][0] != str(citation.get("snippet") or "")
-            or not params["quote"][0]):
-            return None
-    else:
-        return None
-    return link
-
-
 def format_highlighted_citation_card(
     citation: dict[str, Any],
     status: str = "ELIGIBLE",
@@ -369,7 +313,11 @@ def format_highlighted_citation_card(
     status_code = str(citation.get("verification_status") or "")
     visual = status_code == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW"
     html = status_code == "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW"
-    proof_path = _verified_highlight_path(citation, support_id)
+    # Lazy import keeps the standalone, source-free topic preview independent
+    # from the unrelated RAG runtime and its optional dependencies.
+    from tarim_destek_rag.citations.evidence_contract import verified_highlight_path
+
+    proof_path = verified_highlight_path(citation, support_id)
     located = proof_path is not None
     original_url = str(citation.get("url") or "")
     # Without confirmed page/phrase grounding, a generic source URL must not
