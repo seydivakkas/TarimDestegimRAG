@@ -115,8 +115,16 @@ imzalı kararların silinmesi/iptali denetim kaydında ayrıca tutulmalıdır.
 olarak kontrol ettikten sonra imzalar:
 
 ~~~powershell
-python -m tarim_destek_rag.citations.ek20_cell_provenance sign --proposal "data/ek20_review_proposals/<source_sha>/citrus__biological_tl_da.json" --reviewer-id incelemeci_a --private-key "C:\EK20-Guvenli-Inceleme-A\incelemeci_a.private.pem" --decision APPROVE --visual-confirmation
+python -m tarim_destek_rag.citations.ek20_cell_provenance sign --proposal "data/ek20_review_proposals/<source_sha>/citrus__biological_tl_da.json" --reviewer-id incelemeci_a --private-key "C:\EK20-Guvenli-Inceleme-A\incelemeci_a.private.pem" --decision APPROVE --observed-value 700 --observed-row-label "Turunçgiller" --visual-confirmation
 ~~~
+
+**Önemli:** `--observed-value` incelemecinin kendi okuduğu sayısal 
+metni, `--observed-row-label` ise gerçek orijinalde okuduğu ürün/etmen 
+başlığını belirtir. Orijinal hücrede tire/boş değer varsa, sadece açık 
+`DASH` işareti kabul edilir; `0` hiçbir zaman `null` yerine geçmez. 
+Taslak aktarım ile gözle okuma uyuşmuyorsa APPROVE imzalanamaz; önce 
+uyuşmazlık incelenir veya REJECT kaydedilir. Bu örnekteki 700, mevcut 
+**taslak** değerdir; bağımsız görsel onaylandığı iddia edilmez.
 
 İncelemeci B de **farklı insan + farklı yetkili özel anahtar** ile aynı
 orijinal görüntüyü, satır başlığını, alanı ve ROI metnini bağımsız inceler;
