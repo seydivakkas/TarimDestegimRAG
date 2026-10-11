@@ -610,6 +610,22 @@ def test_per_read_activation_verifies_real_bytes_trust_digest_and_revocation(
     }))
     assert pipeline.active_release_is_verified(2026)
 
+    # The Ed25519 signature covers the canonical rules/source but not actor
+    # fields in the manifest. WORM attestation events must bind their identity
+    # and signed timestamp to the release at every authorization read.
+    manifest_path = pipeline._manifest_path(2026)
+    original_manifest = manifest_path.read_bytes()
+    forged = json.loads(original_manifest)
+    forged["reviewer_attestation"]["actor_id"] = "FORGED_REVIEWER"
+    manifest_path.write_text(json.dumps(forged), encoding="utf-8")
+    assert not pipeline.active_release_is_verified(2026)
+    forged["reviewer_attestation"]["actor_id"] = reviewer.actor_id
+    forged["approver_attestation"]["signed_at"] = "2099-01-01T00:00:00Z"
+    manifest_path.write_text(json.dumps(forged), encoding="utf-8")
+    assert not pipeline.active_release_is_verified(2026)
+    manifest_path.write_bytes(original_manifest)
+    assert pipeline.active_release_is_verified(2026)
+
     modified = repo.load_rules(2026)
     modified[0]["official_unit_amount"] = "999.00"
     repo.save_rules(2026, modified)
