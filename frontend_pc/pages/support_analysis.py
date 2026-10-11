@@ -47,6 +47,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             from tarim_destek_rag.citations.pdf_page_indexer import (
                 get_page_dropdown_choices,
                 render_evidence_by_key,
+                render_ocr_page_by_key,
             )
 
             gr.Markdown(
@@ -71,6 +72,14 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 value="<p>Henüz kaynak kanıtı seçilmedi. "
                 "Belge arşivi yoksa sayfa gösterilmez.</p>"
             )
+            btn_page_ocr = gr.Button(
+                "Seçili gerçek sayfayı yerel OCR ile oku (inceleme taslağı)",
+                variant="secondary",
+            )
+            ocr_display = gr.HTML(
+                value="<p>OCR yalnızca isteğiniz üzerine çalışır; "
+                "OCR sonucu resmî alıntı veya onay değildir.</p>"
+            )
 
             def update_article_view(choice: str | None, query: str = "") -> str:
                 return render_evidence_by_key(choice or "", query or "")
@@ -89,6 +98,11 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 update_article_view,
                 inputs=[article_selector, page_search_input],
                 outputs=[article_display],
+            )
+            btn_page_ocr.click(
+                render_ocr_page_by_key,
+                inputs=[article_selector],
+                outputs=[ocr_display],
             )
 
         with gr.Accordion("📁 Başvuru İçin Gerekli Belgeler & Ön Değerlendirme Raporu", open=True):
@@ -122,6 +136,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "out_reasons": out_reasons,
         "article_selector": article_selector,
         "article_display": article_display,
+        "ocr_display": ocr_display,
         "btn_report": btn_report,
         "file_report": file_report,
         "out_disclaimer": out_disclaimer,

@@ -324,3 +324,36 @@ def render_evidence_by_key(choice_key: str, search_query: str = "") -> str:
         return HOLD_HTML
     found = idx.get_page(doc_id, int(number))
     return render_page_evidence_card(found, indexer=idx) if found else HOLD_HTML
+
+def render_ocr_page_by_key(choice_key: str | None) -> str:
+    """Opt-in local OCR of a selected verified original page; never auto-approve."""
+    if not choice_key or ":" not in choice_key:
+        return HOLD_HTML
+    doc_id, raw_page = choice_key.rsplit(":", 1)
+    if not raw_page.isdigit():
+        return HOLD_HTML
+    idx = get_global_pdf_indexer()
+    page = idx.get_page(doc_id, int(raw_page))
+    if page is None:
+        return HOLD_HTML
+    try:
+        idx.screenshot(page)  # bytes + page verified before OCR/status output
+        text, status = idx.ocr_page(page)
+    except (OSError, ValueError, RuntimeError, KeyError):
+        return HOLD_HTML
+    if status != "OCR_UNREVIEWED" or not text:
+        return (
+            '<p style="border-left:4px solid #d97706;padding:12px">'
+            'OCR kullanılamıyor veya Türkçe dil modeli yüklü değil. '
+            'Görüntüden metin uydurulmadı; özgün sayfayı inceleyin. '
+            f'Durum: {escape(status)}</p>'
+        )
+    return (
+        '<section style="border:1px solid #f59e0b;padding:14px">'
+        '<strong>OCR ÖN TASLAĞI — Hukukî alıntı/doğrulama değildir (HOLD)</strong>'
+        '<p>Aşağıdaki karakterler seçilen özgün sayfanın yerel Tesseract '
+        'çıktısıdır. Hatalı okunan tutar, hücre, grafik ve hükümler olabilir. '
+        'Bağımsız insan incelemesi ve kaynak koordinatı zorunludur.</p>'
+        f'<pre style="white-space:pre-wrap;overflow:auto">{escape(text[:16000])}</pre>'
+        '</section>'
+    )

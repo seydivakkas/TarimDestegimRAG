@@ -177,3 +177,27 @@ def test_originals_manifest_html_is_not_fake_pdf(tmp_path: Path) -> None:
     assert engine.get_all_pages() == []
     with pytest.raises(ValueError, match="Missing or ambiguous"):
         engine._source("RG_COMMUNIQUE_2024_39")
+
+def test_ocr_user_action_does_not_fake_text_without_tesseract(
+    original_fixture: OfficialPdfIndexer,
+) -> None:
+    with patch.object(module, "_GLOBAL_INDEXER", original_fixture):
+        with patch.object(module.shutil, "which", return_value=None):
+            result = module.render_ocr_page_by_key("SYNTHETIC_TEST_ONLY:2")
+    assert "OCR kullanılamıyor" in result
+    assert "HOLD" not in result or "OCR_NOT_INSTALLED" in result
+    assert "Lorem" not in result
+
+
+def test_ocr_output_is_html_escaped_and_never_legal_confirmation(
+    original_fixture: OfficialPdfIndexer,
+) -> None:
+    with patch.object(module, "_GLOBAL_INDEXER", original_fixture):
+        with patch.object(
+            original_fixture, "ocr_page",
+            return_value=("<script>fake</script>", "OCR_UNREVIEWED"),
+        ):
+            result = module.render_ocr_page_by_key("SYNTHETIC_TEST_ONLY:1")
+    assert "&lt;script&gt;fake&lt;/script&gt;" in result
+    assert "<script>fake</script>" not in result
+    assert "HOLD" in result
