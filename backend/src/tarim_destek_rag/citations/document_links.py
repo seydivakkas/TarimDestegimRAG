@@ -13,7 +13,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from tarim_destek_rag.citations.evidence_contract import verified_highlight_path
 
 DOCUMENT_LOCATIONS: dict[str, dict[str, str]] = {
     "CKS_M1": {
@@ -314,7 +313,7 @@ def format_highlighted_citation_card(
     status_code = str(citation.get("verification_status") or "")
     visual = status_code == "VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW"
     html = status_code == "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW"
-    proof_path = verified_highlight_path(citation, support_id)
+    # Lazy import keeps the standalone, source-free topic preview independent\n    # from the unrelated RAG runtime and its optional dependencies.\n    from tarim_destek_rag.citations.evidence_contract import verified_highlight_path\n\n    proof_path = verified_highlight_path(citation, support_id)
     located = proof_path is not None
     original_url = str(citation.get("url") or "")
     # Without confirmed page/phrase grounding, a generic source URL must not
