@@ -11,3 +11,21 @@
 7. Hukukî hüküm–üretim yılı, EK-20 hücre semantiği, çiftçi olguları, bağımsız hukukî imzalar, gerçek WORM/HSM ve ödeme aktivasyonu **HOLD**.
 
 **Kabul için:** Özgün 8859 tarama PDF'si/2024/39 HTML ve 2025/42 ekteki EK-20, SHA kontrollü arşivde doğru yerlerde bulunmalı; Windows'ta Gradio gerçek sayfayı göstermeli; yanlış SHA/sayfa/kaynak testleri PASS olmalı; uygulamanın bütün yanlış resmî alıntı yolu kapalı kalmalı.
+
+## Windows kurulumu — gerçekten özgün PDF gösterme
+
+Windows PowerShell veya terminali proje kökünde açın:
+
+```powershell
+python -m scripts.install_pinned_gazette_sources --source-id RG_DECISION_8859
+```
+
+Komut yalnız Resmî Gazete HTTPS kaynağındaki **orijinal PDF** baytlarını indirir; kaynak manifestindeki SHA/uzunluk tutmazsa **HOLD** ve hata üretir. İnternet erişimi yoksa SHA isimleriyle düzenlenmiş, önceden bağımsız doğrulanmış arşiv kopyalarını şu yolla içe alın:
+
+```powershell
+python -m scripts.install_pinned_gazette_sources --source-id RG_DECISION_8859 --import-dir "C:\\ResmiGazeteOrijinallerim"
+```
+
+Ardından Gradio'yu yeniden başlatın. Destek Analizi / Kanıt bölümündeki açılır listede yalnız SHA-destekli PDF sayfaları listelenir. İlgili sayfayı seçip büyük sayfa görselini inceleyin; Tesseract varsa OCR düğmesini ayrıca çalıştırabilirsiniz. Özgün dosya kurulu değilse görünüm **HOLD** kalır. `2024/39` özgün HTML'dir; bu PDF kurucusu onu PDF'ye dönüştürmez.
+
+**Not:** Windows/kurum ortamında gerçek kullanıcı kabul testi ve tüm belgelerin OCR'si burada çalıştırılmadı.
