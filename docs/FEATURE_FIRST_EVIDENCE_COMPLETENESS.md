@@ -21,7 +21,7 @@
 | F07 | Tekil gerekçe → kaynak | KISMİ: her gerekçe seçimi, sadece mevcut curated claim_bindings | Bütün sonuç metinleri kaynak paragrafı/ek hücresi/yıl ile ayrı ayrı eşlenir; bulunamayan HOLD |
 | F08 | Yıllara göre değişiklik zinciri | KISMİ: 2025/42 bazı pasajlar, 2025 geçiş | 2024/39, 2025/13, 2025/42, 8859, 10394, 11781 ve diğer uygulanabilir revizyonların etkisi hüküm bazlı izlenir |
 | F09 | EK-20 satır/hücre kanıtı | KISMİ: 2026 taslak 12x4, gerçek PDF görüntüsü | Her sayısal hücrenin tam ROI, iki bağımsız görsel okuma ve geçerli yıl kaydı olmadan hukukî/ödeme PASS olmaz |
-| F10 | Neden / SSS / rapor / mobil birlikteliği | EKSİK: genel kaynak ve farklı ekran yolları | Tüm açıklamalar tekil aynı claim_id, source_id, SHA, sayfa ve pasaj/ROI bağını kullanır |
+| F10 | Neden / SSS / rapor / mobil birlikteliği | KISMİ: Neden + raporda tekil claim_id; SSS/mobil henüz değil | Tüm açıklamalar tekil aynı claim_id, source_id, SHA, sayfa ve pasaj/ROI bağını kullanır |
 | F11 | Offline Windows kullanım paketi | KISMİ: özgün kaynak yükleme, opsiyonel Tesseract | İlk kurulumdan indeks yenilemeye kadar ücretli API/bulut gerektirmeden Türkçe OCR ve resmî dosya yönetimi |
 | F12 | Kaynak değişikliği ve doğrulama yönetimi | KISMİ: manifest, draft hukukî eşleşmeler | Yeni resmî belgeden eski kuralı iptal/değiştirme, fark inceleme, insan onayına sunma ve geri alma |
 | F13 | Güvenli hak ediş/ödeme ayrımı | KISMİ: fail-closed ayrı PR37 | Ürün arayüzündeki görünür tahmini tutarlar da güvenilmeyen mevzuat aktivasyonundan ayrılır; ücret/ödeme kaynak onayı olmadan aktive olmaz |
@@ -35,6 +35,8 @@
 - Gerçek PDF tablosu, resim ve vektör bölgeleri koordinatla kırpılır; görsel **hükmün doğru yorumlandığının belgesi değildir**.
 - 2026 EK-20'nin 12 satır/4 hücre sınıfı kullanıcı tarafından seçilebilir; kaynak orijinal sayfa ve taslak aktarım yan yana gösterilir; onay/ödeme HOLD.
 - Tesseract TSV ile her sözcüğün `pixel_bbox` koordinatı ve satır adayları arşivlenebilir; gerçek tablo hücresi doğrulaması ayrı kalır.
+- Ön değerlendirme raporunun bütün hesaplanmış gerekçeleri aynı `claim_id`, `source_id`, kaynak SHA ve kesin hüküm/durum ayrımıyla izlenir. Tahmini madde/sayfa URL'leri ve sabit "yasal dayanak" etiketleri kaldırılmıştır.
+
 
 ## Geliştirme bitmeden "hazır" denmeyecek
 
