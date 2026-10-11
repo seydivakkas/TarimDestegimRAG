@@ -315,8 +315,26 @@ def render_evidence_by_key(choice_key: str, search_query: str = "") -> str:
     idx = get_global_pdf_indexer()
     if search_query.strip():
         matches = idx.search_pages(search_query, top_k=1)
-        return (render_page_evidence_card(matches[0], search_query, indexer=idx)
-                if matches else HOLD_HTML)
+        if matches:
+            return render_page_evidence_card(matches[0], search_query, indexer=idx)
+        # OCR is unreviewed: it may suggest a REAL page image, never prove
+        # a passage or claim. No yellow annotation for OCR-only candidates.
+        from tarim_destek_rag.citations.verified_ocr_index import search_ocr_candidates
+
+        candidates = search_ocr_candidates(idx, search_query, index_dir=Path(
+            os.getenv("TARIM_RAG_OCR_INDEX_DIR", "data/indexes")))
+        if candidates:
+            candidate = candidates[0]
+            page = idx.get_page(candidate["document_id"], candidate["page_number"])
+            if page is not None:
+                return (
+                    '<p style="background:#fffbeb;padding:12px">'
+                    '<strong>HOLD — OCR arama adayı.</strong> Metnin bu sayfada '
+                    'birebir bulunduğu hukukî olarak doğrulanmadı; aşağıdaki '
+                    'özgün ekran görüntüsünü kendiniz kontrol edin.</p>'
+                    + render_page_evidence_card(page, indexer=idx)
+                )
+        return HOLD_HTML
     if not choice_key or ":" not in choice_key:
         return HOLD_HTML
     doc_id, number = choice_key.rsplit(":", 1)

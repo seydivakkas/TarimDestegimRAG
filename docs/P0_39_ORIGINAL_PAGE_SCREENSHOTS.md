@@ -29,3 +29,15 @@ python -m scripts.install_pinned_gazette_sources --source-id RG_DECISION_8859 --
 Ardından Gradio'yu yeniden başlatın. Destek Analizi / Kanıt bölümündeki açılır listede yalnız SHA-destekli PDF sayfaları listelenir. İlgili sayfayı seçip büyük sayfa görselini inceleyin; Tesseract varsa OCR düğmesini ayrıca çalıştırabilirsiniz. Özgün dosya kurulu değilse görünüm **HOLD** kalır. `2024/39` özgün HTML'dir; bu PDF kurucusu onu PDF'ye dönüştürmez.
 
 **Not:** Windows/kurum ortamında gerçek kullanıcı kabul testi ve tüm belgelerin OCR'si burada çalıştırılmadı.
+
+## Bütün taranmış PDF sayfalarını yerel OCR ile indeksleme
+
+Özgün PDF yüklenmiş ve Tesseract (`tur+eng` eğitim verileri dahil) Windows PATH içinde ise:
+
+```powershell
+python -m tarim_destek_rag.citations.verified_ocr_index --source-id RG_DECISION_8859
+```
+
+Motor PDF'deki **her sayfanın gerçek baytlarını yeniden doğrular**, metin katmanını veya varsa gerçek Tesseract OCR çıktısını `data/indexes/verified_ocr_<original-sha>.json` içerisine kaydeder. Yerel OCR/dil paketi eksikse dosya `INCOMPLETE_OCR_HOLD` olur ve komut başarılı kabul ile sonuçlanmaz. Eski sentetik JSON veya sadece URL bilgisi geçerli OCR indeksi sayılamaz.
+
+Metin aramasında PDF-native kesin eşleşme yoksa OCR indeksi yalnızca `OCR_CANDIDATE_UNREVIEWED` sonucunu önerebilir. Kullanıcıya gerçek sayfa görüntüsü açılır, **metin otomatik işaretlenmez**; OCR hatası veya kelime çarpıtmasıyla yanlış hukukî alıntı üretilemez. Tablolarda satır/hücre semantiği ve grafik yorumlama bağımsız görsel inceleme olmadan `PENDING_INDEPENDENT_REVIEW` kalır.
