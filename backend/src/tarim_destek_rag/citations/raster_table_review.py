@@ -227,7 +227,8 @@ def _ocr_words_for_candidate(
             return []
         matches = [
             page for page in report["pages"]
-            if page.get("page_number") == record.page_number
+            if isinstance(page, dict)
+            and page.get("page_number") == record.page_number
             and page.get("source_sha256") == digest
             and page.get("method") == "OCR_UNREVIEWED"
             and isinstance(page.get("ocr_spatial_layout"), dict)
@@ -241,6 +242,8 @@ def _ocr_words_for_candidate(
             return []
         selected: list[str] = []
         for word in words[:12000]:
+            if not isinstance(word, dict):
+                continue
             rect = word.get("pixel_bbox")
             value = word.get("text")
             if (not isinstance(rect, list) or len(rect) != 4
@@ -259,7 +262,10 @@ def _ocr_words_for_candidate(
 
 def render_raster_cell(selected: str | None) -> str:
     """Display actual source-page coordinates with an AMBER candidate outline."""
-    from PIL import Image, ImageDraw
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError:
+        return _HOLD
 
     matched = _SELECTION.fullmatch(selected or "")
     if matched is None:
