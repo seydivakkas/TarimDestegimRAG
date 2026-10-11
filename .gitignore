@@ -71,3 +71,9 @@ mobile/.pub/
 .DS_Store
 Thumbs.db
 
+
+# EK-20 reviewer ROI proposals and signed attestations are operational records
+# Private reviewer keys must NEVER be stored inside the source tree.
+data/ek20_review_proposals/
+data/ek20_signed_reviews/
+**/*.private.pem
