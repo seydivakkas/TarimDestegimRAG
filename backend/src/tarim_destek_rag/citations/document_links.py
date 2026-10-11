@@ -13,7 +13,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-
 DOCUMENT_LOCATIONS: dict[str, dict[str, str]] = {
     "CKS_M1": {
         "title": "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",

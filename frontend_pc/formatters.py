@@ -8,13 +8,13 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
-from tarim_destek_rag.citations.evidence_contract import verified_highlight_path
 from tarim_destek_rag.citations.document_links import (
     format_citation_section_header,
     format_clickable_action,
     format_clickable_check,
     format_highlighted_citation_card,
 )
+from tarim_destek_rag.citations.evidence_contract import verified_highlight_path
 
 logger = logging.getLogger("frontend_pc.formatters")
 
