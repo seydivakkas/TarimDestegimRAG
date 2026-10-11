@@ -191,14 +191,28 @@ def _trusted_reviewers() -> dict[str, tuple[str, Ed25519PublicKey, bytes]]:
 
 def _review_payload(
     proposal: dict[str, Any], reviewer: str, role: str, decision: str,
-    reviewed_at: str,
+    reviewed_at: str, observed_value: str, observed_row_label: str,
 ) -> dict[str, Any]:
     return {
         "schema_version": SCHEMA, "proposal": proposal,
         "reviewer_id": reviewer, "role": role, "decision": decision,
         "reviewed_at": reviewed_at,
+        "observed_value": observed_value,
+        "observed_row_label": observed_row_label,
         "scope": "VISUAL_CELL_LOCATION_AND_TRANSCRIPTION_ONLY",
     }
+
+
+def _require_independent_visual_reading(
+    proposal: dict[str, Any], observed_value: str, observed_row_label: str,
+) -> None:
+    """Each reviewer independently enters the row label and observed cell."""
+    value = proposal.get("visual_transcription")
+    expected = "DASH" if value is None else str(value)
+    if (not isinstance(observed_value, str) or observed_value != expected
+            or not isinstance(observed_row_label, str)
+            or observed_row_label != proposal.get("row_label")):
+        raise ValueError("Visual reading differs from draft: HOLD / reject or correct")
 
 
 def _valid_record(
@@ -216,12 +230,19 @@ def _valid_record(
         raise ValueError("Review role or decision invalid")
     proposal = signed.get("proposal")
     when = signed.get("reviewed_at")
+    observed_value = signed.get("observed_value")
+    observed_row_label = signed.get("observed_row_label")
     if (not isinstance(proposal, dict) or not isinstance(when, str)
             or len(when) > 40 or not when.endswith("+00:00")
+            or not isinstance(observed_value, str)
+            or not isinstance(observed_row_label, str)
             or _review_payload(
                 proposal, reviewer, role, signed["decision"], when,
+                observed_value, observed_row_label,
             ) != signed):
         raise ValueError("Noncanonical review identity or content")
+    if signed["decision"] == "APPROVE":
+        _require_independent_visual_reading(proposal, observed_value, observed_row_label)
     try:
         key.verify(base64.b64decode(signature, validate=True), canonical(signed))
     except (InvalidSignature, ValueError) as exc:
@@ -358,7 +379,9 @@ def render_candidate_roi(
     if not isinstance(selected, str) or selected.count(":") != 1:
         return "<p>HOLD — Önce EK-20 satır ve sütununu seçin.</p>"
     values = (x0, y0, x1, y1)
-    if (any(type(n) not in (int, float) or n != int(n) for n in values)
+    import math
+    if (any(type(n) not in (int, float) or not math.isfinite(n)
+            or n != int(n) for n in values)
             or any(n < 0 or n > 8000 for n in values)):
         return "<p>HOLD — Piksel kutusu dört geçerli tam sayı gerektirir.</p>"
     row, field = selected.split(":")
@@ -470,9 +493,14 @@ def _cli_sign(args: argparse.Namespace) -> int:
     ) != trusted_raw:
         raise ValueError("Private key is not paired with the registered reviewer")
     # This command signs the reviewer's attestation, not a legal payout decision.
+    if args.decision == "APPROVE":
+        _require_independent_visual_reading(
+            context, args.observed_value, args.observed_row_label,
+        )
     signed = _review_payload(
         context, args.reviewer_id, role, args.decision,
         datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        args.observed_value, args.observed_row_label,
     )
     record = {
         "signed": signed,
@@ -499,6 +527,8 @@ def main() -> int:
     sign.add_argument("--reviewer-id", required=True)
     sign.add_argument("--private-key", type=Path, required=True)
     sign.add_argument("--decision", choices=("APPROVE", "REJECT"), required=True)
+    sign.add_argument("--observed-value", required=True)
+    sign.add_argument("--observed-row-label", required=True)
     sign.add_argument("--visual-confirmation", action="store_true", required=True)
     args = parser.parse_args()
     try:
