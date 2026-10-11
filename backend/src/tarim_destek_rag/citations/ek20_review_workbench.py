@@ -105,6 +105,11 @@ def render_ek20_candidate(
             raise ValueError("Unreviewed cell must not be visually highlighted")
     except (OSError, ValueError, KeyError):
         return "<p>HOLD — EK-20 kaynağı ile tablo aktarımı uyuşmuyor.</p>"
+    from tarim_destek_rag.citations.ek20_cell_provenance import render_review_overlay
+
+    # Separate original full-page image from the cryptographically gated overlay.
+    # Never use OCR or a manually supplied bbox as a yellow legal citation.
+    review_panel = render_review_overlay(selected)
     image_src = base64.b64encode(image).decode("ascii")
     text = "— (bu hücreye tutar girilmemiş)" if value is None else f"{value} TL/da"
     return (
@@ -123,6 +128,8 @@ def render_ek20_candidate(
         f'<p><a href="{escape(original_page.official_url, quote=True)}" '
         'target="_blank" rel="noopener noreferrer">'
         'Resmî Gazete'nin özgün EK-20 PDF sayfasını aç ↗</a></p>'
-        '<p>Seçilen hücrenin birebir koordinatı bağımsız onaylı olmadığı '
-        'için resim üzerinde tahmini sarı vurgulama yapılmadı.</p></section>'
+        '<p>Kaynak üzerindeki sarı hücre işareti yalnız iki ayrı yetkili '
+        'kriptografik görsel inceleme imzası doğrulandığında çizilir. '
+        'Hukukî yürürlük ve ödeme her durumda HOLD kalır.</p>'
+        + review_panel + '</section>'
     )
