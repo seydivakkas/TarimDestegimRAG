@@ -110,7 +110,10 @@ def render_ocr_spatial_review(page_key: str | None) -> str:
     Orange boxes always denote unreviewed OCR hypotheses, never legal proof.
     The source PDF remains untouched; overlays exist only in this preview.
     """
-    from PIL import Image, ImageDraw
+    try:
+        from PIL import Image, ImageDraw
+    except ImportError:
+        return "<p>HOLD — Yerel Pillow görüntüleme bileşeni kurulu değil.</p>"
 
     if not isinstance(page_key, str) or ":" not in page_key:
         return "<p>HOLD — Önce özgün bir PDF sayfası seçin.</p>"
