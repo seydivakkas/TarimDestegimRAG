@@ -55,7 +55,7 @@ jobs:
               assert page is not None, "HOLD: original Gazette source not indexed"
               assert page.total_pages == expected_pages, "HOLD: synthetic/incorrect page count"
               png, matches, digest = idx.screenshot(page, dpi=150)
-              assert png.startswith(b"\\x89PNG\\r\\n\\x1a\\n")
+              assert png.startswith(bytes.fromhex("89504e470d0a1a0a"))
               assert digest == page.source_sha256
               assert matches == 0
               assert "data:image/png;base64," in render_page_evidence_card(page, indexer=idx)
