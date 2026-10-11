@@ -109,6 +109,27 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             region_display = gr.HTML(
                 value="<p>Bir sayfa ve sayfa içi görsel bölge seçin.</p>"
             )
+            from tarim_destek_rag.citations.ek20_review_workbench import (
+                ek20_cell_choices,
+                render_ek20_candidate,
+            )
+
+            gr.Markdown(
+                "**2026 EK-20 tablo satır/hücre incelemesi:** Sol tarafta "
+                "satır/sütun taslak aktarımı, altında özgün tek sayfalık "
+                "resmî PDF görüntüsü. Değerler ödeme için kullanılmaz."
+            )
+            ek20_selector = gr.Dropdown(
+                choices=ek20_cell_choices(),
+                value=None,
+                label="EK-20 ürün/etmen ve destek hücresi (taslak, HOLD)",
+                interactive=True,
+            )
+            ek20_display = gr.HTML(
+                value="<p>EK-20 hücresi seçildiğinde özgün tablo "
+                "görüntüsüyle karşılaştırılabilir.</p>"
+            )
+
             btn_page_ocr = gr.Button(
                 "Seçili gerçek sayfayı yerel OCR ile oku (inceleme taslağı)",
                 variant="secondary",
@@ -138,6 +159,9 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 inputs=[region_selector],
                 outputs=[region_display],
             )
+            # This listener accepts evaluation state wired by frontend_pc.app.
+            # No evidence or source is inferred from a user-selected label.
+
             btn_page_search.click(
                 update_article_view,
                 inputs=[article_selector, page_search_input],
@@ -191,6 +215,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "ocr_display": ocr_display,
         "region_selector": region_selector,
         "region_display": region_display,
+        "ek20_selector": ek20_selector,
+        "ek20_display": ek20_display,
         "btn_report": btn_report,
         "file_report": file_report,
         "out_disclaimer": out_disclaimer,
