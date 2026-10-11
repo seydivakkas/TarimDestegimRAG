@@ -198,6 +198,32 @@ def build_ui() -> gr.Blocks:
                 client=api_client,
             )
 
+        # A common, explicit per-claim source navigator. Never bind proof by
+        # guessed article name, overall support ID, or keyword similarity.
+        from tarim_destek_rag.citations.claim_evidence_workbench import (
+            claim_choices,
+            render_claim_evidence,
+        )
+
+        def update_claim_selector(response):
+            return gr.update(choices=claim_choices(response), value=None)
+
+        eval_state.change(
+            update_claim_selector,
+            inputs=[eval_state],
+            outputs=[p2["claim_selector"]],
+        )
+        p2["btn_claim_show"].click(
+            render_claim_evidence,
+            inputs=[eval_state, p2["claim_selector"]],
+            outputs=[p2["claim_display"]],
+        )
+        p2["claim_selector"].change(
+            render_claim_evidence,
+            inputs=[eval_state, p2["claim_selector"]],
+            outputs=[p2["claim_display"]],
+        )
+
         # Değerlendirme Butonu Bağlantısı
         p1["btn_calculate"].click(
             on_calculate_click,

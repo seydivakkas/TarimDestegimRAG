@@ -44,6 +44,24 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 "Buradaki hesaplama açıklamaları resmî alıntı değildir; "
                 "hukukî kaynak bağlantıları bağımsız olarak doğrulanmalıdır."
             )
+            gr.Markdown(
+                "**Gerekçeden birebir kaynağa:** Hesaplamadan sonra tek bir "
+                "şartı seçin. Sistem kural kimliği + şartın kelimesi kelimesine "
+                "metni + üretim yılı eşleşmeden alıntı göstermeyecek. "
+                "Eşleşse bile hukukî ve olgusal kabul HOLD kalır."
+            )
+            claim_selector = gr.Dropdown(
+                choices=[],
+                value=None,
+                label="Tekil kural gerekçesini seç — Neden?",
+                interactive=True,
+            )
+            btn_claim_show = gr.Button("Bu gerekçenin özgün hükmünü göster")
+            claim_display = gr.HTML(
+                value="<p>Hesaplama sonucundaki tekil gerekçeler "
+                "burada seçilebilir. Kaynağı olmayanlar HOLD kalır.</p>"
+            )
+
             from tarim_destek_rag.citations.pdf_page_indexer import (
                 get_page_dropdown_choices,
                 render_evidence_by_key,
@@ -134,6 +152,9 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "out_cards": out_cards,
         "out_table": out_table,
         "out_reasons": out_reasons,
+        "claim_selector": claim_selector,
+        "btn_claim_show": btn_claim_show,
+        "claim_display": claim_display,
         "article_selector": article_selector,
         "article_display": article_display,
         "ocr_display": ocr_display,
