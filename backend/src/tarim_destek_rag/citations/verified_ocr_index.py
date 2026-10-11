@@ -17,6 +17,7 @@ from tarim_destek_rag.citations.pdf_page_indexer import (
     OfficialPdfIndexer,
     normalize_tr,
 )
+from tarim_destek_rag.citations.ocr_spatial_layout import extract_ocr_geometry
 
 INDEX_SCHEMA = 1
 
@@ -43,11 +44,20 @@ def index_official_document(
         # Revalidate every page's original PDF and position before accepting
         # either native text or OCR bytes. This does not validate OCR semantics.
         indexer.screenshot(page, dpi=120)
+        spatial: dict[str, Any] = {
+            "status": "NATIVE_PDF_TEXT_LAYOUT",
+            "words": [],
+            "lines": [],
+        }
         if page.raw_text:
             text = page.raw_text
             method = "PDF_NATIVE_TEXT_UNREVIEWED"
         else:
             text, method = indexer.ocr_page(page)
+            if method == "OCR_UNREVIEWED" and text:
+                # The plain-text hypothesis and its image word coordinates
+                # are stored independently. Neither is verified legal text.
+                spatial = extract_ocr_geometry(indexer, page)
             if method != "OCR_UNREVIEWED" or not text:
                 unfinished.append(page.page_number)
         result.append({
@@ -55,6 +65,7 @@ def index_official_document(
             "source_sha256": source["original_sha256"],
             "method": method,
             "text": text,
+            "ocr_spatial_layout": spatial,
             "tables_extracted_from_native_pdf": [
                 {
                     "table_id": t.table_id,
