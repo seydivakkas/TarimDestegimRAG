@@ -535,7 +535,7 @@ def generate_report_markdown(
         "",
         f"**Rapor Tarihi:** {now_str}",
         "**Doğrulama Motoru:** TarımDestekRAG Deterministik Kural Motoru (Zero-LLM)",
-        "**Yasal Dayanak:** 2026 Resmî Gazete Bitkisel Üretim Kararları & BÜGEM Havza Tebliğleri",
+        "**İncelenen mevzuat kaynakları (tekil madde kanıtı değildir):** Resmî Gazete ve BÜGEM kayıtları; doğrulanmış pasajlar aşağıda ayrı gösterilir.",
         "",
         "---",
         "### 👤 1. Üretici ve Parsel Kayıt Özeti",
