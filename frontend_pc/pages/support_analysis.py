@@ -172,6 +172,33 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                     "koordinatlarını girin. Bu işlem bir ROI adayı gösterir; "
                     "bağımsız iki incelemeci imzası veya hukukî onay vermez."
                 )
+                from tarim_destek_rag.citations.ek20_raster_alignment import (
+                    measured_ek20_cell_choices,
+                )
+
+                gr.Markdown(
+                    "**Özgün PDF'den ölçülen kutuyu seç:** EK-20 sayfasında "
+                    "gerçek ve tam çizgili ızgara bulunursa hücre adaylarını "
+                    "listeleyebilirsiniz. Ürün-sütun kaydını ve fiziksel "
+                    "kutuyu ayrı ayrı, kendiniz seçmelisiniz. Bağlantı "
+                    "sadece ROI ön taslağıdır. Tam ızgara yoksa manuel "
+                    "koordinat girişi kullanılabilir; tahmin yapılmaz."
+                )
+                btn_ek20_grid_scan = gr.Button(
+                    "EK-20 özgün sayfasındaki ölçülmüş ızgara hücrelerini getir",
+                    variant="secondary",
+                )
+                ek20_grid_selector = gr.Dropdown(
+                    choices=[],
+                    value=None,
+                    label="Ölçülen gerçek PDF hücresi (semantik eşleşme onaysız)",
+                    interactive=True,
+                )
+                btn_ek20_align = gr.Button(
+                    "Seçtiğim gerçek hücreyi seçtiğim EK-20 alanına ROI adayı yap",
+                    variant="secondary",
+                )
+
                 with gr.Row():
                     roi_x0 = gr.Number(value=0, precision=0, label="x0")
                     roi_y0 = gr.Number(value=0, precision=0, label="y0")
@@ -276,6 +303,26 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 inputs=[article_selector],
                 outputs=[ocr_spatial_display],
             )
+            btn_ek20_grid_scan.click(
+                lambda: gr.update(
+                    choices=measured_ek20_cell_choices(), value=None,
+                ),
+                inputs=[],
+                outputs=[ek20_grid_selector],
+            )
+            ek20_selector.change(
+                lambda: (
+                    gr.update(value=None),
+                    None, None, None, None,
+                    "<p>HOLD — Yeni EK-20 alanı için hücre ROI'sini yeniden seçin.</p>",
+                ),
+                inputs=[],
+                outputs=[
+                    ek20_grid_selector,
+                    roi_x0, roi_y0, roi_x1, roi_y1,
+                    roi_preview_display,
+                ],
+            )
             btn_roi_preview.click(
                 render_candidate_roi,
                 inputs=[ek20_selector, roi_x0, roi_y0, roi_x1, roi_y1],
@@ -333,6 +380,13 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "raster_cell_selector": raster_cell_selector,
         "raster_cell_display": raster_cell_display,
         "ek20_selector": ek20_selector,
+        "ek20_grid_selector": ek20_grid_selector,
+        "btn_ek20_align": btn_ek20_align,
+        "roi_x0": roi_x0,
+        "roi_y0": roi_y0,
+        "roi_x1": roi_x1,
+        "roi_y1": roi_y1,
+        "roi_preview_display": roi_preview_display,
         "ek20_display": ek20_display,
         "ek20_coverage_display": ek20_coverage_display,
         "roi_preview_display": roi_preview_display,
