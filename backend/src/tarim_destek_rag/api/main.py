@@ -930,10 +930,14 @@ def dynamic_evaluate_parcel(
     """Çiftçi parselini bitemporal dinamik kurallarla tüm destek programları bazında değerlendirir."""
     from tarim_destek_rag.rules.dynamic_rule_repository import DynamicRuleRepository
     from tarim_destek_rag.rules.dynamic_support_evaluator import DynamicSupportEvaluator
+    from tarim_destek_rag.rules.legal_activation import RuleActivationPipeline
 
     archive_root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
     rule_repo = DynamicRuleRepository(archive_root)
     catalog = rule_repo.get_catalog(years=[request.production_year])
+    approval_verified = RuleActivationPipeline(
+        archive_root
+    ).active_release_is_verified(request.production_year)
 
     eval_date = (
         date.fromisoformat(request.as_of_date)
@@ -953,6 +957,7 @@ def dynamic_evaluate_parcel(
         irrigation=request.irrigation,
         certified_seed=request.certified_seed,
         certified_sapling=request.certified_sapling,
+        approval_verified=approval_verified,
     )
     return summary.to_dict()
 
@@ -991,7 +996,12 @@ def create_legal_attestation(
     request: CreateAttestationRequest,
     _admin: None = Depends(require_admin_key),
 ) -> dict[str, Any]:
-    """Yetkilinin Ed25519 özel anahtarı ile kanonik beyanı imzalar ve tasdik nesnesi döner."""
+    """Only isolated test profile may accept raw private keys; production uses external KMS."""
+    if os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE") != "isolated_test":
+        raise HTTPException(
+            status_code=403,
+            detail="Raw private-key signing via HTTP is forbidden; use an external KMS/HSM signer",
+        )
     from datetime import UTC, datetime
 
     from tarim_destek_rag.rules.dynamic_rule_repository import DynamicRuleRepository

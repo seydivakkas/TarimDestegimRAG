@@ -194,5 +194,18 @@ def test_verified_rule_grants_payment(sample_2029_candidate):
         as_of_date=date(2029, 6, 1),
         facts=facts,
     )
-    assert result.status == "ELIGIBLE"
-    assert result.payable_amount == Decimal("480.00")
+    # An untrusted VERIFIED label cannot grant payment.
+    assert result.status == "REVIEW"
+    assert result.payable_amount is None
+
+    # Only the separately verified release consumer supplies this capability.
+    approved = catalog.evaluate(
+        program_key="BASIC_SUPPORT",
+        crop_code="BUĞDAY",
+        production_year=2029,
+        as_of_date=date(2029, 6, 1),
+        facts=facts,
+        approval_verified=True,
+    )
+    assert approved.status == "ELIGIBLE"
+    assert approved.payable_amount == Decimal("480.00")

@@ -127,6 +127,7 @@ class DynamicSupportEvaluator:
         irrigation: bool = False,
         certified_seed: bool = False,
         certified_sapling: bool = False,
+        approval_verified: bool = False,
     ) -> MultiSupportEvaluationSummary:
         """Çiftçi ve parsel parametrelerini tüm destek programları üzerinden değerlendirir."""
         crop_code = normalize_crop_code(crop)
@@ -153,6 +154,7 @@ class DynamicSupportEvaluator:
         any_draft_rule = False
         any_eligible = False
         any_review = False
+        any_unknown = False
 
         for prog in programs_to_eval:
             prog_name = PROGRAM_NAMES.get(prog, prog)
@@ -164,6 +166,7 @@ class DynamicSupportEvaluator:
                 facts=facts,
                 province=province.upper(),
                 district=district.upper(),
+                approval_verified=approval_verified,
             )
 
             unit_amt = res.proposed_unit_amount
@@ -196,7 +199,8 @@ class DynamicSupportEvaluator:
                 prop_amt = Decimal("0.00")
                 pay_amt = Decimal("0.00")
             elif res.status == "UNKNOWN":
-                # Bilinmeyen / bu yıl için kuralı olmayan program
+                # An uncovered programme is unknown, NOT an entitlement of 0 TL.
+                any_unknown = True
                 pay_amt = None
 
             evaluated_items.append(
@@ -228,12 +232,11 @@ class DynamicSupportEvaluator:
         total_payable: Decimal | None = None
         fail_closed_reason = None
 
-        if any_draft_rule or any_review:
+        if any_draft_rule or any_review or any_unknown or not approval_verified:
             total_payable = None
             fail_closed_reason = (
-                "Kurallar taslak (DRAFT) durumunda olduğu veya inceleme gerektiği için "
-                "yasal hak ediş / ödeme oluşturulamaz (Fail-Closed). "
-                "Yalnızca çift onaylı aktivasyon sonrası ödeme yetkilendirilir."
+                "Kurallar taslak (DRAFT) olabilir veya doğrulanmış aktivasyon, tam program kapsamı eksik (Fail-Closed). "
+                "İmza, kaynak ve yürürlük kapısı geçilmeden hak ediş tutarı oluşturulamaz."
             )
         elif any_eligible:
             total_payable = sum(
@@ -244,8 +247,10 @@ class DynamicSupportEvaluator:
             total_payable = Decimal("0.00")
 
         # Genel durum
-        if any_review:
+        if any_review or (any_unknown and any_eligible):
             overall_status = "REVIEW"
+        elif any_unknown:
+            overall_status = "UNKNOWN"
         elif any_eligible:
             overall_status = "ELIGIBLE"
         else:

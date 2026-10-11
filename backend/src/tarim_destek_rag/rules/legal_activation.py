@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import base64
 import binascii
+import hashlib
 import json
 import os
 import uuid
@@ -44,7 +45,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import (
 )
 
 from tarim_destek_rag.rules.dynamic_rule_repository import DynamicRuleRepository
-from tarim_destek_rag.rules.worm_audit import WormAuditLog
+from tarim_destek_rag.rules.worm_audit import TamperedAuditError, WormAuditLog
 
 # Standart hukuk tasdiki beyan metni şablonu
 STANDARD_ATTESTATION_STATEMENT = (
@@ -266,16 +267,150 @@ class RuleActivationPipeline:
         return target
 
     def _load_trusted_store(self, custom_keys: dict[str, Any] | None = None) -> dict[str, Any] | None:
-        """Güvenilir anahtar deposunu env veya parametreden okur."""
+        """Trust roots must be server provisioned, never replaced by API input."""
+        test_profile = os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE") == "isolated_test"
+        if custom_keys is not None and not test_profile:
+            raise TrustedKeyMismatchError("Request-supplied trusted keys are forbidden")
         if custom_keys is not None:
             return custom_keys
         raw_env = os.getenv(TRUST_ENV)
-        if raw_env:
-            try:
-                return json.loads(raw_env)
-            except Exception:
-                pass
-        return None
+        if not raw_env:
+            return None
+        try:
+            keys = json.loads(raw_env)
+            if not isinstance(keys, dict):
+                raise ValueError("Trust store must be a dictionary")
+            return keys
+        except (ValueError, TypeError) as exc:
+            raise TrustedKeyMismatchError("Invalid configured trusted key registry") from exc
+
+    @staticmethod
+    def _role_key(store: dict[str, Any], role: str) -> str | None:
+        name = "reviewer" if role == "LEGAL_REVIEWER" else "approver"
+        row = store.get(name)
+        value = row.get("public_key_b64") if isinstance(row, dict) else store.get(role)
+        return value if isinstance(value, str) and value else None
+
+    def active_release_is_verified(self, production_year: int) -> bool:
+        """Independent per-read gate for payment/denial, including revocation.
+
+        JSON VERIFIED labels, local WORM hashes and valid self-signed keys do
+        not by themselves constitute a trusted legal release.
+        """
+        if (
+            os.getenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED") != "true"
+            or os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE") != "production"
+        ):
+            return False
+        try:
+            store = self._load_trusted_store()
+            if not store:
+                return False
+            rev_key = self._role_key(store, "LEGAL_REVIEWER")
+            app_key = self._role_key(store, "LEGAL_APPROVER")
+            if not rev_key or not app_key or rev_key == app_key:
+                return False
+            manifest = self.get_manifest(production_year)
+            rules = self.rule_repo.load_rules(production_year)
+            if (
+                manifest is None or manifest.status != "ACTIVE"
+                or manifest.production_year != production_year
+                or not rules or len(rules) != manifest.rule_count
+                or any(r.get("review_status") != "VERIFIED" for r in rules)
+            ):
+                return False
+            reviewer, approver = manifest.reviewer_attestation, manifest.approver_attestation
+            if (
+                reviewer.role != "LEGAL_REVIEWER" or approver.role != "LEGAL_APPROVER"
+                or reviewer.actor_id == approver.actor_id
+                or reviewer.public_key_b64 != rev_key
+                or approver.public_key_b64 != app_key
+            ):
+                return False
+
+            # The signed manifest contains the pre-activation DRAFT digest;
+            # status-only transition to VERIFIED must not invalidate it.
+            canonical = sorted(
+                (dict(r, review_status="DRAFT") for r in rules),
+                key=lambda r: r.get("rule_id", ""),
+            )
+            raw = json.dumps(
+                canonical, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+            ).encode("utf-8")
+            if hashlib.sha256(raw).hexdigest() != manifest.rules_digest:
+                return False
+            for att in (reviewer, approver):
+                message = build_canonical_manifest_bytes(
+                    production_year, manifest.source_document_sha256,
+                    manifest.rules_digest, manifest.rule_count, att.statement,
+                )
+                if not verify_signature_ed25519(
+                    att.public_key_b64, att.signature_b64, message,
+                ):
+                    return False
+            if not isinstance(manifest.source_document_sha256, str):
+                return False
+            sha = manifest.source_document_sha256
+            if len(sha) != 64 or any(ch not in "0123456789abcdef" for ch in sha):
+                return False
+            originals = self.archive_root / "originals"
+            if not any(
+                hashlib.sha256(p.read_bytes()).hexdigest() == sha
+                for p in (originals / (sha + ".pdf"), originals / (sha + ".html"))
+                if p.is_file()
+            ):
+                return False
+            ok, _ = self.worm_log.verify_chain()
+            if not ok:
+                return False
+            blocks = self.worm_log.load_blocks()
+            matches = [
+                b for b in blocks if b.event_type == "RULE_ACTIVATION"
+                and b.production_year == production_year
+                and b.block_sha256 == manifest.worm_block_sha256
+                and b.manifest_sha256 == manifest.rules_digest
+                and b.metadata.get("manifest_id") == manifest.manifest_id
+                and b.metadata.get("source_sha256") == sha
+            ]
+            if len(matches) != 1:
+                return False
+            # The original signer records must be the two events immediately
+            # preceding this activation. A valid signature on the rule digest
+            # alone does not authenticate the mutable actor_id, role or
+            # signed_at fields of a locally stored activation manifest.
+            activation = matches[0]
+            if activation.block_index < 2:
+                return False
+            signed_events = blocks[activation.block_index - 2:activation.block_index]
+            if len(signed_events) != 2:
+                return False
+            for block, att, event_type in zip(
+                signed_events,
+                (reviewer, approver),
+                ("ATTESTATION_REVIEW", "ATTESTATION_APPROVAL"),
+                strict=True,
+            ):
+                if (
+                    block.event_type != event_type
+                    or block.production_year != production_year
+                    or block.manifest_sha256 != manifest.rules_digest
+                    or block.actor_id != att.actor_id
+                    or block.role != att.role
+                    or block.public_key_b64 != att.public_key_b64
+                    or block.signature_b64 != att.signature_b64
+                    or block.metadata.get("rules_count") != manifest.rule_count
+                    or block.metadata.get("signed_at") != att.signed_at
+                    or block.metadata.get("statement") != att.statement
+                ):
+                    return False
+            return not any(
+                b.event_type == "RULE_REVOCATION"
+                and b.production_year == production_year
+                and b.block_index > matches[0].block_index for b in blocks
+            )
+        except (OSError, ValueError, TypeError, KeyError, RuntimeError, TamperedAuditError):
+            return False
+
 
     def activate_rules(
         self,
@@ -337,19 +472,23 @@ class RuleActivationPipeline:
             statement=reviewer_attestation.statement,
         )
 
-        # 4. Güvenilir Anahtar Kontrolü (Yapılandırılmışsa)
+        # 4. Trust roots are mandatory in production. Untrusted callers must
+        # never bring their own accepted signer keys or activate local fixtures.
+        test_profile = os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE") == "isolated_test"
+        if not test_profile and os.getenv("TARIM_RAG_LEGAL_ACTIVATION_ENABLED") != "true":
+            raise ActivationError("Production legal activation is disabled")
         trust_store = self._load_trusted_store(trusted_keys)
+        if not test_profile and (
+            not trust_store
+            or not self._role_key(trust_store, "LEGAL_REVIEWER")
+            or not self._role_key(trust_store, "LEGAL_APPROVER")
+        ):
+            raise TrustedKeyMismatchError("Independent server-trusted reviewer and approver required")
         if trust_store:
             # Format: {"reviewer": {"public_key_b64": "..."}, "approver": {"public_key_b64": "..."}}
             # veya doğrudan role göre: {"LEGAL_REVIEWER": "...", "LEGAL_APPROVER": "..."}
-            trusted_rev = (
-                trust_store.get("reviewer", {}).get("public_key_b64")
-                or trust_store.get("LEGAL_REVIEWER")
-            )
-            trusted_app = (
-                trust_store.get("approver", {}).get("public_key_b64")
-                or trust_store.get("LEGAL_APPROVER")
-            )
+            trusted_rev = self._role_key(trust_store, "LEGAL_REVIEWER")
+            trusted_app = self._role_key(trust_store, "LEGAL_APPROVER")
             if trusted_rev and reviewer_attestation.public_key_b64 != trusted_rev:
                 raise TrustedKeyMismatchError(
                     f"İnceleyen anahtarı güvenilir anahtar deposu ile eşleşmiyor: {reviewer_attestation.public_key_b64}"
@@ -395,7 +534,12 @@ class RuleActivationPipeline:
             manifest_sha256=calculated_rules_digest,
             signature_b64=reviewer_attestation.signature_b64,
             public_key_b64=reviewer_attestation.public_key_b64,
-            metadata={"notes": reviewer_attestation.notes, "rules_count": len(rules)},
+            metadata={
+                "notes": reviewer_attestation.notes,
+                "rules_count": len(rules),
+                "signed_at": reviewer_attestation.signed_at,
+                "statement": reviewer_attestation.statement,
+            },
         )
 
         # 6b. Onay Olayı
@@ -407,7 +551,12 @@ class RuleActivationPipeline:
             manifest_sha256=calculated_rules_digest,
             signature_b64=approver_attestation.signature_b64,
             public_key_b64=approver_attestation.public_key_b64,
-            metadata={"notes": approver_attestation.notes, "rules_count": len(rules)},
+            metadata={
+                "notes": approver_attestation.notes,
+                "rules_count": len(rules),
+                "signed_at": approver_attestation.signed_at,
+                "statement": approver_attestation.statement,
+            },
         )
 
         # 6c. Aktivasyon Olayı

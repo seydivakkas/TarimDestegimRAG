@@ -261,7 +261,7 @@ class SoftwareKmsProvider(KeyManagementProvider):
 
 
 class HashiCorpVaultProvider(KeyManagementProvider):
-    """HashiCorp Vault Transit Secrets Engine adaptörü."""
+    """Vault Transit interface. No software signing fallback is permissible."""
 
     def __init__(
         self,
@@ -271,54 +271,62 @@ class HashiCorpVaultProvider(KeyManagementProvider):
         vault_token: str | None = None,
         fallback_software: KeyManagementProvider | None = None,
     ) -> None:
-        self.vault_addr = vault_url or vault_addr or os.getenv("VAULT_ADDR", "http://127.0.0.1:8200")
+        self.vault_addr = vault_url or vault_addr or os.getenv("VAULT_ADDR", "")
         self.vault_token = token or vault_token or os.getenv("VAULT_TOKEN", "")
-        self._fallback = fallback_software or SoftwareKmsProvider()
+        # Legacy constructor argument intentionally ignored. Never silently
+        # substitute an in-process key for unavailable trusted hardware.
+        self._connection_configured = bool(
+            self.vault_addr.startswith("https://") and self.vault_token
+        )
 
     def _vault_request(self, endpoint: str, data: dict[str, Any] | None = None) -> dict[str, Any]:
-        """Vault API HTTP isteği gönderir (veya test ortamında mock'lanır)."""
-        return {}
+        raise RuntimeError("Vault Transit network adapter is unavailable; no software fallback")
 
     def list_keys(self) -> list[KmsKeyMetadata]:
-        return self._fallback.list_keys()
+        return []
 
     def get_key(self, key_id_or_alias: str) -> KmsKeyMetadata | None:
-        return self._fallback.get_key(key_id_or_alias)
+        return None
 
     def get_public_key(self, key_id_or_alias: str) -> str:
-        return self._fallback.get_public_key(key_id_or_alias)
+        raise RuntimeError("Vault Transit key resolution has not been implemented")
 
     def sign_payload(self, key_id_or_alias: str, payload_bytes: bytes) -> str:
+        if not self._connection_configured:
+            raise RuntimeError("Vault Transit HTTPS endpoint and token are mandatory")
         b64_input = base64.b64encode(payload_bytes).decode("ascii")
-        resp = self._vault_request(f"/v1/transit/sign/{key_id_or_alias}", {"input": b64_input})
+        resp = self._vault_request(
+            f"/v1/transit/sign/{key_id_or_alias}", {"input": b64_input}
+        )
         sig_str = resp.get("signature", "")
-        if sig_str:
-            if sig_str.startswith("vault:v1:"):
-                raw = base64.b64decode(sig_str.replace("vault:v1:", ""))
+        if isinstance(sig_str, str) and sig_str.startswith("vault:v1:"):
+            try:
+                raw = base64.b64decode(sig_str.split(":", 2)[-1], validate=True)
+            except (ValueError, binascii.Error) as exc:
+                raise RuntimeError("Vault Transit returned invalid signature") from exc
+            if len(raw) == 64:
                 return raw.hex()
-            return sig_str
-        return self._fallback.sign_payload(key_id_or_alias, payload_bytes)
+        raise RuntimeError("Vault Transit signing unavailable or returned invalid Ed25519 signature")
 
     def verify_signature(
-        self,
-        key_id_or_alias: str,
-        payload_bytes: bytes,
-        signature: str,
+        self, key_id_or_alias: str, payload_bytes: bytes, signature: str
     ) -> bool:
-        return self._fallback.verify_signature(key_id_or_alias, payload_bytes, signature)
+        # Until a real Vault public-key registry and versioning are integrated,
+        # no unverifiable external signature is accepted as trusted.
+        return False
 
     def health_check(self) -> dict[str, Any]:
         return {
-            "status": "HEALTHY",
+            "status": "UNAVAILABLE",
             "provider": "HashiCorpVaultProvider",
             "vault_addr": self.vault_addr,
-            "transit_engine_active": True,
-            "managed_keys_count": len(self.list_keys()),
+            "transit_engine_active": False,
+            "managed_keys_count": 0,
         }
 
 
 class PKCS11HsmProvider(KeyManagementProvider):
-    """PKCS#11 standardı donanımsal güvenlik modülü (HSM) adaptörü."""
+    """PKCS#11 adapter placeholder; never misrepresent software as hardware."""
 
     def __init__(
         self,
@@ -330,37 +338,33 @@ class PKCS11HsmProvider(KeyManagementProvider):
         self.slot_id = slot_id
         self.pin = pin or os.getenv("HSM_PKCS11_PIN", "")
         self.module_path = module_path
-        self._fallback = fallback_software or SoftwareKmsProvider()
 
     def list_keys(self) -> list[KmsKeyMetadata]:
-        return self._fallback.list_keys()
+        return []
 
     def get_key(self, key_id_or_alias: str) -> KmsKeyMetadata | None:
-        return self._fallback.get_key(key_id_or_alias)
+        return None
 
     def get_public_key(self, key_id_or_alias: str) -> str:
-        return self._fallback.get_public_key(key_id_or_alias)
+        raise RuntimeError("PKCS#11 key lookup is not connected")
 
     def sign_payload(self, key_id_or_alias: str, payload_bytes: bytes) -> str:
-        if self.module_path and not Path(self.module_path).exists():
-            raise RuntimeError(f"HSM PKCS11 library not found at: {self.module_path}")
-        return self._fallback.sign_payload(key_id_or_alias, payload_bytes)
+        if not self.module_path or not Path(self.module_path).exists():
+            raise RuntimeError("HSM PKCS11 library not present or not configured")
+        raise RuntimeError("HSM PKCS11 signing requires a verified hardware adapter")
 
     def verify_signature(
-        self,
-        key_id_or_alias: str,
-        payload_bytes: bytes,
-        signature: str,
+        self, key_id_or_alias: str, payload_bytes: bytes, signature: str
     ) -> bool:
-        return self._fallback.verify_signature(key_id_or_alias, payload_bytes, signature)
+        return False
 
     def health_check(self) -> dict[str, Any]:
         return {
-            "status": "HEALTHY",
+            "status": "UNAVAILABLE",
             "provider": "PKCS11HsmProvider",
             "slot_id": self.slot_id,
-            "hardware_token_present": True,
-            "managed_keys_count": len(self.list_keys()),
+            "hardware_token_present": False,
+            "managed_keys_count": 0,
         }
 
 
@@ -381,6 +385,8 @@ def get_kms_provider(provider_type: str | None = None) -> KeyManagementProvider:
     elif p_type in ("hsm", "pkcs11"):
         provider = PKCS11HsmProvider()
     else:
+        if os.getenv("TARIM_RAG_LEGAL_SECURITY_PROFILE") == "production":
+            raise RuntimeError("Software KMS is forbidden for production legal signing")
         provider = SoftwareKmsProvider()
 
     if provider_type is None:
