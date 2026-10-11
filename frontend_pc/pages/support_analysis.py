@@ -62,32 +62,57 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             )
 
             gr.Markdown(
-                "Aşağıdaki listeden incelemek istediğiniz maddeyi seçiniz. Resmî belgedeki şartlar, "
-                "hak kazanma hükümleri ve ret gerekçeleri **renkli olarak işaretlenmiştir**:"
+                "Aşağıdaki listeden incelemek istediğiniz **Resmî Gazete sayfasını, tablosunu veya mevzuat maddesini** seçiniz "
+                "ya da belge içi arama kutusuna ürün, katsayı veya konu yazınız. Sistem ilgili sayfayı, çıkarılan tabloyu, "
+                "grafik analizini ve **yüksek çözünürlüklü sayfa görselini** sunar:"
             )
-            article_selector = gr.Dropdown(
-                choices=[
-                    "MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
-                    "MADDE 2 - Tarım Havzaları Planlı Üretim Desteği",
-                    "MADDE 3 - Sertifikalı Tohum Kullanım Desteği",
-                    "MADDE 4 - Yeraltı Su Kısıtı Olan Havzalar Desteği",
-                    "MADDE 5 - Kadın ve Genç Çiftçi İlave Desteği",
-                    "MADDE 6 - Sertifikalı Fidan ve Kapama Bahçe Şartı",
-                    "EK TABLO - Ürün Bazlı Birim Fiyat Kataloğu",
-                ],
-                value="MADDE 1 - Temel Destek ve ÇKS Zorunluluğu",
-                label="İncelenecek Resmî Mevzuat Maddesi",
-            )
+            with gr.Row():
+                article_selector = gr.Dropdown(
+                    choices=[
+                        "MADDE 1 - Temel Destek ve ÇKS Zorunluluğu (Karar 8859 S.1)",
+                        "MADDE 2 - Tarım Havzaları Planlı Üretim Desteği (Karar 8859 S.1)",
+                        "MADDE 3 - Sertifikalı Tohum Kullanım Desteği (Karar 8859 S.2)",
+                        "MADDE 4 - Yeraltı Su Kısıtı Olan Havzalar Desteği (Karar 8859 S.2)",
+                        "MADDE 5 - Kadın ve Genç Çiftçi İlave Desteği (Karar 8859 S.2)",
+                        "MADDE 6 - Sertifikalı Fidan ve Kapama Bahçe Şartı (Karar 8859 S.2)",
+                        "EK TABLO - 2026 Birim Destek Katsayıları & Fiyat Cetveli (Karar 8859 S.2)",
+                        "KARAR 11781 - 2026 Destekleme Katsayısı Güncellemesi (367 TL/da S.1)",
+                        "TEBLİĞ 2024/39 - Askı İcmalleri, 5 Günlük İtiraz ve ÇKS Süreçleri",
+                    ],
+                    value="MADDE 1 - Temel Destek ve ÇKS Zorunluluğu (Karar 8859 S.1)",
+                    label="📄 Resmî Gazete Belgesi, Sayfası ve Madde Seçimi (#page=X)",
+                    scale=7,
+                )
+                page_search_input = gr.Textbox(
+                    placeholder="Belge ve tablolarda ara (Örn: Buğday, 310, Su Kısıtı, 367, Mısır, Askı)...",
+                    label="🔍 Resmî Belge İçi Hızlı Arama",
+                    scale=4,
+                )
+                btn_page_search = gr.Button("🔍 Sayfayı Bul", scale=2, variant="secondary")
+
+            from tarim_destek_rag.citations.pdf_page_indexer import render_evidence_by_key
 
             article_display = gr.HTML(
-                value=render_document_viewer_html("MADDE 1")
+                value=render_evidence_by_key("MADDE 1")
             )
 
-            def update_article_view(choice: str) -> str:
-                return render_document_viewer_html(choice)
+            def update_article_view(choice: str, query: str = "") -> str:
+                return render_evidence_by_key(choice, query)
 
             article_selector.change(
-                update_article_view, inputs=[article_selector], outputs=[article_display]
+                update_article_view,
+                inputs=[article_selector, page_search_input],
+                outputs=[article_display],
+            )
+            btn_page_search.click(
+                update_article_view,
+                inputs=[article_selector, page_search_input],
+                outputs=[article_display],
+            )
+            page_search_input.submit(
+                update_article_view,
+                inputs=[article_selector, page_search_input],
+                outputs=[article_display],
             )
 
         with gr.Accordion("📁 Başvuru İçin Gerekli Belgeler & Ön Değerlendirme Raporu", open=True):

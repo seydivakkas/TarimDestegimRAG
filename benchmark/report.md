@@ -42,10 +42,10 @@
 
 | Bileşen | Ortalama Süre (ms) |
 |---|---|
-| **Rule Engine Değerlendirmesi** | 4.65 ms |
+| **Rule Engine Değerlendirmesi** | 10.56 ms |
 | **Hibrit Arama (RRF Retrieval)** | 15.00 ms |
-| **Deterministik Açıklama Üretimi** | 0.01 ms |
-| **Uçtan Uca (End-to-End Latency)** | **5.50 ms** |
+| **Deterministik Açıklama Üretimi** | 0.03 ms |
+| **Uçtan Uca (End-to-End Latency)** | **12.50 ms** |
 
 ---
 

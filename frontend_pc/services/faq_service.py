@@ -106,6 +106,24 @@ def ask_assistant(
             else:
                 formatted_reply += f'\n> **[{i}]** *"{c}"*\n'
 
+    try:
+        from tarim_destek_rag.citations.pdf_page_indexer import get_global_pdf_indexer
+        indexer = get_global_pdf_indexer()
+        matches = indexer.search_pages(user_message.strip(), top_k=1)
+        if matches:
+            top_m = matches[0]
+            arts = ", ".join(top_m.articles_contained) if top_m.articles_contained else "Genel Mevzuat"
+            formatted_reply += (
+                f"\n---\n📌 **Doğrudan Resmî Gazete Sayfa & Tablo Kanıtı:**\n"
+                f"- **Resmî Belge:** {top_m.doc_title} (Sayı: {top_m.gazette_issue}, Tarih: {top_m.gazette_date})\n"
+                f"- **İlgili Sayfa:** 📄 **Sayfa {top_m.page_number} / {top_m.total_pages}** ({arts})\n"
+                f"- **Doğrudan PDF Bağlantısı:** [📄 Orijinal Resmî Gazete Sayfa {top_m.page_number}'yi Aç ↗]({top_m.official_url})\n"
+            )
+            if top_m.tables:
+                formatted_reply += f"- **Sayfadaki Resmî Tablo:** `{top_m.tables[0].table_id}` ({top_m.tables[0].row_count} satır birim destek/katsayı cetveli)\n"
+    except Exception as e:
+        logger.debug("Asistan sayfa arama uyarısı: %s", e)
+
     new_history = list(chat_history)
     new_history.append({"role": "user", "content": user_message})
     new_history.append({"role": "assistant", "content": formatted_reply})

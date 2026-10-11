@@ -421,12 +421,21 @@ def format_highlighted_citation_card(
     card_class = "pass" if status == "ELIGIBLE" else ("warn" if status == "REVIEW" else "fail")
     highlighted_snip = highlight_legal_text(snip, status)
 
+    page_num = "1"
+    if "#page=" in url:
+        page_num = url.split("#page=")[-1]
+    elif any(k in sec.lower() for k in ["madde 3", "madde 4", "madde 5", "madde 6", "tablo", "fiyat"]):
+        page_num = "2"
+
     return (
         f'<div class="legal-quote-card {card_class}">\n'
         f'  <div class="legal-quote-header">\n'
-        f'    <span class="legal-doc-badge">🏛️ {title} ({year}) — {sec}</span>\n'
+        f'    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">\n'
+        f'      <span class="legal-doc-badge">🏛️ {title} ({year}) — {sec}</span>\n'
+        f'      <span style="background: #047857; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem; font-weight: 700;">📄 Resmî Gazete Sayfa {page_num}</span>\n'
+        f'    </div>\n'
         f'    <a href="{url}" target="_blank" rel="noopener noreferrer" class="legal-source-link" '
-        f'title="Resmî Orijinal Belgeyi Aç">Resmî Belgede Gör ↗</a>\n'
+        f'title="Resmî Orijinal Belgeyi Aç">Resmî PDF\'te Aç (Sayfa {page_num}) ↗</a>\n'
         f'  </div>\n'
         f'  <div class="legal-quote-body">\n'
         f'    📜 <i>"{highlighted_snip}"</i>\n'
