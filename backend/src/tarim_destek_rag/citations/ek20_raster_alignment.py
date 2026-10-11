@@ -119,14 +119,15 @@ def align_measured_cell_for_review(
         ]
     ):
         return (*_EMPTY, _HOLD)
-    from PIL import Image
-    import io
-
     try:
+        import io
+
+        from PIL import Image
+
         with Image.open(io.BytesIO(original_png)) as im:
             if list(im.size) != candidate_proposal["image_size"]:
                 return (*_EMPTY, _HOLD)
-    except (OSError, ValueError):
+    except (OSError, ValueError, ImportError):
         return (*_EMPTY, _HOLD)
     words = _ocr_words_for_candidate(record, digest, rect)
     draft = " ".join(words) if words else "Kutuya bağlı OCR kelimesi bulunamadı"
