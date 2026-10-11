@@ -15,7 +15,6 @@ from tarim_destek_rag.citations.document_links import (
     format_clickable_action,
     format_clickable_check,
     format_highlighted_citation_card,
-    resolve_check_link,
 )
 
 logger = logging.getLogger("frontend_pc.formatters")
@@ -605,7 +604,7 @@ def generate_report_markdown(
         matched = claim_evidence_record(resp, claim_id)
         quote = matched.get("source_passage")
         report_lines.append(f"#### {label}")
-        report_lines.append(f"- **Kanıt kimliği:** \`{claim_id}\`")
+        report_lines.append(f"- **Kanıt kimliği:** `{claim_id}`")
         if isinstance(quote, str):
             report_lines.append(
                 f"- **Özgün kaynak konumu:** {matched['source_id']} · "
@@ -615,7 +614,7 @@ def generate_report_markdown(
             report_lines.append(
                 f"- **Orijinal HTML adresi:** {matched['source_url']}"
             )
-            report_lines.append(f"- **SHA-256:** \`{matched['source_sha256']}\`")
+            report_lines.append(f"- **SHA-256:** `{matched['source_sha256']}`")
             report_lines.append(
                 "- **Durum:** Kaynak pasajı bulundu. Yürürlük, olgular "
                 "ve ödeme hâlâ HOLD."
