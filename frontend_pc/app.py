@@ -231,6 +231,38 @@ def build_ui() -> gr.Blocks:
             inputs=[p2["ek20_selector"], eval_state],
             outputs=[p2["ek20_display"]],
         )
+        from tarim_destek_rag.citations.ek20_raster_alignment import (
+            align_measured_cell_for_review,
+        )
+        p2["btn_ek20_align"].click(
+            align_measured_cell_for_review,
+            inputs=[
+                p2["ek20_selector"],
+                p2["ek20_grid_selector"],
+                eval_state,
+            ],
+            outputs=[
+                p2["roi_x0"], p2["roi_y0"],
+                p2["roi_x1"], p2["roi_y1"],
+                p2["roi_preview_display"],
+            ],
+        )
+        # Never reuse a previous year's OCR/grid cell proposal after a new
+        # evaluation, even if the dropdown holds the same apparent row name.
+        eval_state.change(
+            lambda: (
+                gr.update(value=None),
+                None, None, None, None,
+                "<p>HOLD — Yeni değerlendirme için ROI önerisini yeniden açın.</p>",
+            ),
+            inputs=[],
+            outputs=[
+                p2["ek20_grid_selector"],
+                p2["roi_x0"], p2["roi_y0"],
+                p2["roi_x1"], p2["roi_y1"],
+                p2["roi_preview_display"],
+            ],
+        )
 
         # Değerlendirme Butonu Bağlantısı
         p1["btn_calculate"].click(
