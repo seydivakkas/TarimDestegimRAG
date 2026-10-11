@@ -109,6 +109,33 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             region_display = gr.HTML(
                 value="<p>Bir sayfa ve sayfa içi görsel bölge seçin.</p>"
             )
+            from tarim_destek_rag.citations.raster_table_review import (
+                raster_cell_choices,
+                render_raster_cell,
+            )
+
+            gr.Markdown(
+                "**Taranmış PDF'nin gerçek piksel hücreleri:** Sayfa seçip "
+                "görüntü tablosunu isteğe bağlı tarayın. Yalnız sürekliliği "
+                "ölçülen gerçek ızgara çizgileri arasındaki hücre adayları "
+                "listelenir. Kenarlıksız veya belirsiz tabloda tahmini "
+                "hücre oluşturulmaz. Turuncu çerçeve hukukî sarı vurgu değildir."
+            )
+            btn_raster_scan = gr.Button(
+                "Seçili gerçek PDF sayfasında tablo hücresi adaylarını bul",
+                variant="secondary",
+            )
+            raster_cell_selector = gr.Dropdown(
+                choices=[],
+                value=None,
+                interactive=True,
+                label="Gerçek görüntüden ölçülen hücre (OCR ve mevzuat HOLD)",
+            )
+            raster_cell_display = gr.HTML(
+                "<p>Önce gerçek sayfayı seçip hücre adaylarını tarayın. "
+                "Yoksa koordinat tahmin edilmeyecek.</p>"
+            )
+
             from tarim_destek_rag.citations.ek20_review_workbench import (
                 ek20_cell_choices,
                 render_ek20_candidate,
@@ -153,6 +180,25 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 ),
                 inputs=[article_selector],
                 outputs=[region_selector],
+            )
+            # The grid scan is explicit and runs only for the current original.
+            # A page switch clears stale selections from a different SHA/page.
+            article_selector.change(
+                lambda: gr.update(choices=[], value=None),
+                inputs=None,
+                outputs=[raster_cell_selector],
+            )
+            btn_raster_scan.click(
+                lambda key: gr.update(
+                    choices=raster_cell_choices(key), value=None,
+                ),
+                inputs=[article_selector],
+                outputs=[raster_cell_selector],
+            )
+            raster_cell_selector.change(
+                render_raster_cell,
+                inputs=[raster_cell_selector],
+                outputs=[raster_cell_display],
             )
             region_selector.change(
                 render_source_region,
@@ -215,6 +261,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "ocr_display": ocr_display,
         "region_selector": region_selector,
         "region_display": region_display,
+        "raster_cell_selector": raster_cell_selector,
+        "raster_cell_display": raster_cell_display,
         "ek20_selector": ek20_selector,
         "ek20_display": ek20_display,
         "btn_report": btn_report,
