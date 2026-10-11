@@ -43,7 +43,9 @@ def test_untrusted_response_can_never_be_payment_eligibility() -> None:
         "basin_evidence": {
             "verification_status": "ORIGINAL_PDF_ROW_AND_CROP_LOCATED_DRAFT_REVIEW",
             "province": "KONYA", "district": "KARATAY", "crop_label": "Buğday",
-            "page_number": 53,
+            "page_number": 53, "production_year": 2026,
+            "source_sha256": PINNED_BASIN_PDF_SHA256,
+            "crop_code": "BUĞDAY", "eligible": None, "approved_rate": None,
             "source_url": "https://www.tarimorman.gov.tr/original.pdf",
             "highlighted_pdf_url": (
                 "/evidence/highlight/basin/" + PINNED_BASIN_PDF_SHA256
