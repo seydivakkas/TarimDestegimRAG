@@ -123,6 +123,38 @@ def test_forged_source_hash_or_target_article_is_hold(tmp_path: Path) -> None:
     ] == "HOLD"
 
 
+
+def test_genuine_transcribed_ek20_cells_are_all_hold_and_dashes_none(
+    tmp_path: Path,
+) -> None:
+    matrix, sources = _matrix(), _manifest()
+    annex = matrix["ek20"]
+    sha = annex["source_sha256"]
+    originals = tmp_path / "originals"
+    originals.mkdir()
+    # A forged file can never unlock cell reporting by filename alone.
+    (originals / (sha + ".pdf")).write_bytes(b"fake official PDF")
+    result = audit_claim_matrix(_evaluation(), matrix, sources, tmp_path)
+    assert result["ek20_status"] == "HOLD"
+    assert result["ek20_cells"] == []
+    assert result["ek20_payment_approved"] is False
+
+
+def test_ek20_transcript_requires_all_rows_and_nonnegative_cell_values(
+    tmp_path: Path,
+) -> None:
+    # Independent review remains outstanding even when the source is pinned.
+    matrix = _matrix()
+    assert len(matrix["ek20_visual_transcription"]["rows"]) == 12
+    first = matrix["ek20_visual_transcription"]["rows"][0]
+    assert first["biological_tl_da"] == 3800
+    assert first["biotechnical_tl_da"] is None
+    assert matrix["ek20_visual_transcription"]["automatic_rate_activation"] is False
+    assert audit_claim_matrix(_evaluation(2025), matrix, _manifest(), tmp_path)[
+        "ek20_cells"
+    ] == []
+
+
 def test_original_2025_42_amendment_clauses_are_exact_when_available() -> None:
     matrix, sources = _matrix(), _manifest()
     root = Path("data/legal_update_archive")
@@ -138,3 +170,9 @@ def test_original_2025_42_amendment_clauses_are_exact_when_available() -> None:
     assert report["claim_verified_count"] == 0
     assert report["acceptance"] == "HOLD"
     assert report["claims"][0]["highlighted_pdf_url"] is None
+    assert len(report["source_spans"]) == 5
+    assert any(s["target_provision"] == "GEÇİCİ MADDE 2(1)"
+               and s["source_location_status"] == "ORIGINAL_HTML_SPAN_LOCATED"
+               for s in report["source_spans"])
+    assert report["ek20_status"] in ("VISUAL_TABLE_PENDING_INDEPENDENT_CELL_REVIEW", "HOLD")
+    assert report["ek20_payment_approved"] is False

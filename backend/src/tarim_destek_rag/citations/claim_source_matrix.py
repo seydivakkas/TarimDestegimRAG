@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 
 _PIN = re.compile(r"[0-9a-f]{64}\Z")
 _ARTICLE = re.compile(r"^\s*MADDE\s+(\d+)\s*[-–]", re.I)
+_TRANSITION = re.compile(r"^\s*GEÇİCİ\s+MADDE\s+(\d+)\s*[-–]", re.I)
 
 
 def _normalized_match(quote: str) -> re.Pattern[str]:
@@ -54,7 +55,7 @@ def validate_source_span(
             raise ValueError("Original HTML bytes do not match official SHA")
         pattern = _normalized_match(entry["exact_quote"])
         required_article = entry["article"]
-        if not re.fullmatch(r"MADDE \d+", required_article):
+        if not re.fullmatch(r"(?:GEÇİCİ )?MADDE \d+", required_article):
             raise ValueError("Invalid legal source article identity")
         document = BeautifulSoup(raw, "html.parser")
         active_article = None
@@ -62,8 +63,11 @@ def validate_source_span(
         for node in document.find_all(string=True):
             if node.parent.name in {"script", "style", "title"}:
                 continue
+            transition = _TRANSITION.search(str(node))
             found_heading = _ARTICLE.search(str(node))
-            if found_heading:
+            if transition:
+                active_article = "GEÇİCİ MADDE " + transition.group(1)
+            elif found_heading:
                 active_article = "MADDE " + found_heading.group(1)
             if pattern.search(str(node)):
                 if active_article != required_article:
@@ -120,7 +124,7 @@ def audit_claim_matrix(
                     and type(year) is int and year in row.get("production_years", [])
                 ]
                 key = hashlib.sha256(json.dumps(
-                    [rule_id, support_id, field, text], ensure_ascii=False,
+                    [rule_id, support_id, year, field, text], ensure_ascii=False,
                     separators=(",", ":"),
                 ).encode("utf-8")).hexdigest()[:24]
                 source = candidates[0] if len(candidates) == 1 else None
@@ -162,6 +166,61 @@ def audit_claim_matrix(
                 ek_status = "VISUAL_TABLE_PENDING_INDEPENDENT_CELL_REVIEW"
         except (OSError, ValueError, TypeError):
             pass
+
+    cells: list[dict[str, Any]] = []
+    if ek_status == "VISUAL_TABLE_PENDING_INDEPENDENT_CELL_REVIEW":
+        transcript = matrix.get("ek20_visual_transcription")
+        if isinstance(transcript, dict):
+            if (
+                transcript.get("source_sha256") != ek.get("source_sha256")
+                or transcript.get("production_year") != 2026
+                or transcript.get("table_pdf_page") != 1
+                or transcript.get("source_pdf_page_count") != 1
+                or transcript.get("transcription_status") !=
+                    "VISUAL_TRANSCRIPTION_PENDING_INDEPENDENT_REVIEW"
+                or transcript.get("automatic_rate_activation") is not False
+                or transcript.get("independent_legal_reviewer_approved") is not False
+            ):
+                ek_status = "HOLD"
+            else:
+                row_items = transcript.get("rows", [])
+                keys = ("biological_tl_da", "biotechnical_tl_da",
+                        "feromone_trap_tl_da", "feromone_only_tl_da")
+                if (
+                    len(row_items) != 12
+                    or len({row.get("row_id") for row in row_items}) != 12
+                    or any(
+                        not isinstance(row.get("row_id"), str)
+                        or any(
+                            row.get(key) is not None
+                            and (type(row[key]) is not int or row[key] < 0)
+                            for key in keys
+                        )
+                        for row in row_items
+                    )
+                ):
+                    ek_status = "HOLD"
+                else:
+                    for row in row_items:
+                        for key in keys:
+                            amount = row.get(key)
+                            cells.append({
+                                "cell_id": "EK20_2026:" + row["row_id"] + ":" + key,
+                                "source_sha256": ek["source_sha256"],
+                                "pdf_page": 1,
+                                "row_id": row["row_id"],
+                                "cell_key": key,
+                                "transcribed_value_tl_da": amount,
+                                "transcription_status": (
+                                    "DASH_NOT_ZERO" if amount is None
+                                    else "VISUAL_PENDING_INDEPENDENT_REVIEW"
+                                ),
+                                "fact_verified": False,
+                                "legal_verified": False,
+                                "payable_amount": None,
+                                "acceptance": "HOLD",
+                                "highlighted_pdf_url": None,
+                            })
     return {
         "schema_version": 1,
         "production_year": year,
@@ -174,6 +233,7 @@ def audit_claim_matrix(
         "source_spans": list(location.values()),
         "claims": matches,
         "ek20_status": ek_status,
+        "ek20_cells": cells,
         "ek20_payment_approved": False,
         "acceptance": "HOLD" if matches else "NO_CLAIMS_TO_AUDIT",
         "note": "Source location is not factual, legal-year or payment approval.",
