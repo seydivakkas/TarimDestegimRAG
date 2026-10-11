@@ -15,12 +15,12 @@
 | F01 | Orijinal kaynak deposu | KISMİ: beş SHA-pinli belge | Birincil mevzuat ve tüm sürüm/değişiklik/ekler doğrulanmış orijinli; sentetik/türetilmiş belge dışlanmış |
 | F02 | Gerçek PDF ekran görüntüsü | VAR, PR40 | Sayfa numarası, original SHA ve tam kaynak URL sayfaya bağlanır |
 | F03 | PDF metin/OCR indeksleme | KISMİ: native metin, toplu OCR taslağı, gerçek sayfa üzerinde turuncu OCR satır kutusu önizlemesi | Bütün sayfalara tarama durumu, OCR geometrisi, indeks sürümü, görsel inceleme akışı ekli |
-| F04 | Tablolar ve hücreler | KISMİ: native find_tables, OCR sözcük kutuları, görüntü piksellerinden ölçülen çizgili-ızgara hücre adayları ve kaynak SHA'lı orijinal hücre kırpımı | Born-digital ve raster tabloların satır/sütun/hücre konumları özgün piksel/point sistemine bağlı; hata/boş/dash belirsizlikleri korunur |
+| F04 | Tablolar ve hücreler | KISMİ: native find_tables, OCR sözcük kutuları, gerçek raster ızgara hücreleri, orijinal hücre kırpımı ve EK-20 için kontrollü manuel semantik–piksel kutusu eşleştirme önizlemesi | Born-digital ve raster tabloların satır/sütun/hücre konumları özgün piksel/point sistemine bağlı; hata/boş/dash belirsizlikleri korunur |
 | F05 | Grafik/şekil/çizim | KISMİ: bölge kırpımı | Gerçek sayfa görselleri ve bölgeler bulunur; semantik iddialar yalnız kanıtlı inceleme ile |
 | F06 | PDF/HTML ortak kanıt gezgini | KISMİ: PDF görüntüsü, SHA-doğrulanmış HTML pasajı | Her iki belge türü aynı kanıt kimliği ve kaynak bağlantı kontratıyla gezilebilir |
 | F07 | Tekil gerekçe → kaynak | KISMİ: her gerekçe seçimi, sadece mevcut curated claim_bindings | Bütün sonuç metinleri kaynak paragrafı/ek hücresi/yıl ile ayrı ayrı eşlenir; bulunamayan HOLD |
 | F08 | Yıllara göre değişiklik zinciri | KISMİ: 2025/42 bazı pasajlar, 2025 geçiş | 2024/39, 2025/13, 2025/42, 8859, 10394, 11781 ve diğer uygulanabilir revizyonların etkisi hüküm bazlı izlenir |
-| F09 | EK-20 satır/hücre kanıtı | KISMİ: 2026 taslak 12x4, gerçek sayfa ROI önizleme, 48 hücre durumu, iki ayrı Ed25519 inceleme imzası ve imza sonrası görsel sarı alan; gerçek 48 ROI için onay henüz yok | Her sayısal hücrenin tam ROI, iki bağımsız görsel okuma ve geçerli yıl kaydı olmadan hukukî/ödeme PASS olmaz |
+| F09 | EK-20 satır/hücre kanıtı | KISMİ: 2026 taslak 12x4, gerçek sayfa ROI, ölçülen ızgara kutusundan kullanıcı kontrollü ROI ön doldurma, 48 hücre envanteri, iki ayrı Ed25519 inceleme imzası; 48 gerçek hücrenin bağımsız onayı henüz yok | Her sayısal hücrenin tam ROI, iki bağımsız görsel okuma ve geçerli yıl kaydı olmadan hukukî/ödeme PASS olmaz |
 | F10 | Neden / SSS / rapor / mobil birlikteliği | KISMİ: Neden + raporda tekil claim_id; SSS/mobil henüz değil | Tüm açıklamalar tekil aynı claim_id, source_id, SHA, sayfa ve pasaj/ROI bağını kullanır |
 | F11 | Offline Windows kullanım paketi | KISMİ: özgün kaynak yükleme, opsiyonel Tesseract | İlk kurulumdan indeks yenilemeye kadar ücretli API/bulut gerektirmeden Türkçe OCR ve resmî dosya yönetimi |
 | F12 | Kaynak değişikliği ve doğrulama yönetimi | KISMİ: manifest, draft hukukî eşleşmeler | Yeni resmî belgeden eski kuralı iptal/değiştirme, fark inceleme, insan onayına sunma ve geri alma |
@@ -96,3 +96,20 @@ Bu paketteki **uygulanan** işlevler:
 **Sonraki özellik:** 48 kaynak hücrenin fiilî koordinat ve bağımsız incelemesi,
 ardından F07/F08 mevzuat sürüm–yıl–kural zinciri ve F10 ortak SSS/rapor/mobil
 kanıt kontratı. Son F14 kapsamlı regression, gerçek Windows ve hukukî kabul.
+
+## P1-D03 — Taranmış EK-20 hücresini özgün koordinatla eşleştirme (özellik geliştirme)
+
+Bu dalda `ek20_raster_alignment.py` özelliği eklendi. Artık incelemeci, özgün EK-20 tek sayfalık PDF'yi açarak kaynak raster pikselinden tespit edilen **çizgili ızgara kutusunu**, ayrı seçtiği **2026 ürün/etmen + destek sütununa** ROI ön taslağı olarak atayabilir.
+
+**İncelemecinin uygulamadaki sırası:**
+
+1. Destek Analizi / Neden sekmesinde değerlendirme üretim yılı 2026 olmalı; EK-20 ürün ve tutar türü seçilmeli.
+2. "EK-20 özgün sayfasındaki ölçülmüş ızgara hücrelerini getir" ile yalnız gerçek PDF piksellerinden çıkarılmış kutular açılır. Izgara eksik/kenarlıksız ise liste **boş** kalır; metin veya satır sırasından uydurma koordinat üretmeyiz.
+3. İncelemeci gördüğü gerçek raster kutusunu kendisi seçer. **Tablodaki semantik 12 satırlık sıra, fiziksel raster satır numarasına otomatik bağlanmaz.**
+4. "Seçtiğim gerçek hücreyi ... ROI adayı yap" dört piksel koordinatını form alanına taşır. Kaynak URL + SHA + sayfa + DPI + gerçek resim boyutu, `prepare_roi` ile yeniden bağlanır. Gerçek görüntü üzerinde turuncu aday kutusu ve varsa aynı piksellerdeki onaysız OCR kelimeleri gösterilir.
+5. Farklı EK-20 sütunu/ürünü ya da yeni çiftçi değerlendirmesi seçildiğinde önceki koordinatlar temizlenir. Kullanıcı kendi girdiği manuel ROI ile de önizleme yapabilir.
+6. Hiçbir adım proposal dosyası yazmaz, otomatik inceleme imzası oluşturmaz, sarı hukukî işaret veya hak ediş tutarı onayı vermez. Mevcut iki kişilik Ed25519 görsel inceleme zinciri ayrı ve kurumsal kontrollüdür.
+
+**Kalan F04/F09 özelliği:** Öncelikle tam 48 EK-20 hücresinin gerçek PDF piksel ROI haritalaması ve görsel gözden geçirme; sonra kenarlıksız, birleşik başlıklı ve çizgisi kesilmiş tarama tabloları için güvenli yerleşim analizinde karşılaştırmalı insan incelemesi. Bu eksikler kapatılmadan F04/F09 `TAMAM` değildir.
+
+**Test ve nihai doğrulama sırası değişmedi:** Kullanıcı kararı gereği geniş regresyon/gerçek Windows kabul turu bütün özellikler bittikten sonra F14 sırasında yapılır. CI'nin push ile otomatik çalışması bir işlevi tamamlanmış saymaz.
