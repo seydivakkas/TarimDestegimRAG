@@ -13,6 +13,8 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from tarim_destek_rag.citations.evidence_contract import verified_highlight_path
+
 DOCUMENT_LOCATIONS: dict[str, dict[str, str]] = {
     "CKS_M1": {
         "title": "2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
@@ -294,9 +296,6 @@ def highlight_legal_text(text: str, status: str | None = None) -> str:
         )
 
     return escaped
-
-
-from tarim_destek_rag.citations.evidence_contract import verified_highlight_path
 
 
 def format_highlighted_citation_card(
