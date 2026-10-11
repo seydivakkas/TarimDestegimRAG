@@ -348,6 +348,51 @@ def render_review_overlay(selected: str | None) -> str:
         return "<p>HOLD — Kaynak piksel hücresi yeniden doğrulanamadı.</p>"
 
 
+
+def render_candidate_roi(
+    selected: str | None, x0: Any, y0: Any, x1: Any, y1: Any,
+) -> str:
+    """Preview precisely entered, original-pixel coordinates without approval."""
+    from html import escape
+
+    if not isinstance(selected, str) or selected.count(":") != 1:
+        return "<p>HOLD — Önce EK-20 satır ve sütununu seçin.</p>"
+    values = (x0, y0, x1, y1)
+    if (any(type(n) not in (int, float) or n != int(n) for n in values)
+            or any(n < 0 or n > 8000 for n in values)):
+        return "<p>HOLD — Piksel kutusu dört geçerli tam sayı gerektirir.</p>"
+    row, field = selected.split(":")
+    rect = [int(n) for n in values]
+    try:
+        from PIL import ImageDraw
+        proposal = prepare_roi(row, field, rect)
+        image = _original_context(row, field)["image"].copy().convert("RGBA")
+        ImageDraw.Draw(image, "RGBA").rectangle(
+            rect, outline=(217, 119, 6, 255), width=6,
+        )
+        output = io.BytesIO()
+        image.convert("RGB").save(output, format="PNG")
+        encoded = base64.b64encode(output.getvalue()).decode("ascii")
+        return (
+            '<section style="padding:12px;border:1px solid #d97706">'
+            "<strong>HOLD — Orijinal sayfada elle seçilmiş koordinat adayı</strong>"
+            "<p>Çerçeve yalnız girilen tam piksel koordinatlarının önizlemesidir. "
+            "Tablo hücresiyle doğru eşleştiği henüz bilinmez. "
+            "Hiçbir inceleme imzası bu işlemle oluşturulmaz.</p>"
+            f'<p>Satır: <code>{escape(row)}</code> · '
+            f'Sütun: <code>{escape(field)}</code> · '
+            f'Piksel kutusu: <code>{escape(str(rect))}</code></p>'
+            f'<img src="data:image/png;base64,{encoded}" '
+            'style="width:100%;max-width:1100px;height:auto" '
+            'alt="Gerçek kaynak sayfasında kullanıcı tarafından önerilen ROI"/>'
+            f'<p>ROI RGB SHA-256: <code>{escape(proposal["roi_rgb_sha256"])}</code></p>'
+            "<p>Bu koordinatın kayıt altına alınması ve iki ayrı yetkili "
+            "incelemeci tarafından imzalanması yalnız yerel inceleme "
+            "komutuyla yapılır. Önizleme kayıt/onay değildir.</p></section>"
+        )
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError, ImportError):
+        return "<p>HOLD — Özgün PDF üzerinde verilen ROI doğrulanamadı.</p>"
+
 def render_ek20_review_coverage() -> str:
     """Show truthful 48-field feature coverage, not an approval dashboard."""
     from html import escape
