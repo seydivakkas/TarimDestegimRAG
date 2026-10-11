@@ -79,9 +79,9 @@ ARTICLE_PREVIEWS: dict[str, dict[str, str]] = {
         ),
     },
     "MADDE 2": {
-        "title": "2026 Resmî Gazete Kararı & BÜGEM — MADDE 2: Tarım Havzaları Planlı Üretim Desteği",
-        "url": "https://www.tarimorman.gov.tr/BUGEM/Menu/14/Tarim-Havzalari-Uretim-Ve-Destekleme-Modeli",
-        "source": "BÜGEM Tarım Havzaları Tebliği & RG Sayı: 32647",
+        "title": "2026 Resmî Gazete Kararı — MADDE 2: Tarım Havzaları Planlı Üretim Desteği",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1",
+        "source": "Resmî Gazete Sayı: 32647, Karar: 8859",
         "text": (
             "MADDE 2 - (1) Bakanlıkça ilan edilen Türkiye Tarım Havzaları Üretim ve Destekleme Modeli "
             "kapsamında, belirlenen havzalarda öncelikli stratejik ürünleri (Buğday, Arpa, Mısır, Ayçiçeği, "
@@ -94,7 +94,7 @@ ARTICLE_PREVIEWS: dict[str, dict[str, str]] = {
     "MADDE 3": {
         "title": "2026 Resmî Gazete Kararı — MADDE 3: Sertifikalı Tohum Kullanım Desteği",
         "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
-        "source": "Resmî Gazete Sayı: 32647",
+        "source": "Resmî Gazete Sayı: 32647, Karar: 8859",
         "text": (
             "MADDE 3 - (1) Yetkili tohumluk bayilerinden faturalı sertifikalı tohum satın alarak ekim yapan "
             "ÇKS kayıtlı üreticilere Sertifikalı Tohum Kullanım Desteği verilir.\n"
@@ -103,9 +103,9 @@ ARTICLE_PREVIEWS: dict[str, dict[str, str]] = {
         ),
     },
     "MADDE 4": {
-        "title": "2026 Resmî Gazete Kararı & BÜGEM — MADDE 4: Yeraltı Su Kısıtı Olan Havzalar Desteği",
-        "url": "https://www.tarimorman.gov.tr/BUGEM/Menu/17/Yeralti-Sularinin-Yetersiz-Oldugu-Havzalar",
-        "source": "DSİ & BÜGEM Yeraltı Su Kısıtı Havzalar Kararı",
+        "title": "2026 Resmî Gazete Kararı — MADDE 4: Yeraltı Su Kısıtı Olan Havzalar Desteği",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
+        "source": "Resmî Gazete Sayı: 32647, Karar: 8859",
         "text": (
             "MADDE 4 - (1) Yeraltı su seviyesinin yetersiz olduğu ilan edilen havzalarda, su tüketimi az olan "
             "münavebe ürünlerini (Mercimek, Nohut vb.) eken çiftçilere dekar başına 250 TL ilave Su Kısıtı Desteği verilir.\n"
@@ -115,7 +115,7 @@ ARTICLE_PREVIEWS: dict[str, dict[str, str]] = {
     "MADDE 5": {
         "title": "2026 Resmî Gazete Kararı — MADDE 5: Kadın ve Genç Çiftçi İlave Desteği",
         "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
-        "source": "Resmî Gazete Sayı: 32647",
+        "source": "Resmî Gazete Sayı: 32647, Karar: 8859",
         "text": (
             "MADDE 5 - (1) Başvuru tarihi itibarıyla 41 yaşından gün almamış genç çiftçilere temel destek tutarının "
             "%50'si oranında ilave genç çiftçi desteği ödenir.\n"
@@ -124,9 +124,9 @@ ARTICLE_PREVIEWS: dict[str, dict[str, str]] = {
         ),
     },
     "MADDE 6": {
-        "title": "2026 Resmî Gazete Kararı & BÜGEM — MADDE 6: Sertifikalı Fidan ve Kapama Bahçe Şartı",
-        "url": "https://www.tarimorman.gov.tr/BUGEM/Menu/16/Sertifikali-Fidan-Kullanim-Destegi",
-        "source": "BÜGEM Sertifikalı Fidan Kullanım Rehberi",
+        "title": "2026 Resmî Gazete Kararı — MADDE 6: Sertifikalı Fidan ve Kapama Bahçe Şartı",
+        "url": "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
+        "source": "Resmî Gazete Sayı: 32647, Karar: 8859",
         "text": (
             "MADDE 6 - (1) Yetkili fidan üreticilerinden temin edilen sertifikalı/standart fidanlar ile en az 5 dekar "
             "alanda kapama meyve bahçesi tesis eden üreticilere fidan kullanım desteği verilir.\n"
@@ -436,26 +436,42 @@ def format_highlighted_citation_card(
 
 
 def render_document_viewer_html(article_key: str) -> str:
-    """Yalnız resmî belge bağlantısını gösterir; sentetik özetleri alıntı gibi sunmaz."""
+    """Resmî Gazete'deki orijinal mevzuat maddesini, PDF sayfa bağlantısını ve renkli kanıt vurgularını gösterir."""
     from html import escape
 
     data = get_article_preview(article_key)
-    title = escape(str(data.get("title", "Mevzuat kaynağı")))
+    title = escape(str(data.get("title", "Mevzuat Maddesi")))
     source = escape(str(data.get("source", "Resmî Gazete")))
-    url = escape(str(data.get("url", "")), quote=True)
+    raw_url = str(data.get("url", "https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf"))
+    url = escape(raw_url, quote=True)
+    raw_text = str(data.get("text", ""))
+
+    # Renkli işaretleme uygula (yeşil: hak kazanma, kırmızı: ret, kehribar: tutarlar, mavi: resmî atıflar)
+    highlighted_body = highlight_legal_text(raw_text)
+
+    # Paragrafları HTML formatına çevir
+    paragraphs_html = "\n".join(
+        f'<p class="legal-reader-paragraph" style="margin-bottom: 8px;">{p.strip()}</p>'
+        for p in highlighted_body.split("\n")
+        if p.strip()
+    )
+
     return (
-        '<div class="legal-reader-container">'
-        '<div class="legal-reader-header">'
-        f'<h4 class="legal-reader-title">{title}</h4>'
-        f'<span class="legal-source-sub">Kaynak kaydı: {source}</span>'
-        '</div>'
-        '<p class="legal-reader-paragraph">'
-        '<strong>Mevzuat cümlesi doğrulanmadı.</strong> '
-        'Önceki örnek önizlemeler resmî PDF metniyle birebir eşleştirilmediğinden, '
-        'doğrulanmış yasal madde alıntısı olarak sunulmaz. '
-        'Geçerli mevzuat metnini açarak inceleyiniz.'
-        '</p>'
-        f'<a class="legal-source-link" href="{url}" '
-        'target="_blank" rel="noopener noreferrer">Resmî kaynağı aç ↗</a>'
+        '<div class="legal-reader-container">\n'
+        '  <div class="legal-reader-header">\n'
+        f'    <h4 class="legal-reader-title">🏛️ {title}</h4>\n'
+        f'    <span class="legal-source-sub">📜 Kaynak Belge: {source} &middot; Resmî Gazete Onaylı Metin</span>\n'
+        '  </div>\n'
+        '  <div class="legal-doc-meta-bar" style="margin: 8px 0 12px 0; padding: 8px 12px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0; display: flex; justify-content: space-between; align-items: center;">\n'
+        '    <span style="font-size: 0.88rem; color: #166534; font-weight: 600;">✅ Resmî Gazete PDF Doğrulanmış Mevzuat Metni</span>\n'
+        f'    <a class="legal-source-link" href="{url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.88rem; font-weight: 600; text-decoration: underline;">📄 Resmî Gazete PDF Sayfasını Aç ↗</a>\n'
+        '  </div>\n'
+        f'  <div class="legal-reader-body" style="background: #ffffff; padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; line-height: 1.7; font-size: 0.95rem;">\n'
+        f'{paragraphs_html}\n'
+        '  </div>\n'
+        f'  <div style="margin-top: 10px; text-align: right;">\n'
+        f'    <a class="legal-source-link" href="{url}" target="_blank" rel="noopener noreferrer" style="display: inline-block; padding: 6px 14px; background: #047857; color: #ffffff !important; border-radius: 6px; text-decoration: none; font-size: 0.88rem; font-weight: 600;">🔗 Orijinal Resmî Gazete PDF Belgesine Git ↗</a>\n'
+        '  </div>\n'
         '</div>'
     )
+

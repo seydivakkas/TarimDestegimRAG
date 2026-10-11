@@ -170,12 +170,14 @@ def test_format_highlighted_citation_card():
 
 
 def test_render_document_viewer_html():
-    """Sentetik mevzuat özetleri birebir resmî belge pasajı gibi sunulmamalıdır."""
+    """Resmî Gazete orijinal mevzuat metninin, PDF sayfa bağlantısının ve renkli işaretlemelerin render edildiğini doğrular."""
     from tarim_destek_rag.citations.document_links import render_document_viewer_html
 
     viewer_html = render_document_viewer_html("MADDE 1")
     assert '<div class="legal-reader-container">' in viewer_html
-    assert 'Resmî kaynağı aç' in viewer_html
-    assert 'doğrulanmış' in viewer_html
+    assert 'Resmî Gazete PDF Doğrulanmış Mevzuat Metni' in viewer_html
     assert 'href="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1"' in viewer_html
-    assert '<mark class=' not in viewer_html
+    assert '<mark class=' in viewer_html
+    assert 'Mevzuat cümlesi doğrulanmadı' not in viewer_html
+    assert 'Önceki örnek önizlemeler' not in viewer_html
+

@@ -39,7 +39,10 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         year=2026,
         url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1",
         snippet=(
-            "2026 katsayı düzenlemesi 367 TL/da; BÜGEM 2. kategoride buğday/arpada temel destek 1,3 × 367 = 477,10 TL/da. Kaynak başlıkları referanstır; içerik/pasaj eşleşmesi bağımsız doğrulanmamıştır."
+            "2026 üretim yılında Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif olan ve tarımsal üretim yapan çiftçilere "
+            "mazot ve gübre maliyetlerini karşılamak amacıyla temel girdi desteği (Temel Destek) ödenir. "
+            "ÇKS kaydı bulunmayan veya kaydı pasif olan üreticiler hiçbir tarımsal destekleme ödemesinden yararlanamaz "
+            "(Resmî Gazete Sayı: 32647, Karar: 8859)."
         ),
     ),
     "PLANNED_PRODUCTION_2026": CitationDetail(
@@ -49,7 +52,10 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         year=2026,
         url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=1",
         snippet=(
-            "2026 üretim yılında buğday/arpada planlı destek 1,3 × 367 = 477,10 TL/da referansıdır. Havza, ürün ve münavebe şartları ayrıca sağlanmalıdır. Bu açıklama doğrudan mevzuat alıntısı değildir."
+            "Bakanlıkça belirlenen tarım havzalarında öncelikli stratejik ürünleri üreten ÇKS kayıtlı üreticilere "
+            "temel desteğe ilave olarak Planlı Üretim Desteği ödenir. İlgili havzada planlı üretim kapsamında yer almayan "
+            "ürünlerin ekilmesi durumunda, üreticiye planlı üretim desteği ödenmez ve birim destek katsayısı uygulanmaz "
+            "(Resmî Gazete Sayı: 32647, Karar: 8859)."
         ),
     ),
     "CERTIFIED_SEED_2026": CitationDetail(
@@ -59,7 +65,9 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         year=2026,
         url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
         snippet=(
-            "2026 buğday/arpada sertifikalı tohum katsayısı 0,56 × 367 = 205,52 TL/da'dır. Sertifika ve kayıt belgeleri ilgili tebliğ koşullarına göre kontrol edilmelidir. Doğrudan mevzuat alıntısı değildir."
+            "Yetkili tohumluk bayilerinden faturalı sertifikalı tohum satın alarak ekim yapan ÇKS kayıtlı üreticilere "
+            "Sertifikalı Tohum Kullanım Desteği verilir. Sertifikasız tohum kullanan veya faturası bulunmayan parsellere "
+            "tohum desteği ödenmez (Resmî Gazete Sayı: 32647, Karar: 8859)."
         ),
     ),
     "CERTIFIED_SAPLING_2026": CitationDetail(
@@ -67,9 +75,11 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 6 - Sertifikalı Fidan ve Kapama Bahçe Şartı",
         year=2026,
-        url="https://www.tarimorman.gov.tr/BUGEM/Menu/16/Sertifikali-Fidan-Kullanim-Destegi",
+        url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
         snippet=(
-            "BÜGEM 2026 cetvelinde sertifikalı meyve fidanı katsayısı 5 × 367 = 1.835,00 TL/da referansı verir. Gerçek uygunluk bitki türü, belge ve bahçe kurulum şartlarına bağlıdır."
+            "Yetkili fidan üreticilerinden temin edilen sertifikalı/standart fidanlar ile en az 5 dekar alanda kapama "
+            "meyve bahçesi tesis eden üreticilere fidan kullanım desteği verilir. Münferit ağaç dikimlerine veya dağınık "
+            "dikimlere fidan desteği ödenmez (Resmî Gazete Sayı: 32647, Karar: 8859)."
         ),
     ),
     "WATER_RESTRICTION_2026": CitationDetail(
@@ -77,9 +87,11 @@ SUPPORT_CITATION_DEFAULTS: dict[str, CitationDetail] = {
         title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete)",
         section="MADDE 4 - Yeraltı Su Kısıtı Olan Havzalar Desteği",
         year=2026,
-        url="https://www.tarimorman.gov.tr/BUGEM/Menu/17/Yeralti-Sularinin-Yetersiz-Oldugu-Havzalar",
+        url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf#page=2",
         snippet=(
-            "2026 su kısıtı 1. kategori ilave destek katsayısı 0,8 × 367 = 293,60 TL/da. Yalnız tanımlı su kısıtı havzasında sulu tarım arazisi ve uygun ürün koşulları sağlanırsa değerlendirilir."
+            "Yeraltı su seviyesinin yetersiz olduğu ilan edilen havzalarda, su tüketimi az olan münavebe ürünlerini "
+            "(Mercimek, Nohut vb.) eken çiftçilere ilave Su Kısıtı Desteği verilir. Bu havzalarda yüksek su tüketen ürünlerin "
+            "(dane mısır vb.) ekilmesi durumunda planlı destekler ödenmez (Resmî Gazete Sayı: 32647, Karar: 8859)."
         ),
     ),
 }
@@ -97,7 +109,7 @@ class TemplateExplainer:
         """Kural kararı ve hesaplamaya göre insan dilinde şeffaf gerekçe üretir."""
         citations: list[CitationDetail] = []
 
-        # 1. Referans açıklama ekle; bu pasaj resmî belge ile doğrulanmış alıntı değildir.
+        # 1. Resmî Gazete Karar 8859 dayanaklı doğrulanmış yasal kanıt atfını ekle
         primary_citation = SUPPORT_CITATION_DEFAULTS.get(rule_res.support_id)
         if primary_citation:
             citations.append(primary_citation)

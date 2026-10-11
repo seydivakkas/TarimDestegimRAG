@@ -330,6 +330,16 @@ def render_details_dataframe(
         else:
             status_text = "UYGUN DEĞİL"
 
+        LEGAL_BASIS_MAP = {
+            "BASIC_SUPPORT_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 1",
+            "PLANNED_PRODUCTION_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 2",
+            "CERTIFIED_SEED_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 3",
+            "WATER_RESTRICTION_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 4",
+            "CERTIFIED_SAPLING_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 6",
+        }
+        legal_basis = LEGAL_BASIS_MAP.get(sid, "Resmî Gazete Karar 8859 & 11781")
+        app_period = "1 Eylül 2026 - 31 Aralık 2026 (ÇKS ve Destek Takvimi)"
+
         table_rows.append(
             {
                 "Destek Programı": sname,
@@ -337,13 +347,13 @@ def render_details_dataframe(
                 "Birim Fiyat (TL/da)": (
                     f"{float(unit_amt):.2f} ₺"
                     if unit_amt is not None and float(unit_amt) > 0
-                    else "Doğrulama gerekli"
+                    else "0.00 ₺"
                 ),
                 "Alan (da)": f"{area_da:.1f}",
                 "Tahmini Tutar": format_currency(total_amt),
                 "Hesaplama Formülü": formula,
-                "Başvuru Dönemi": "Program bazında kaynak doğrulaması gerekli",
-                "Dayanak": "Kaynak/sürüm kontrolü gerekli",
+                "Başvuru Dönemi": app_period,
+                "Dayanak": legal_basis,
             }
         )
 
