@@ -374,6 +374,35 @@ class RuleActivationPipeline:
             ]
             if len(matches) != 1:
                 return False
+            # The original signer records must be the two events immediately
+            # preceding this activation. A valid signature on the rule digest
+            # alone does not authenticate the mutable actor_id, role or
+            # signed_at fields of a locally stored activation manifest.
+            activation = matches[0]
+            if activation.block_index < 2:
+                return False
+            signed_events = blocks[activation.block_index - 2:activation.block_index]
+            if len(signed_events) != 2:
+                return False
+            for block, att, event_type in zip(
+                signed_events,
+                (reviewer, approver),
+                ("ATTESTATION_REVIEW", "ATTESTATION_APPROVAL"),
+                strict=True,
+            ):
+                if (
+                    block.event_type != event_type
+                    or block.production_year != production_year
+                    or block.manifest_sha256 != manifest.rules_digest
+                    or block.actor_id != att.actor_id
+                    or block.role != att.role
+                    or block.public_key_b64 != att.public_key_b64
+                    or block.signature_b64 != att.signature_b64
+                    or block.metadata.get("rules_count") != manifest.rule_count
+                    or block.metadata.get("signed_at") != att.signed_at
+                    or block.metadata.get("statement") != att.statement
+                ):
+                    return False
             return not any(
                 b.event_type == "RULE_REVOCATION"
                 and b.production_year == production_year
@@ -505,7 +534,12 @@ class RuleActivationPipeline:
             manifest_sha256=calculated_rules_digest,
             signature_b64=reviewer_attestation.signature_b64,
             public_key_b64=reviewer_attestation.public_key_b64,
-            metadata={"notes": reviewer_attestation.notes, "rules_count": len(rules)},
+            metadata={
+                "notes": reviewer_attestation.notes,
+                "rules_count": len(rules),
+                "signed_at": reviewer_attestation.signed_at,
+                "statement": reviewer_attestation.statement,
+            },
         )
 
         # 6b. Onay Olayı
@@ -517,7 +551,12 @@ class RuleActivationPipeline:
             manifest_sha256=calculated_rules_digest,
             signature_b64=approver_attestation.signature_b64,
             public_key_b64=approver_attestation.public_key_b64,
-            metadata={"notes": approver_attestation.notes, "rules_count": len(rules)},
+            metadata={
+                "notes": approver_attestation.notes,
+                "rules_count": len(rules),
+                "signed_at": approver_attestation.signed_at,
+                "statement": approver_attestation.statement,
+            },
         )
 
         # 6c. Aktivasyon Olayı
