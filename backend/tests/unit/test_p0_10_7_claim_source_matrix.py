@@ -157,7 +157,6 @@ def test_ek20_transcript_requires_all_rows_and_nonnegative_cell_values(
 
 def test_original_amendment_highlight_returns_source_bound_sandboxed_copy() -> None:
     from fastapi.testclient import TestClient
-
     from tarim_destek_rag.api.main import app
 
     matrix = _matrix()
