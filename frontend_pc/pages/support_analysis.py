@@ -90,6 +90,25 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 value="<p>Henüz kaynak kanıtı seçilmedi. "
                 "Belge arşivi yoksa sayfa gösterilmez.</p>"
             )
+            from tarim_destek_rag.citations.source_region_viewer import (
+                page_region_choices,
+                render_source_region,
+            )
+
+            gr.Markdown(
+                "**Sayfa içi yakınlaştırma:** Gerçek PDF'den tespit edilen tablo, "
+                "görsel veya çizim bölgelerini özgün koordinatlarıyla büyütün. "
+                "Bölgenin hukukî ve sayısal anlamı ayrıca incelenmelidir."
+            )
+            region_selector = gr.Dropdown(
+                choices=[],
+                value=None,
+                label="Gerçek sayfadaki tablo / görsel / çizim bölgesi",
+                interactive=True,
+            )
+            region_display = gr.HTML(
+                value="<p>Bir sayfa ve sayfa içi görsel bölge seçin.</p>"
+            )
             btn_page_ocr = gr.Button(
                 "Seçili gerçek sayfayı yerel OCR ile oku (inceleme taslağı)",
                 variant="secondary",
@@ -106,6 +125,18 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 update_article_view,
                 inputs=[article_selector, page_search_input],
                 outputs=[article_display],
+            )
+            article_selector.change(
+                lambda key: gr.update(
+                    choices=page_region_choices(key), value=None,
+                ),
+                inputs=[article_selector],
+                outputs=[region_selector],
+            )
+            region_selector.change(
+                render_source_region,
+                inputs=[region_selector],
+                outputs=[region_display],
             )
             btn_page_search.click(
                 update_article_view,
@@ -158,6 +189,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "article_selector": article_selector,
         "article_display": article_display,
         "ocr_display": ocr_display,
+        "region_selector": region_selector,
+        "region_display": region_display,
         "btn_report": btn_report,
         "file_report": file_report,
         "out_disclaimer": out_disclaimer,
