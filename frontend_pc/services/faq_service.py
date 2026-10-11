@@ -61,7 +61,7 @@ def get_faq_table(
                 "Kategori": f.get("category", "-"),
                 "Soru": f.get("question", "-"),
                 "Özet Cevap": ans_short,
-                "Resmî Yasal Dayanak": citation,
+                "Kaynak notu (doğrulanmamış pasaj)": citation,
             }
         )
     return pd.DataFrame(rows)
@@ -87,7 +87,7 @@ def ask_assistant(
 
     formatted_reply = f"{answer}\n\n"
     if chunks:
-        formatted_reply += "---\n#### 🏛️ Doğrulanmış Resmî Mevzuat Dayanakları & Alıntılar (İşaretli Kanıt Metni):\n"
+        formatted_reply += "---\n#### Kaynak parçaları (tekil resmî pasaj incelemesi bekliyor):\n"
         for i, c in enumerate(chunks[:3], 1):
             if isinstance(c, dict):
                 src = c.get("source_id", "RG")
@@ -106,23 +106,7 @@ def ask_assistant(
             else:
                 formatted_reply += f'\n> **[{i}]** *"{c}"*\n'
 
-    try:
-        from tarim_destek_rag.citations.pdf_page_indexer import get_global_pdf_indexer
-        indexer = get_global_pdf_indexer()
-        matches = indexer.search_pages(user_message.strip(), top_k=1)
-        if matches:
-            top_m = matches[0]
-            arts = ", ".join(top_m.articles_contained) if top_m.articles_contained else "Genel Mevzuat"
-            formatted_reply += (
-                f"\n---\n📌 **Doğrudan Resmî Gazete Sayfa & Tablo Kanıtı:**\n"
-                f"- **Resmî Belge:** {top_m.doc_title} (Sayı: {top_m.gazette_issue}, Tarih: {top_m.gazette_date})\n"
-                f"- **İlgili Sayfa:** 📄 **Sayfa {top_m.page_number} / {top_m.total_pages}** ({arts})\n"
-                f"- **Doğrudan PDF Bağlantısı:** [📄 Orijinal Resmî Gazete Sayfa {top_m.page_number}'yi Aç ↗]({top_m.official_url})\n"
-            )
-            if top_m.tables:
-                formatted_reply += f"- **Sayfadaki Resmî Tablo:** `{top_m.tables[0].table_id}` ({top_m.tables[0].row_count} satır birim destek/katsayı cetveli)\n"
-    except Exception as e:
-        logger.debug("Asistan sayfa arama uyarısı: %s", e)
+    # No automatic 'top page' citation: search ranking is not exact evidence.
 
     new_history = list(chat_history)
     new_history.append({"role": "user", "content": user_message})

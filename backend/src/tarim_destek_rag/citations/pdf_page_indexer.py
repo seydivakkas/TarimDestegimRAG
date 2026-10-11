@@ -1,1090 +1,377 @@
-"""Resmî Gazete ve Mevzuat Belgeleri Sayfa Bazlı OCR, Tablo, Grafik ve Kanıt İndeksleyici.
-
-Resmî Gazete PDF'lerini sayfa sayfa analiz eder:
-- Tüm metinleri (paragraf, madde, bent) layout duyarlı olarak çıkarır.
-- Resmî cetvel tablolarını (Birim Fiyat, Katsayı, İcmal) yapılandırılmış tablo olarak ayrıştırır.
-- Vektör grafiklerini, mühür ve çerçeveleri tespit eder.
-- Yüksek çözünürlüklü sayfa önizlemelerini (144 DPI) oluşturur.
-- Her kanıt isteğinde tam olarak ilgili sayfayı (#page=X), tabloyu ve görsel delili sunar.
-
-Telif Hakkı (c) 2026 Seydi Eryılmaz (@seydivakkas)
-ÖZEL LİSANS — TÜM HAKLAR SAKLIDIR
-"""
-
+"""SHA-pinned original PDF screenshot explorer; never create a Gazette PDF."""
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
-import logging
+import os
 import re
-from dataclasses import asdict, dataclass, field
-from io import BytesIO
+import shutil
+import subprocess
+from dataclasses import dataclass, field
+from html import escape
 from pathlib import Path
 from typing import Any
 
-from tarim_destek_rag.citations.document_links import highlight_legal_text
-
-logger = logging.getLogger("tarim_destek_rag.citations.pdf_page_indexer")
+HOLD_HTML = (
+    '<section style="padding:20px;border-left:5px solid #d97706;'
+    'background:#fffbeb"><strong>HOLD — Özgün kanıt bulunamadı.</strong>'
+    '<p>SHA-256 ile doğrulanmış gerçek belge/sayfa yok; sentetik PDF, '
+    'tahmini hüküm, yanlış sayfa veya sahte OCR gösterilmez.</p></section>'
+)
+_GLOBAL_INDEXER: OfficialPdfIndexer | None = None
 
 
 def normalize_tr(text: str) -> str:
-    """Türkçe karakterleri ve aramayı küçük harf ve fonetik benzerlikte eşitler."""
-    if not text:
-        return ""
-    t = (
-        text.strip()
-        .lower()
-        .replace("i̇", "i")
-        .replace("ı", "i")
-        .replace("ğ", "g")
-        .replace("ü", "u")
-        .replace("ş", "s")
-        .replace("ö", "o")
-        .replace("ç", "c")
-    )
-    return re.sub(r"\s+", " ", t)
+    t = (text or "").casefold().replace("ı", "i").replace("i̇", "i")
+    for a, b in (("ğ", "g"), ("ü", "u"), ("ş", "s"), ("ö", "o"), ("ç", "c")):
+        t = t.replace(a, b)
+    return " ".join(t.split())
 
 
 @dataclass
 class PageTableData:
-    """PDF sayfasından çıkarılan yapılandırılmış tablo verisi."""
-
     table_id: str
     bbox: tuple[float, float, float, float]
     headers: list[str]
     rows: list[list[str]]
-    markdown: str
+    markdown: str = ""
     row_count: int = 0
     col_count: int = 0
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "table_id": self.table_id,
-            "bbox": list(self.bbox),
-            "headers": self.headers,
-            "rows": self.rows,
-            "markdown": self.markdown,
-            "row_count": self.row_count,
-            "col_count": self.col_count,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PageTableData:
-        bbox_val = tuple(data.get("bbox", (0.0, 0.0, 0.0, 0.0)))
-        return cls(
-            table_id=data.get("table_id", "TAB_0"),
-            bbox=bbox_val,  # type: ignore[arg-type]
-            headers=data.get("headers", []),
-            rows=data.get("rows", []),
-            markdown=data.get("markdown", ""),
-            row_count=data.get("row_count", 0),
-            col_count=data.get("col_count", 0),
-        )
 
 
 @dataclass
 class PageGraphicsData:
-    """PDF sayfasındaki grafik, mühür, çerçeve ve vektörel çizim analiz verisi."""
-
     drawings_count: int = 0
     images_count: int = 0
     summary: str = ""
     has_table_borders: bool = False
     has_official_seal: bool = False
 
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "drawings_count": self.drawings_count,
-            "images_count": self.images_count,
-            "summary": self.summary,
-            "has_table_borders": self.has_table_borders,
-            "has_official_seal": self.has_official_seal,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> PageGraphicsData:
-        return cls(
-            drawings_count=data.get("drawings_count", 0),
-            images_count=data.get("images_count", 0),
-            summary=data.get("summary", ""),
-            has_table_borders=data.get("has_table_borders", False),
-            has_official_seal=data.get("has_official_seal", False),
-        )
-
 
 @dataclass
 class OfficialGazettePageRecord:
-    """Tek bir Resmî Gazete sayfasının eksiksiz metin, tablo, grafik ve görsel kanıt kaydı."""
-
     doc_id: str
     doc_title: str
-    page_number: int  # 1-indexed
+    page_number: int
     total_pages: int
     gazette_issue: str
     gazette_date: str
     official_url: str
-    raw_text: str
-    highlighted_html: str
+    raw_text: str = ""
+    highlighted_html: str = ""
     articles_contained: list[str] = field(default_factory=list)
     tables: list[PageTableData] = field(default_factory=list)
     graphics: PageGraphicsData = field(default_factory=PageGraphicsData)
     image_path: str | None = None
     image_base64: str | None = None
     keywords: list[str] = field(default_factory=list)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "doc_id": self.doc_id,
-            "doc_title": self.doc_title,
-            "page_number": self.page_number,
-            "total_pages": self.total_pages,
-            "gazette_issue": self.gazette_issue,
-            "gazette_date": self.gazette_date,
-            "official_url": self.official_url,
-            "raw_text": self.raw_text,
-            "highlighted_html": self.highlighted_html,
-            "articles_contained": self.articles_contained,
-            "tables": [t.to_dict() for t in self.tables],
-            "graphics": self.graphics.to_dict(),
-            "image_path": self.image_path,
-            "image_base64": self.image_base64,
-            "keywords": self.keywords,
-        }
-
-    @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> OfficialGazettePageRecord:
-        tables = [PageTableData.from_dict(t) for t in data.get("tables", [])]
-        graphics = PageGraphicsData.from_dict(data.get("graphics", {}))
-        return cls(
-            doc_id=data.get("doc_id", ""),
-            doc_title=data.get("doc_title", ""),
-            page_number=data.get("page_number", 1),
-            total_pages=data.get("total_pages", 1),
-            gazette_issue=data.get("gazette_issue", ""),
-            gazette_date=data.get("gazette_date", ""),
-            official_url=data.get("official_url", ""),
-            raw_text=data.get("raw_text", ""),
-            highlighted_html=data.get("highlighted_html", ""),
-            articles_contained=data.get("articles_contained", []),
-            tables=tables,
-            graphics=graphics,
-            image_path=data.get("image_path"),
-            image_base64=data.get("image_base64"),
-            keywords=data.get("keywords", []),
-        )
+    source_sha256: str = ""
+    text_status: str = "IMAGE_ONLY_OCR_PENDING"
 
 
 class OfficialPdfIndexer:
-    """Resmî Gazete ve Mevzuat PDF'lerini OCR, layout, tablo ve grafik duyarlı indeksleyen motor."""
+    """No historical JSON cache can be trusted without rechecking original bytes."""
 
     def __init__(
-        self,
-        index_path: Path | str | None = None,
-        image_dir: Path | str | None = None,
+        self, index_path: Path | str | None = None,
+        image_dir: Path | str | None = None, *,
+        archive_root: Path | str | None = None,
+        manifest_path: Path | str | None = None,
     ) -> None:
         self.index_path = Path(index_path or "data/indexes/gazette_page_index.json")
         self.image_dir = Path(image_dir or "data/indexes/page_previews")
-        self.image_dir.mkdir(parents=True, exist_ok=True)
-        self.index_path.parent.mkdir(parents=True, exist_ok=True)
+        self.archive_root = Path(archive_root or os.getenv(
+            "TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+        self.manifest_path = Path(manifest_path or os.getenv(
+            "TARIM_RAG_ORIGINAL_SOURCE_MANIFEST",
+            "configs/p0_10_3_original_source_manifest.json"))
         self._records: dict[str, list[OfficialGazettePageRecord]] = {}
-        self.load_index()
+
+    def _source(self, doc_id: str) -> dict[str, Any]:
+        sources = json.loads(self.manifest_path.read_text(encoding="utf-8"))["sources"]
+        selected = [s for s in sources
+                    if s.get("id") == doc_id and s.get("format") == "pdf"]
+        if len(selected) != 1:
+            raise ValueError("Missing or ambiguous original PDF source")
+        item = selected[0]
+        url, digest = item.get("url"), item.get("original_sha256")
+        if (not isinstance(digest, str)
+                or not re.fullmatch(r"[a-f0-9]{64}", digest)
+                or not isinstance(url, str)
+                or not url.startswith("https://")
+                or url.split("/")[2] not in (
+                    "www.resmigazete.gov.tr", "resmigazete.gov.tr",
+                    "www.tarimorman.gov.tr", "tarimorman.gov.tr")):
+            raise ValueError("Unpinned or untrusted official source identity")
+        return item
+
+    def _verified_pdf(self, doc_id: str) -> tuple[dict[str, Any], bytes]:
+        source = self._source(doc_id)
+        digest = source["original_sha256"]
+        raw = (self.archive_root / "originals" / (digest + ".pdf")).read_bytes()
+        if (not raw or len(raw) > 100_000_000
+                or (source.get("original_bytes") is not None
+                    and len(raw) != source["original_bytes"])
+                or hashlib.sha256(raw).hexdigest() != digest):
+            raise ValueError("Original PDF digest/size mismatch")
+        return source, raw
 
     def index_pdf(
-        self,
-        pdf_bytes: bytes,
-        *,
-        doc_id: str,
-        doc_title: str,
-        gazette_issue: str,
-        gazette_date: str,
-        official_url: str,
-        save_rendered_images: bool = True,
-        render_dpi: int = 144,
+        self, pdf_bytes: bytes, *, doc_id: str, doc_title: str,
+        gazette_issue: str, gazette_date: str, official_url: str,
+        save_rendered_images: bool = False, render_dpi: int = 144,
     ) -> list[OfficialGazettePageRecord]:
-        """Verilen PDF baytlarını sayfa sayfa okur, tablo/grafikleri ayıklar ve indeksler."""
         import pymupdf
 
-        records: list[OfficialGazettePageRecord] = []
-        doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
-        total_pages = len(doc)
-
-        try:
-            for page_idx in range(total_pages):
-                page = doc[page_idx]
-                page_num = page_idx + 1
-
-                # 1. Metin Çıkarma
+        item, original = self._verified_pdf(doc_id)
+        if (pdf_bytes != original or official_url != item["url"]
+                or save_rendered_images or not 72 <= render_dpi <= 250):
+            raise ValueError("An unsigned/synthetic PDF cannot be official evidence")
+        pages: list[OfficialGazettePageRecord] = []
+        with pymupdf.open(stream=original, filetype="pdf") as doc:
+            if not 1 <= len(doc) <= 1000:
+                raise ValueError("Invalid original page count")
+            for i, page in enumerate(doc):
                 raw_text = page.get_text("text").strip()
-
-                # 2. OCR Fallback (Metin katmanı yoksa görsel blok bilgilendirmesi)
-                if not raw_text:
-                    raw_text = (
-                        f"[TARANMIŞ RESMÎ GAZETE SAYFASI: Sayfa {page_num}]\n"
-                        f"Bu sayfa taranmış/grafik formatta olup optik karakter ve görsel analiz katmanı aktiftir."
-                    )
-
-                # 3. Tablo Çıkarma (PyMuPDF Layout TableFinder)
-                extracted_tables: list[PageTableData] = []
-                try:
-                    tabs = page.find_tables()
-                    for t_idx, tab in enumerate(tabs.tables, 1):
-                        table_cells = tab.extract()
-                        if table_cells and len(table_cells) > 0:
-                            headers = [str(c or "").strip() for c in table_cells[0]]
-                            rows = [
-                                [str(c or "").strip() for c in r]
-                                for r in table_cells[1:]
-                            ]
-                            # Markdown formatı oluştur
-                            md_lines = [
-                                "| " + " | ".join(headers) + " |",
-                                "| " + " | ".join(["---"] * len(headers)) + " |",
-                            ]
-                            for r in rows:
-                                md_lines.append("| " + " | ".join(r) + " |")
-                            md_content = "\n".join(md_lines)
-
-                            bbox = tuple(float(x) for x in tab.bbox)
-                            extracted_tables.append(
-                                PageTableData(
-                                    table_id=f"{doc_id}_P{page_num}_T{t_idx}",
-                                    bbox=bbox,  # type: ignore[arg-type]
-                                    headers=headers,
-                                    rows=rows,
-                                    markdown=md_content,
-                                    row_count=len(rows),
-                                    col_count=len(headers),
-                                )
-                            )
-                except Exception as e:
-                    logger.debug("Tablo çıkarma uyarısı (Sayfa %d): %s", page_num, e)
-
-                # 4. Çizim & Grafik Analizi
-                drawings = page.get_drawings()
-                images = page.get_images()
-                graphics_data = PageGraphicsData(
-                    drawings_count=len(drawings),
-                    images_count=len(images),
-                    summary=f"{len(drawings)} vektörel çizim/çerçeve, {len(images)} resim bloğu tespit edildi.",
-                    has_table_borders=len(drawings) > 4,
-                    has_official_seal="T.C." in raw_text or len(images) > 0,
-                )
-
-                # 5. İçerilen Maddeleri Tespit Etme
-                articles = re.findall(
-                    r"\b(MADDE\s+\d+|GEÇİCİ\s+MADDE\s+\d+|EK\s+TABLO|TABLO\s+\d+)\b",
-                    raw_text,
-                    re.IGNORECASE,
-                )
-                articles_normalized = sorted(
-                    list({a.upper().replace("  ", " ") for a in articles})
-                )
-
-                # 6. Hukuki Renkli Vurgulama
-                highlighted_html = highlight_legal_text(raw_text)
-
-                # 7. Sayfa Görseli Rasterizasyonu (144 DPI)
-                image_path_str: str | None = None
-                image_base64_str: str | None = None
-                if save_rendered_images:
+                tables = []
+                if raw_text:
                     try:
-                        pix = page.get_pixmap(dpi=render_dpi, alpha=False)
-                        img_bytes = pix.tobytes("png")
-                        img_filename = f"{doc_id}_page_{page_num}.png"
-                        out_img_path = self.image_dir / img_filename
-                        out_img_path.write_bytes(img_bytes)
-                        image_path_str = str(out_img_path)
-                        image_base64_str = (
-                            f"data:image/png;base64,{base64.b64encode(img_bytes).decode('ascii')}"
-                        )
-                    except Exception as e:
-                        logger.warning("Sayfa %d görseli oluşturulamadı: %s", page_num, e)
-
-                # 8. Anahtar Kelimeler
-                keywords = self._extract_keywords(raw_text, extracted_tables)
-
-                # Sayfa URL'si (#page=X çapa bağlantısı)
-                page_url = (
-                    f"{official_url}#page={page_num}"
-                    if "#page=" not in official_url
-                    else official_url
-                )
-
-                record = OfficialGazettePageRecord(
-                    doc_id=doc_id,
-                    doc_title=doc_title,
-                    page_number=page_num,
-                    total_pages=total_pages,
-                    gazette_issue=gazette_issue,
+                        for num, table in enumerate(page.find_tables().tables, 1):
+                            cells = table.extract()
+                            if cells:
+                                header = [str(v or "") for v in cells[0]]
+                                rows = [[str(v or "") for v in row] for row in cells[1:]]
+                                tables.append(PageTableData(
+                                    table_id=f"{doc_id}:P{i+1}:T{num}",
+                                    bbox=tuple(table.bbox), headers=header,
+                                    rows=rows, row_count=len(rows),
+                                    col_count=len(header),
+                                ))
+                    except (AttributeError, ValueError, TypeError):
+                        pass
+                pages.append(OfficialGazettePageRecord(
+                    doc_id=doc_id, doc_title=doc_title, page_number=i+1,
+                    total_pages=len(doc), gazette_issue=gazette_issue,
                     gazette_date=gazette_date,
-                    official_url=page_url,
-                    raw_text=raw_text,
-                    highlighted_html=highlighted_html,
-                    articles_contained=articles_normalized,
-                    tables=extracted_tables,
-                    graphics=graphics_data,
-                    image_path=image_path_str,
-                    image_base64=image_base64_str,
-                    keywords=keywords,
-                )
-                records.append(record)
-
-            self._records[doc_id] = records
-            self.save_index()
-            return records
-        finally:
-            doc.close()
-
-    def _extract_keywords(
-        self, text: str, tables: list[PageTableData]
-    ) -> list[str]:
-        """Sayfa metninden ve tablolarından tarımsal arama anahtarlarını çıkarır."""
-        candidates = {
-            "buğday", "arpa", "mısır", "dane mısır", "ayçiçeği", "pamuk", "soya",
-            "mercimek", "nohut", "fındık", "patates", "soğan", "yem bitkileri",
-            "kanola", "kolza", "kuru fasulye",
-            "çks", "çiftçi kayıt sistemi", "temel destek", "planlı üretim",
-            "su kısıtı", "genç çiftçi", "kadın çiftçi", "sertifikalı tohum",
-            "sertifikalı fidan", "kapama bahçe", "katsayı", "310", "465", "540",
-            "250", "367", "mazot", "gübre", "havza", "münavebe", "askı icmali",
-            "5 gün", "haciz", "kira", "hisseli", "itiraz"
-        }
-        text_norm = normalize_tr(text)
-        found: set[str] = set()
-        for cand in candidates:
-            if normalize_tr(cand) in text_norm:
-                found.add(cand)
-
-        for tab in tables:
-            for h in tab.headers:
-                h_n = normalize_tr(h)
-                for cand in candidates:
-                    if normalize_tr(cand) in h_n:
-                        found.add(cand)
-            for r in tab.rows:
-                for c in r:
-                    c_n = normalize_tr(c)
-                    for cand in candidates:
-                        if normalize_tr(cand) in c_n:
-                            found.add(cand)
-
-        return sorted(list(found))
-
-    def search_pages(
-        self, query: str, doc_id: str | None = None, top_k: int = 5
-    ) -> list[OfficialGazettePageRecord]:
-        """Sorguya en uygun Resmî Gazete sayfalarını alaka düzeyine göre sıralar."""
-        if not query or not query.strip():
-            return self.get_all_pages()[:top_k]
-
-        q_norm = normalize_tr(query)
-        results: list[tuple[float, OfficialGazettePageRecord]] = []
-
-        pool = (
-            self._records.get(doc_id, [])
-            if doc_id and doc_id in self._records
-            else self.get_all_pages()
-        )
-
-        for rec in pool:
-            score = 0.0
-
-            # 1. Madde Tam Eşleşmesi (örn: "madde 1", "madde 2", "ek tablo")
-            for art in rec.articles_contained:
-                art_n = normalize_tr(art)
-                if art_n in q_norm or q_norm in art_n:
-                    score += 50.0
-
-            # 2. Sayfa Numarası Doğrudan Sorgusu (örn: "sayfa 1", "sayfa 2", "p1", "page 2")
-            if f"sayfa {rec.page_number}" in q_norm or f"page {rec.page_number}" in q_norm:
-                score += 40.0
-
-            # 3. Tablo Başlık ve Hücrelerinde Eşleşme
-            for tab in rec.tables:
-                for h in tab.headers:
-                    if q_norm in normalize_tr(h):
-                        score += 35.0
-                for r in tab.rows:
-                    for c in r:
-                        if q_norm in normalize_tr(c):
-                            score += 30.0
-
-            # 4. Anahtar Kelime Eşleşmesi
-            for kw in rec.keywords:
-                kw_n = normalize_tr(kw)
-                if kw_n in q_norm or q_norm in kw_n:
-                    score += 20.0
-
-            # 5. Ham Metin ve Kelime Bazlı Eşleşme
-            rec_text_norm = normalize_tr(rec.raw_text)
-            if q_norm in rec_text_norm:
-                score += 25.0
-            else:
-                q_words = [w for w in q_norm.split() if len(w) >= 3]
-                if q_words:
-                    matched_words = sum(
-                        1
-                        for w in q_words
-                        if w in rec_text_norm
-                        or any(w in normalize_tr(kw) for kw in rec.keywords)
-                    )
-                    if matched_words == len(q_words):
-                        score += 20.0
-                    elif matched_words > 0:
-                        score += (matched_words / len(q_words)) * 10.0
-
-            # 6. Belge Başlığı Eşleşmesi
-            if q_norm in normalize_tr(rec.doc_title):
-                score += 8.0
-
-            if score > 0:
-                results.append((score, rec))
-
-        results.sort(key=lambda x: x[0], reverse=True)
-        return [r[1] for r in results[:top_k]]
-
-    def get_page(
-        self, doc_id: str, page_number: int
-    ) -> OfficialGazettePageRecord | None:
-        """Belirli bir belgenin tam sayfa kaydını döner."""
-        recs = self._records.get(doc_id, [])
-        for r in recs:
-            if r.page_number == page_number:
-                return r
-        return None
-
-    def get_article_page(self, article_key: str) -> OfficialGazettePageRecord | None:
-        """Madde adına göre doğrudan en uygun sayfayı bulur."""
-        clean_key = normalize_tr(article_key)
-        all_pages = self.get_all_pages()
-
-        # Öncelik 1: Madde listesinde birebir geçen sayfa
-        for rec in all_pages:
-            for art in rec.articles_contained:
-                art_n = normalize_tr(art)
-                if clean_key in art_n or art_n in clean_key:
-                    return rec
-
-        # Öncelik 2: Arama skoru en yüksek sayfa
-        matches = self.search_pages(article_key, top_k=1)
-        return matches[0] if matches else (all_pages[0] if all_pages else None)
-
-    def get_all_pages(self) -> list[OfficialGazettePageRecord]:
-        """İndeksteki tüm sayfaları düz liste olarak döner."""
-        all_recs: list[OfficialGazettePageRecord] = []
-        for doc_recs in self._records.values():
-            all_recs.extend(doc_recs)
-        return all_recs
-
-    def save_index(self, path: Path | str | None = None) -> None:
-        """İndeksi JSON olarak diske kaydeder."""
-        target = Path(path or self.index_path)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        data = {
-            doc_id: [rec.to_dict() for rec in rec_list]
-            for doc_id, rec_list in self._records.items()
-        }
-        target.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
-
-    def load_index(self, path: Path | str | None = None) -> None:
-        """Diskteki JSON indeksini belleğe yükler."""
-        target = Path(path or self.index_path)
-        if not target.exists():
-            return
-        try:
-            raw = json.loads(target.read_text(encoding="utf-8"))
-            self._records = {}
-            for doc_id, rec_dicts in raw.items():
-                self._records[doc_id] = [
-                    OfficialGazettePageRecord.from_dict(d) for d in rec_dicts
-                ]
-        except Exception as e:
-            logger.warning("İndeks yüklenirken hata oluştu: %s", e)
+                    official_url=f"{official_url}#page={i+1}",
+                    raw_text=raw_text, tables=tables,
+                    articles_contained=sorted(set(re.findall(
+                        r"(?:GEÇİCİ\s+)?MADDE\s+\d+", raw_text, re.I))),
+                    source_sha256=item["original_sha256"],
+                    graphics=PageGraphicsData(
+                        drawings_count=len(page.get_drawings()),
+                        images_count=len(page.get_images()),
+                        summary="Görsel yerleşim bilgisi; resmî mühür doğrulaması değildir.",
+                    ),
+                    text_status=("PDF_TEXT_LAYER_UNREVIEWED" if raw_text
+                                 else "IMAGE_ONLY_OCR_PENDING"),
+                ))
+        self._records[doc_id] = pages
+        return pages
 
     def seed_default_gazette_documents(self) -> None:
-        """Varsayılan Resmî Gazete mevzuatlarını yüksek doğrulukla oluşturur ve indeksler."""
+        """Compatibility entry point, never generates or writes PDF files."""
+        self.load_verified_originals()
+
+    def load_verified_originals(self) -> None:
+        try:
+            sources = json.loads(self.manifest_path.read_text(encoding="utf-8"))["sources"]
+        except (OSError, ValueError, TypeError, KeyError):
+            return
+        for item in sources:
+            doc_id = item.get("id")
+            if item.get("format") != "pdf" or not isinstance(doc_id, str):
+                continue
+            try:
+                trusted, data = self._verified_pdf(doc_id)
+                self.index_pdf(data, doc_id=doc_id, doc_title=doc_id,
+                               gazette_issue=str(trusted.get("gazette_issue") or ""),
+                               gazette_date=str(trusted.get("gazette_date") or ""),
+                               official_url=trusted["url"])
+            except (OSError, ValueError, TypeError, RuntimeError, KeyError):
+                continue  # HOLD: source absent or does not match source manifest.
+
+    def get_all_pages(self) -> list[OfficialGazettePageRecord]:
+        return [page for pages in self._records.values() for page in pages]
+
+    def get_page(self, doc_id: str, number: int) -> OfficialGazettePageRecord | None:
+        if type(number) is not int or number < 1:
+            return None
+        return next((p for p in self._records.get(doc_id, [])
+                     if p.page_number == number), None)
+
+    def search_pages(self, query: str, *, top_k: int = 3) -> list[OfficialGazettePageRecord]:
+        needle = normalize_tr(query)
+        if len(needle) < 2 or not 1 <= top_k <= 20:
+            return []
+        ranked = [(normalize_tr(p.raw_text).count(needle), p)
+                  for p in self.get_all_pages() if p.raw_text]
+        return [page for count, page in sorted(ranked, key=lambda x: -x[0])
+                if count][:top_k]
+
+    def get_article_page(self, key: str) -> OfficialGazettePageRecord | None:
+        return next(iter(self.search_pages(key, top_k=1)), None)
+
+    def screenshot(
+        self, record: OfficialGazettePageRecord, *,
+        query: str = "", dpi: int = 175,
+    ) -> tuple[bytes, int, str]:
+        """Render the selected page from SHA-verified bytes on every view."""
         import pymupdf
 
-        doc_dir = Path("data/documents")
-        doc_dir.mkdir(parents=True, exist_ok=True)
+        if not 120 <= dpi <= 250:
+            raise ValueError("Invalid screenshot DPI")
+        source, raw = self._verified_pdf(record.doc_id)
+        if (record.source_sha256 != source["original_sha256"]
+                or record.official_url !=
+                    f"{source['url']}#page={record.page_number}"):
+            raise ValueError("Untrusted cached page or wrong original URL")
+        with pymupdf.open(stream=raw, filetype="pdf") as doc:
+            if (type(record.page_number) is not int
+                    or not 1 <= record.page_number <= len(doc)
+                    or record.total_pages != len(doc)):
+                raise ValueError("Wrong PDF page")
+            page = doc[record.page_number-1]
+            hits = []
+            if (query and record.text_status == "PDF_TEXT_LAYER_UNREVIEWED"
+                    and len(query) <= 120):
+                hits = page.search_for(query)
+                for rect in hits[:12]:
+                    mark = page.add_highlight_annot(rect)
+                    mark.set_colors(stroke=(1, 0.82, 0))
+                    mark.update(opacity=0.38)
+            image = page.get_pixmap(dpi=dpi, alpha=False).tobytes("png")
+        return image, len(hits), source["original_sha256"]
 
-        # -------------------------------------------------------------
-        # 1. Resmî Gazete Karar 8859 (29 Ağustos 2024, Sayı: 32647) - 2 Sayfa
-        # -------------------------------------------------------------
-        pdf_8859_path = doc_dir / "RG_20240829_8859.pdf"
-        doc1 = pymupdf.open()
-
-        # Sayfa 1: Karar Başlığı, Madde 1 (Temel Destek & ÇKS), Madde 2 (Havza Desteği)
-        p1 = doc1.new_page(width=595, height=842)
-        p1.insert_text((50, 45), "T.C. RESMI GAZETE", fontsize=15)
-        p1.insert_text(
-            (50, 65),
-            "29 Agustos 2024 PERSEMBE - Sayi : 32647 - CUMHURBASKANI KARARI (Karar Sayisi: 8859)",
-            fontsize=9,
-        )
-        p1.draw_line((50, 75), (545, 75), color=(0.1, 0.1, 0.1), width=1.2)
-
-        p1.insert_text(
-            (50, 100),
-            "2025-2027 YILLARINDA YAPILACAK BITKISEL URETIME YONELIK DESTEKLEMELER ILE",
-            fontsize=10,
-        )
-        p1.insert_text(
-            (50, 115),
-            "2025 YILINDA YAPILACAK SERTIFIKALI TOHUM KULLANIM DESTEGINE ILISKIN KARAR",
-            fontsize=10,
-        )
-
-        # Madde 1
-        p1.insert_text(
-            (50, 150),
-            "MADDE 1 - (1) 2026 uretim yilinda Ciftci Kayit Sistemi (CKS) kaydi aktif olan ve tarimsal uretim",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 168),
-            "yapan ureticilere temel girdi maliyetlerini (mazot ve gubre) karsilamak amaciyla Temel Destek odenir.",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 186),
-            "(2) Temel destekleme basvurulari ve CKS guncellemeleri 1 Eylul 2026 - 31 Aralik 2026 tarihleri arasinda",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 204),
-            "Il/Ilce Tarim ve Orman Mudurluklerine veya e-Devlet kapisi uzerinden yapilir.",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 222),
-            "(3) CKS kaydi bulunmayan veya kaydi pasif olan ureticiler hicbir tarimsal destekleme odemesinden yararlanamaz.",
-            fontsize=9.5,
-        )
-
-        # Madde 2
-        p1.insert_text(
-            (50, 260),
-            "MADDE 2 - (1) Bakanlikca ilan edilen Turkiye Tarim Havzalari Uretim ve Destekleme Modeli kapsaminda,",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 278),
-            "belirlenen havzalarda oncelikli stratejik urunleri (Bugday, Arpa, Misir, Aycicegi, Pamuk, Soya, Mercimek,",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 296),
-            "Nohut vb.) ureten ureticilere temel destege ilave olarak Planli Uretim Destegi odenir.",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 314),
-            "(2) Ilgili il/ilce havzasinda planli uretim kapsaminda yer almayan urunlerin ekilmesi durumunda, ureticiye",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 332),
-            "planli uretim destegi odenmez ve birim destek katsayisi uygulanmaz.",
-            fontsize=9.5,
-        )
-        p1.insert_text(
-            (50, 350),
-            "(3) Munavebe sarti: Ust uste uc yil ayni parselde ayni tek yillik urunun ekilmesi durumunda ucuncu yil destekleme yapilmaz.",
-            fontsize=9.5,
-        )
-
-        p1.insert_text((270, 810), "- 1 -", fontsize=10)
-
-        # Sayfa 2: Madde 3, 4, 5, 6 ve 2026 Birim Fiyat Tablosu
-        p2 = doc1.new_page(width=595, height=842)
-        p2.insert_text((50, 45), "T.C. RESMI GAZETE - 29 Agustos 2024 - Sayi: 32647", fontsize=10)
-        p2.draw_line((50, 55), (545, 55), color=(0.1, 0.1, 0.1), width=1)
-
-        # Madde 3
-        p2.insert_text(
-            (50, 80),
-            "MADDE 3 - (1) Yetkili tohumluk bayilerinden faturali sertifikali tohum satin alarak ekim yapan CKS kayitli",
-            fontsize=9,
-        )
-        p2.insert_text(
-            (50, 95),
-            "ureticilere Sertifikali Tohum Kullanim Destegi verilir. Sertifikasiz tohum kullanan parsellere tohum destegi odenmez.",
-            fontsize=9,
-        )
-
-        # Madde 4
-        p2.insert_text(
-            (50, 120),
-            "MADDE 4 - (1) Yeralti su seviyesinin yetersiz oldugu ilan edilen havzalarda, su tuketimi az olan munavebe",
-            fontsize=9,
-        )
-        p2.insert_text(
-            (50, 135),
-            "urunlerini (Mercimek, Nohut vb.) eken ciftcilere dekar basina 250 TL ilave Su Kisiti Destegi verilir.",
-            fontsize=9,
-        )
-        p2.insert_text(
-            (50, 150),
-            "(2) Bu havzalarda sulu sartlarda yuksek su tuketen urunlerin (dane misir vb.) ekilmesi durumunda planli destekler odenmez.",
-            fontsize=9,
-        )
-
-        # Madde 5
-        p2.insert_text(
-            (50, 175),
-            "MADDE 5 - (1) Basvuru tarihi itibariyla 41 yasindan gun almamis genc ciftcilere ve CKS kayitli kadin ureticilere,",
-            fontsize=9,
-        )
-        p2.insert_text(
-            (50, 190),
-            "temel destek tutarinin %50'si oraninda ilave destek odenir. Her iki sarti saglayanlar birleserek yararlanir.",
-            fontsize=9,
-        )
-
-        # Madde 6
-        p2.insert_text(
-            (50, 215),
-            "MADDE 6 - (1) Sertifikali fidanlar ile en az 5 dekar alanda kapama meyve bahcesi tesis eden ureticilere fidan destegi verilir.",
-            fontsize=9,
-        )
-        p2.insert_text(
-            (50, 230),
-            "(2) Munferit agac dikimlerine veya daganik dikimlere fidan destegi odenmez.",
-            fontsize=9,
-        )
-
-        # EK TABLO: Birim Destek Katsayıları ve Fiyat Tablosu
-        p2.insert_text(
-            (50, 260),
-            "EK TABLO: 2026 URETIM YILI BIRIM DESTEKLEME KATSAYILARI VE TUTARLARI CETVELI (TL/da)",
-            fontsize=9.5,
-        )
-
-        # Tablo Çizimi (Borders and Grid)
-        tbl_top = 275
-        tbl_bottom = 575
-        tbl_left = 50
-        tbl_right = 545
-        row_height = 25
-
-        p2.draw_rect(
-            pymupdf.Rect(tbl_left, tbl_top, tbl_right, tbl_bottom),
-            color=(0, 0, 0),
-            width=1.2,
-        )
-
-        cols_x = [tbl_left, 160, 235, 310, 395, 470, tbl_right]
-        for cx in cols_x[1:-1]:
-            p2.draw_line((cx, tbl_top), (cx, tbl_bottom), color=(0, 0, 0), width=0.8)
-
-        for r_i in range(1, 13):
-            ry = tbl_top + (r_i * row_height)
-            p2.draw_line((tbl_left, ry), (tbl_right, ry), color=(0, 0, 0), width=0.8)
-
-        headers_data = [
-            ("Urun Grubu", 55),
-            ("Temel Kat.", 165),
-            ("Temel TL/da", 240),
-            ("Planli Kat.", 315),
-            ("Planli TL/da", 400),
-            ("Su Kisiti", 475),
-        ]
-        for h_text, hx in headers_data:
-            p2.insert_text((hx, tbl_top + 17), h_text, fontsize=8.5)
-
-        table_rows_data = [
-            ("Bugday / Arpa", "1.00", "310 TL", "1.50", "465 TL", "-"),
-            ("Dane Misir", "1.00", "310 TL", "1.50", "465 TL", "0 TL (Kisit)"),
-            ("Aycicegi (Yaglik)", "1.00", "310 TL", "1.50", "465 TL", "-"),
-            ("Pamuk (Kutlu)", "1.00", "310 TL", "1.74", "540 TL", "-"),
-            ("Soya Fasulyesi", "1.00", "310 TL", "1.50", "465 TL", "-"),
-            ("Mercimek / Nohut", "1.00", "310 TL", "1.50", "465 TL", "+250 TL/da"),
-            ("Kuru Fasulye", "1.00", "310 TL", "1.50", "465 TL", "-"),
-            ("Findik (Geleneksel)", "1.00", "310 TL", "-", "-", "-"),
-            ("Yem Bitkileri", "1.00", "310 TL", "1.00", "310 TL", "-"),
-            ("Patates / Kuru Sogan", "1.00", "310 TL", "1.00", "310 TL", "-"),
-            ("Kanola (Kolza)", "1.00", "310 TL", "1.50", "465 TL", "-"),
-        ]
-
-        for idx, r_data in enumerate(table_rows_data, 1):
-            ry = tbl_top + (idx * row_height) + 17
-            p2.insert_text((55, ry), r_data[0], fontsize=8)
-            p2.insert_text((175, ry), r_data[1], fontsize=8)
-            p2.insert_text((250, ry), r_data[2], fontsize=8)
-            p2.insert_text((330, ry), r_data[3], fontsize=8)
-            p2.insert_text((410, ry), r_data[4], fontsize=8)
-            p2.insert_text((480, ry), r_data[5], fontsize=8)
-
-        # Yürürlük ve Uygulama Maddeleri
-        p2.insert_text(
-            (50, 605),
-            "MADDE 7 - Finansman ve Kaynak: Destekleme odemeleri Tarim ve Orman Bakanligi butcesinden karsilanir.",
-            fontsize=8.5,
-        )
-        p2.insert_text(
-            (50, 622),
-            "MADDE 8 - Denetim ve Haksiz Odemeler: Gercege aykiri beyanda bulunanlar 5 yil sureyle destekleme alamaz.",
-            fontsize=8.5,
-        )
-        p2.insert_text(
-            (50, 639),
-            "MADDE 9 - Yururluk: Bu Karar 1/1/2026 tarihinde yururluge girer.",
-            fontsize=8.5,
-        )
-        p2.insert_text(
-            (50, 656),
-            "MADDE 10 - Yurutme: Bu Karar hukumlerini Tarim ve Orman Bakani yurutur.",
-            fontsize=8.5,
-        )
-
-        p2.insert_text((270, 810), "- 2 -", fontsize=10)
-
-        pdf_8859_bytes = doc1.tobytes()
-        doc1.close()
-        pdf_8859_path.write_bytes(pdf_8859_bytes)
-
-        self.index_pdf(
-            pdf_8859_bytes,
-            doc_id="RG_DECISION_8859",
-            doc_title="2026 Bitkisel Üretim Destekleme Kararı (Resmî Gazete Karar: 8859)",
-            gazette_issue="32647",
-            gazette_date="29 Ağustos 2024",
-            official_url="https://www.resmigazete.gov.tr/eskiler/2024/08/20240829-1.pdf",
-        )
-
-        # -------------------------------------------------------------
-        # 2. Resmî Gazete Karar 11781 (8 Eylül 2026, Sayı: 33364) - 1 Sayfa
-        # -------------------------------------------------------------
-        pdf_11781_path = doc_dir / "RG_20260908_11781.pdf"
-        doc2 = pymupdf.open()
-        p_11781 = doc2.new_page(width=595, height=842)
-        p_11781.insert_text((50, 45), "T.C. RESMI GAZETE", fontsize=15)
-        p_11781.insert_text(
-            (50, 65),
-            "8 Eylul 2026 SALI - Sayi : 33364 - CUMHURBASKANI KARARI (Karar Sayisi: 11781)",
-            fontsize=9,
-        )
-        p_11781.draw_line((50, 75), (545, 75), color=(0.1, 0.1, 0.1), width=1.2)
-
-        p_11781.insert_text(
-            (50, 105),
-            "2026 URETIM YILI BITKISEL URETIM DESTEKLEME BIRIM KATSAYISININ GUNCELLENMESI",
-            fontsize=10,
-        )
-        p_11781.insert_text(
-            (50, 125),
-            "HAKKINDA CUMHURBASKANI KARARI",
-            fontsize=10,
-        )
-
-        p_11781.insert_text(
-            (50, 160),
-            "MADDE 1 - 29/8/2024 tarihli ve 8859 sayili Cumhurbaskani Karari ile yururluge konulan Bitkisel Uretime",
-            fontsize=9.5,
-        )
-        p_11781.insert_text(
-            (50, 178),
-            "Yonelik Desteklemeler Karari kapsaminda uygulanan temel girdi birim destek katsayisi degeri",
-            fontsize=9.5,
-        )
-        p_11781.insert_text(
-            (50, 196),
-            "2026 uretim yili icin 367 TL/da olarak revize edilmistir.",
-            fontsize=9.5,
-        )
-
-        p_11781.insert_text(
-            (50, 230),
-            "MADDE 2 - Havza bazli planli uretim katsayilari ve su kisiti bulunan havzalardaki ilave destek",
-            fontsize=9.5,
-        )
-        p_11781.insert_text(
-            (50, 248),
-            "uygulamalari bu tutara oranlanarak 2026 yili hak edislerinde aynen uygulanir.",
-            fontsize=9.5,
-        )
-
-        p_11781.insert_text(
-            (50, 280),
-            "MADDE 3 - Bu Karar yayimi tarihinde yururluge girer.",
-            fontsize=9.5,
-        )
-
-        p_11781.insert_text((270, 810), "- 1 -", fontsize=10)
-
-        pdf_11781_bytes = doc2.tobytes()
-        doc2.close()
-        pdf_11781_path.write_bytes(pdf_11781_bytes)
-
-        self.index_pdf(
-            pdf_11781_bytes,
-            doc_id="RG_DECISION_11781",
-            doc_title="2026 Destekleme Katsayısı Güncelleme Kararı (Resmî Gazete Karar: 11781)",
-            gazette_issue="33364",
-            gazette_date="8 Eylül 2026",
-            official_url="https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
-        )
-
-        # -------------------------------------------------------------
-        # 3. Resmî Gazete Tebliğ 2024/39 (31 Aralık 2024, Sayı: 32769, 5. Mükerrer)
-        # -------------------------------------------------------------
-        pdf_teblig_path = doc_dir / "RG_20241231_TEBLIG_2024_39.pdf"
-        doc3 = pymupdf.open()
-        p_teb = doc3.new_page(width=595, height=842)
-        p_teb.insert_text((50, 45), "T.C. RESMI GAZETE", fontsize=15)
-        p_teb.insert_text(
-            (50, 65),
-            "31 Aralik 2024 SALI - Sayi : 32769 (5. Mukerrer) - TEBLIG (Teblig No: 2024/39)",
-            fontsize=9,
-        )
-        p_teb.draw_line((50, 75), (545, 75), color=(0.1, 0.1, 0.1), width=1.2)
-
-        p_teb.insert_text(
-            (50, 105),
-            "BITKISEL URETIME YONELIK DESTEKLEMELER UYGULAMA TEBLIGI",
-            fontsize=10,
-        )
-
-        p_teb.insert_text(
-            (50, 140),
-            "MADDE 1 - Amac ve Kapsam: 2026 uretim yili bitkisel uretim destekleme basvuru ve hak edis kurallari.",
-            fontsize=9.5,
-        )
-        p_teb.insert_text(
-            (50, 170),
-            "MADDE 2 - Aski Icmalleri ve Itiraz Suresi: Ilce Tarim Mudurluklerince hazirlanan icmal listeleri",
-            fontsize=9.5,
-        )
-        p_teb.insert_text(
-            (50, 188),
-            "koy muhtarliklarinda 5 gun sureyle askiya cikarilir. Aski suresince yapilmayan itirazlar gecersizdir.",
-            fontsize=9.5,
-        )
-        p_teb.insert_text(
-            (50, 220),
-            "MADDE 3 - CKS Basvuru ve Denetim: Kadastro ve uydu kontrolleri ile gercege aykiri beyanlar elenir.",
-            fontsize=9.5,
-        )
-        p_teb.insert_text((270, 810), "- 1 -", fontsize=10)
-
-        pdf_teb_bytes = doc3.tobytes()
-        doc3.close()
-        pdf_teblig_path.write_bytes(pdf_teb_bytes)
-
-        self.index_pdf(
-            pdf_teb_bytes,
-            doc_id="RG_COMMUNIQUE_2024_39",
-            doc_title="Bitkisel Üretime Yönelik Desteklemeler Uygulama Tebliği (Tebliğ 2024/39)",
-            gazette_issue="32769 (5. Mükerrer)",
-            gazette_date="31 Aralık 2024",
-            official_url="https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8-1.pdf",
-        )
-
-        logger.info(
-            "Resmî Gazete belgeleri başarıyla üretildi, tablolar ve grafikler indekslendi."
-        )
-
-
-# Singleton Indexer Örneği
-_GLOBAL_INDEXER: OfficialPdfIndexer | None = None
+    def ocr_page(self, record: OfficialGazettePageRecord) -> tuple[str, str]:
+        """Actual opt-in local OCR, never an invented transcribed legal quotation."""
+        if not shutil.which("tesseract"):
+            return "", "OCR_NOT_INSTALLED"
+        try:
+            image, _, _ = self.screenshot(record, dpi=180)
+            run = subprocess.run(
+                ["tesseract", "stdin", "stdout", "-l", "tur+eng"],
+                input=image, capture_output=True, timeout=45, check=False,
+            )
+            if run.returncode != 0:
+                return "", "OCR_FAILED"
+            return run.stdout.decode("utf-8", errors="replace").strip(), "OCR_UNREVIEWED"
+        except (ValueError, OSError, subprocess.TimeoutExpired):
+            return "", "OCR_FAILED"
 
 
 def get_global_pdf_indexer() -> OfficialPdfIndexer:
-    """Tekil Resmî Gazete sayfa indeksleyici örneğini döner."""
     global _GLOBAL_INDEXER
     if _GLOBAL_INDEXER is None:
         _GLOBAL_INDEXER = OfficialPdfIndexer()
-    required = {"RG_DECISION_8859", "RG_DECISION_11781", "RG_COMMUNIQUE_2024_39"}
-    if not required.issubset(_GLOBAL_INDEXER._records.keys()):
-        _GLOBAL_INDEXER.seed_default_gazette_documents()
+        _GLOBAL_INDEXER.load_verified_originals()
     return _GLOBAL_INDEXER
 
 
 def get_page_dropdown_choices() -> list[tuple[str, str]]:
-    """Arayüz açılır kutusu için etiket ve anahtar ikililerini döner."""
-    indexer = get_global_pdf_indexer()
-    choices: list[tuple[str, str]] = []
-    for rec in indexer.get_all_pages():
-        arts_str = (
-            ", ".join(rec.articles_contained)
-            if rec.articles_contained
-            else "Genel Hükümler"
-        )
-        label = f"📄 [{rec.doc_id} S.{rec.page_number}] {rec.doc_title[:38]}... ({arts_str})"
-        val_key = f"{rec.doc_id}:{rec.page_number}"
-        choices.append((label, val_key))
-    return choices
-
-
-def render_evidence_by_key(choice_key: str, search_query: str = "") -> str:
-    """Seçilen sayfa anahtarına veya arama sorgusuna göre kanıt kartını üretir."""
-    indexer = get_global_pdf_indexer()
-
-    # 1. Arama sorgusu varsa önceliklendir
-    if search_query and search_query.strip():
-        matches = indexer.search_pages(search_query.strip(), top_k=1)
-        if matches:
-            return render_page_evidence_card(matches[0], search_query)
-
-    # 2. Seçilen anahtara göre sayfa getir
-    if ":" in str(choice_key):
-        parts = str(choice_key).split(":", 1)
-        doc_id = parts[0]
-        try:
-            p_num = int(parts[1])
-            rec = indexer.get_page(doc_id, p_num)
-            if rec:
-                return render_page_evidence_card(rec)
-        except ValueError:
-            pass
-
-    # 3. Madde adı veya genel fallback
-    rec_art = indexer.get_article_page(str(choice_key))
-    if rec_art:
-        return render_page_evidence_card(rec_art)
-
-    all_pages = indexer.get_all_pages()
-    if all_pages:
-        return render_page_evidence_card(all_pages[0])
-
-    return "<div style='color: #ef4444; padding: 12px;'>Resmî Gazete kanıt sayfası bulunamadı.</div>"
+    return [
+        (f"{p.doc_id} · Gerçek sayfa {p.page_number}/{p.total_pages}",
+         f"{p.doc_id}:{p.page_number}")
+        for p in get_global_pdf_indexer().get_all_pages()
+    ]
 
 
 def render_page_evidence_card(
-    record: OfficialGazettePageRecord, query: str = ""
+    record: OfficialGazettePageRecord, query: str = "",
+    *, indexer: OfficialPdfIndexer | None = None,
 ) -> str:
-    """Resmî Gazete sayfasını; tablo, grafik ve yüksek çözünürlüklü görsel kanıtıyla birlikte HTML kartı olarak sunar."""
-    from html import escape
-
-    doc_title = escape(record.doc_title)
-    issue = escape(record.gazette_issue)
-    g_date = escape(record.gazette_date)
-    p_num = record.page_number
-    t_pages = record.total_pages
-    clean_url = escape(record.official_url, quote=True)
-
-    # 1. Tablo HTML'i (Eğer sayfada tablo varsa)
-    table_section_html = ""
-    if record.tables:
-        for t in record.tables:
-            table_rows_html = ""
-            for r in t.rows:
-                cells_html = "".join(
-                    f'<td style="padding: 6px 10px; border: 1px solid #cbd5e1; font-size: 0.88rem; color: #1e293b;">{escape(c)}</td>'
-                    for c in r
-                )
-                table_rows_html += f'<tr style="background: #ffffff;">{cells_html}</tr>\n'
-
-            header_cells = "".join(
-                f'<th style="padding: 8px 10px; border: 1px solid #94a3b8; background: #0f766e; color: #ffffff; font-size: 0.88rem; text-align: left;">{escape(h)}</th>'
-                for h in t.headers
-            )
-
-            table_section_html += f"""
-            <div class="evidence-table-container" style="margin: 12px 0; border: 1px solid #0f766e; border-radius: 6px; overflow: hidden; background: #f0fdfa;">
-                <div style="background: #0f766e; color: #ffffff; padding: 6px 12px; font-weight: 700; font-size: 0.9rem; display: flex; justify-content: space-between;">
-                    <span>📊 Sayfadan OCR/Yerleşim ile Çıkarılan Resmî Tablo: {escape(t.table_id)}</span>
-                    <span style="font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px;">{t.row_count} Satır &middot; {t.col_count} Sütun</span>
-                </div>
-                <div style="overflow-x: auto; padding: 8px;">
-                    <table style="width: 100%; border-collapse: collapse;">
-                        <thead>
-                            <tr>{header_cells}</tr>
-                        </thead>
-                        <tbody>
-                            {table_rows_html}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            """
-
-    # 2. Grafik & Vektör Bilgisi
-    graphics_html = ""
-    if record.graphics.drawings_count > 0 or record.graphics.images_count > 0:
-        graphics_html = f"""
-        <div style="display: flex; gap: 8px; align-items: center; margin: 8px 0; font-size: 0.84rem; color: #475569; background: #f8fafc; padding: 6px 10px; border-radius: 6px; border: 1px solid #e2e8f0;">
-            <span>📐 <b>Grafik &amp; Düzen Analizi:</b> {escape(record.graphics.summary)}</span>
-            {'<span style="background: #dcfce7; color: #166534; padding: 2px 6px; border-radius: 4px; font-weight: 600;">✓ Resmî Mühür/Başlık Doğrulandı</span>' if record.graphics.has_official_seal else ''}
-            {'<span style="background: #e0f2fe; color: #0369a1; padding: 2px 6px; border-radius: 4px; font-weight: 600;">✓ Resmî Cetvel Çerçevesi</span>' if record.graphics.has_table_borders else ''}
-        </div>
-        """
-
-    # 3. Sayfa Görseli (Görsel Kanıt Önizleme)
-    image_section_html = ""
-    if record.image_base64:
-        image_section_html = f"""
-        <div class="evidence-image-preview" style="margin-top: 14px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #f8fafc;">
-            <div style="padding: 6px 12px; background: #334155; color: #ffffff; font-size: 0.85rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
-                <span>🖼️ Orijinal Resmî Gazete Sayfası Görsel Delili (144 DPI Sayfa Taraması)</span>
-                <span style="font-size: 0.78rem; opacity: 0.85;">Sayfa {p_num} / {t_pages}</span>
-            </div>
-            <div style="text-align: center; padding: 10px; background: #64748b; max-height: 520px; overflow-y: auto;">
-                <img src="{record.image_base64}" alt="Resmî Gazete Sayfa {p_num}" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
-            </div>
-        </div>
-        """
-
-    paragraphs_html = "\n".join(
-        f'<p class="legal-reader-paragraph" style="margin-bottom: 8px;">{p.strip()}</p>'
-        for p in record.highlighted_html.split("\n")
-        if p.strip()
+    """Full-width screenshot from original; no fabricated paragraph or table."""
+    idx = indexer or get_global_pdf_indexer()
+    try:
+        picture, hits, digest = idx.screenshot(record, query=query)
+    except (OSError, ValueError, RuntimeError, KeyError):
+        return HOLD_HTML
+    img = base64.b64encode(picture).decode("ascii")
+    status = ("PDF metin katmanı: hukukî inceleme bekliyor"
+              if record.raw_text else
+              "Taranmış sayfa: OCR/pasaj eşleşmesi henüz onaylanmadı")
+    highlights = (f"{hits} birebir PDF metin eşleşmesi sarı işaretlendi"
+                  if hits else "Kesin pasaj bulunamadı; sarı vurgu üretilmedi")
+    return (
+        '<section style="padding:16px;border:1px solid #cbd5e1;'
+        'border-radius:12px;background:white;max-width:1100px">'
+        f'<h3>Özgün PDF sayfa ekran görüntüsü — {escape(record.doc_title)}</h3>'
+        f'<p>Sayfa {record.page_number}/{record.total_pages} · {escape(status)}</p>'
+        f'<img alt="Gerçek PDF sayfa {record.page_number}" '
+        f'src="data:image/png;base64,{img}" '
+        'style="width:100%;height:auto;border:1px solid #94a3b8;'
+        'box-shadow:0 6px 20px #0002" />'
+        f'<p><a href="{escape(record.official_url, quote=True)}" '
+        'target="_blank" rel="noopener noreferrer">'
+        f'Özgün resmî PDF dosyasındaki sayfa {record.page_number} ↗</a></p>'
+        f'<p>Kaynak SHA-256: <code>{escape(digest)}</code></p>'
+        f'<p>{escape(highlights)}. OCR ve metin çıkarımı tek başına '
+        'hak ediş veya hukukî uygunluk onayı değildir.</p></section>'
     )
 
-    return f"""
-    <div class="legal-reader-container" style="border: 2px solid #047857; border-radius: 8px; padding: 16px; background: #ffffff; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-        <!-- Üst Künye Çubuğu -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
-            <div>
-                <span style="display: inline-block; background: #047857; color: #ffffff; padding: 3px 10px; border-radius: 4px; font-weight: 700; font-size: 0.85rem;">
-                    📄 Resmî Gazete Sayfa {p_num} / {t_pages}
-                </span>
-                <span style="margin-left: 6px; font-weight: 600; color: #0f172a; font-size: 0.95rem;">
-                    Sayı: {issue} &middot; Tarih: {g_date}
-                </span>
-                <h4 style="margin: 6px 0 0 0; color: #064e3b; font-size: 1.1rem; line-height: 1.3;">
-                    🏛️ {doc_title}
-                </h4>
-            </div>
-            <div>
-                <a href="{clean_url}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; background: #047857; color: #ffffff !important; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(4,120,87,0.3);">
-                    📄 Orijinal PDF'te Sayfa {p_num}'yi Aç (#page={p_num}) ↗
-                </a>
-            </div>
-        </div>
 
-        <!-- İlgili Maddeler & Grafik Özeti -->
-        <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-            <span style="font-size: 0.84rem; font-weight: 600; color: #334155;">Bu Sayfadaki Hükümler:</span>
-            {''.join(f'<span style="background: #e2e8f0; color: #0f172a; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">{escape(a)}</span>' for a in record.articles_contained) if record.articles_contained else '<span style="color: #64748b; font-size: 0.82rem;">Belge Başlığı ve Tanımlar</span>'}
-        </div>
+def render_evidence_by_key(choice_key: str, search_query: str = "") -> str:
+    idx = get_global_pdf_indexer()
+    if search_query.strip():
+        matches = idx.search_pages(search_query, top_k=1)
+        if matches:
+            return render_page_evidence_card(matches[0], search_query, indexer=idx)
+        # OCR is unreviewed: it may suggest a REAL page image, never prove
+        # a passage or claim. No yellow annotation for OCR-only candidates.
+        from tarim_destek_rag.citations.verified_ocr_index import search_ocr_candidates
 
-        {graphics_html}
+        candidates = search_ocr_candidates(idx, search_query, index_dir=Path(
+            os.getenv("TARIM_RAG_OCR_INDEX_DIR", "data/indexes")))
+        if candidates:
+            candidate = candidates[0]
+            page = idx.get_page(candidate["document_id"], candidate["page_number"])
+            if page is not None:
+                return (
+                    '<p style="background:#fffbeb;padding:12px">'
+                    '<strong>HOLD — OCR arama adayı.</strong> Metnin bu sayfada '
+                    'birebir bulunduğu hukukî olarak doğrulanmadı; aşağıdaki '
+                    'özgün ekran görüntüsünü kendiniz kontrol edin.</p>'
+                    + render_page_evidence_card(page, indexer=idx)
+                )
+        return HOLD_HTML
+    if not choice_key or ":" not in choice_key:
+        return HOLD_HTML
+    doc_id, number = choice_key.rsplit(":", 1)
+    if not number.isdigit():
+        return HOLD_HTML
+    found = idx.get_page(doc_id, int(number))
+    return render_page_evidence_card(found, indexer=idx) if found else HOLD_HTML
 
-        {table_section_html}
-
-        <!-- İşaretli Metin Katmanı -->
-        <div style="margin-top: 12px;">
-            <div style="font-weight: 700; color: #334155; font-size: 0.9rem; margin-bottom: 6px; display: flex; justify-content: space-between;">
-                <span>📜 Doğrulanmış Resmî Sayfa Metni &amp; Renkli Şart Vurguları:</span>
-                <span style="font-size: 0.8rem; color: #047857; font-weight: 600;">✓ Sayfa {p_num} İle Birebir Eşleşti</span>
-            </div>
-            <div class="legal-reader-body" style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; line-height: 1.7; font-size: 0.92rem; max-height: 380px; overflow-y: auto;">
-                {paragraphs_html}
-            </div>
-        </div>
-
-        {image_section_html}
-
-        <!-- Alt Bağlantı -->
-        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-            <span style="font-size: 0.82rem; color: #64748b;">
-                T.C. Resmî Gazete Orijinal Metin Arşivi &middot; Sayfa Hash &amp; Koordinat Onaylı
-            </span>
-            <a href="{clean_url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.85rem; color: #047857; font-weight: 700; text-decoration: underline;">
-                🔗 Orijinal Resmî Gazete PDF'ine Git (Sayfa {p_num}) ↗
-            </a>
-        </div>
-    </div>
-    """
+def render_ocr_page_by_key(choice_key: str | None) -> str:
+    """Opt-in local OCR of a selected verified original page; never auto-approve."""
+    if not choice_key or ":" not in choice_key:
+        return HOLD_HTML
+    doc_id, raw_page = choice_key.rsplit(":", 1)
+    if not raw_page.isdigit():
+        return HOLD_HTML
+    idx = get_global_pdf_indexer()
+    page = idx.get_page(doc_id, int(raw_page))
+    if page is None:
+        return HOLD_HTML
+    try:
+        idx.screenshot(page)  # bytes + page verified before OCR/status output
+        text, status = idx.ocr_page(page)
+    except (OSError, ValueError, RuntimeError, KeyError):
+        return HOLD_HTML
+    if status != "OCR_UNREVIEWED" or not text:
+        return (
+            '<p style="border-left:4px solid #d97706;padding:12px">'
+            'OCR kullanılamıyor veya Türkçe dil modeli yüklü değil. '
+            'Görüntüden metin uydurulmadı; özgün sayfayı inceleyin. '
+            f'Durum: {escape(status)}</p>'
+        )
+    return (
+        '<section style="border:1px solid #f59e0b;padding:14px">'
+        '<strong>OCR ÖN TASLAĞI — Hukukî alıntı/doğrulama değildir (HOLD)</strong>'
+        '<p>Aşağıdaki karakterler seçilen özgün sayfanın yerel Tesseract '
+        'çıktısıdır. Hatalı okunan tutar, hücre, grafik ve hükümler olabilir. '
+        'Bağımsız insan incelemesi ve kaynak koordinatı zorunludur.</p>'
+        f'<pre style="white-space:pre-wrap;overflow:auto">{escape(text[:16000])}</pre>'
+        '</section>'
+    )

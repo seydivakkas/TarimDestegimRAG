@@ -1,0 +1,47 @@
+# P0-39 — Özgün Sayfa Ekran Görüntüsü Kanıtı (taslak kabul)
+
+**Sınır:** Resmî metni, tabloyu ve grafik öğelerini eksiksiz OCR ile doğruladığımızı iddia etmiyoruz. Kaynak yoksa HOLD.
+
+1. Belgeler yalnız `configs/p0_10_3_original_source_manifest.json` içindeki `id`, `url`, `format=pdf`, `original_sha256` ve bayt uzunluğuyla eşleşen dosyalardan indekslenir. Dosya adı: `$TARIM_RAG_UPDATE_ARCHIVE/originals/<sha>.pdf`.
+2. `get_global_pdf_indexer` eski `gazette_page_index.json` veya `data/documents/RG_*.pdf` varlıklarını **yüklemez**; `seed_default_gazette_documents` hiçbir PDF üretmez.
+3. Kanıt sekmesi resmî URL'de tahmini #page kullanmaz. Yalnız gerçek PDF sayfa sayısı doğrulanmış seçimleri listeler; sayfayı **SHA sabitli gerçek dosyanın baytlarından** açıp PNG oluşturur. Metin katmanındaki *tam* arama vurgulanabilir; OCR veya resim için doğrulanmamış sarı işaretleme yapılmaz.
+4. **Gerçek OCR:** Tesseract yüklü ise `OfficialPdfIndexer.ocr_page(record)` seçilen özgün sayfa PNG'sini yerel olarak Tesseract `tur+eng` ile işler. Çıktı `OCR_UNREVIEWED` kalır. Tesseract veya Türkçe model dosyası yoksa `OCR_NOT_INSTALLED` / `OCR_FAILED`. Otomatik yüzde yüz doğruluk, tam tablo semantiği veya hukukî onay yoktur.
+5. Gerçek OCR sonucunu kaynağa satır-hücre koordinatlı bağlayıp ikinci incelemeyle doğrulayan iş akışı ileride ayrıca kurulmalıdır. İşlenmemiş image-only PDF'de metin araması sonuç üretmez, kaynak sayfası seçilerek incelenir.
+6. Eski sentetik 8859/11781/2024-39 PDF'leri git ağacından kaldırıldı. 2024/39 asıl yayın HTML'dir; PDF diye taklit edilmez. İlgili sentetik testler hakikat kanıtına dayanan fail-closed testlerle değiştirildi.
+7. Hukukî hüküm–üretim yılı, EK-20 hücre semantiği, çiftçi olguları, bağımsız hukukî imzalar, gerçek WORM/HSM ve ödeme aktivasyonu **HOLD**.
+
+**Kabul için:** Özgün 8859 tarama PDF'si/2024/39 HTML ve 2025/42 ekteki EK-20, SHA kontrollü arşivde doğru yerlerde bulunmalı; Windows'ta Gradio gerçek sayfayı göstermeli; yanlış SHA/sayfa/kaynak testleri PASS olmalı; uygulamanın bütün yanlış resmî alıntı yolu kapalı kalmalı.
+
+## Windows kurulumu — gerçekten özgün PDF gösterme
+
+Windows PowerShell veya terminali proje kökünde açın:
+
+```powershell
+python -m scripts.install_pinned_gazette_sources --source-id RG_DECISION_8859
+```
+
+Komut yalnız Resmî Gazete HTTPS kaynağındaki **orijinal PDF** baytlarını indirir; kaynak manifestindeki SHA/uzunluk tutmazsa **HOLD** ve hata üretir. İnternet erişimi yoksa SHA isimleriyle düzenlenmiş, önceden bağımsız doğrulanmış arşiv kopyalarını şu yolla içe alın:
+
+```powershell
+python -m scripts.install_pinned_gazette_sources --source-id RG_DECISION_8859 --import-dir "C:\\ResmiGazeteOrijinallerim"
+```
+
+Ardından Gradio'yu yeniden başlatın. Destek Analizi / Kanıt bölümündeki açılır listede yalnız SHA-destekli PDF sayfaları listelenir. İlgili sayfayı seçip büyük sayfa görselini inceleyin; Tesseract varsa OCR düğmesini ayrıca çalıştırabilirsiniz. Özgün dosya kurulu değilse görünüm **HOLD** kalır. `2024/39` özgün HTML'dir; bu PDF kurucusu onu PDF'ye dönüştürmez.
+
+**Not:** Windows/kurum ortamında gerçek kullanıcı kabul testi ve tüm belgelerin OCR'si burada çalıştırılmadı.
+
+## Bütün taranmış PDF sayfalarını yerel OCR ile indeksleme
+
+Özgün PDF yüklenmiş ve Tesseract (`tur+eng` eğitim verileri dahil) Windows PATH içinde ise:
+
+```powershell
+python -m tarim_destek_rag.citations.verified_ocr_index --source-id RG_DECISION_8859
+```
+
+Motor PDF'deki **her sayfanın gerçek baytlarını yeniden doğrular**, metin katmanını veya varsa gerçek Tesseract OCR çıktısını `data/indexes/verified_ocr_<original-sha>.json` içerisine kaydeder. Yerel OCR/dil paketi eksikse dosya `INCOMPLETE_OCR_HOLD` olur ve komut başarılı kabul ile sonuçlanmaz. Eski sentetik JSON veya sadece URL bilgisi geçerli OCR indeksi sayılamaz.
+
+Metin aramasında PDF-native kesin eşleşme yoksa OCR indeksi yalnızca `OCR_CANDIDATE_UNREVIEWED` sonucunu önerebilir. Kullanıcıya gerçek sayfa görüntüsü açılır, **metin otomatik işaretlenmez**; OCR hatası veya kelime çarpıtmasıyla yanlış hukukî alıntı üretilemez. Tablolarda satır/hücre semantiği ve grafik yorumlama bağımsız görsel inceleme olmadan `PENDING_INDEPENDENT_REVIEW` kalır.
+
+## CI orijinal PDF ile bağımsız görsel kanıt testi
+
+`.github/workflows/p0-39-authentic-original-screenshots.yml` önceki bağımsız SHA-denetimli **özgün Resmî Gazete bayt** arşivini alır ve üzerinde 8859'un gerçek 89 sayfası ile 2025/42 EK-20'nin gerçek 1 sayfasını kontrol eder. Bunlardan orijinal PDF'ye dokunmadan PNG görüntü çıkarır. İki gerçek ekran görüntüsünü GitHub Actions artefaktı olarak saklar. İş akışının kaynağı alınamazsa veya tam SHA eşleşmezse iş **FAIL / HOLD** olur; sentetik belge üretip yeşile dönmez. Bu, resmî tablodaki OCR hücrelerinin bağımsız insan incelemesi yerine geçmez.

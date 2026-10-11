@@ -1,0 +1,84 @@
+name: P0-39 Authentic Original PDF Page Screenshot Gate
+
+on:
+  push:
+    branches:
+      - fix/p0-real-original-page-screenshots
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  source-page-screenshots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TARIM_RAG_LEGAL_ACTIVATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PDF rendering and exact regression dependencies
+        run: python -m pip install -e ".[dev,pdf-evidence]"
+      - name: Restore prior SHA-audited official Gazette original bytes
+        uses: actions/download-artifact@v4
+        with:
+          name: p0-10-3-original-official-bytes
+          run-id: 37907432091
+          github-token: ${{ github.token }}
+          path: data/legal_update_archive
+      - name: Produce screenshot directly from 89-page original 8859 and 2026 EK-20
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          from tarim_destek_rag.citations.pdf_page_indexer import (
+              OfficialPdfIndexer,
+              render_page_evidence_card,
+          )
+
+          idx = OfficialPdfIndexer()
+          idx.load_verified_originals()
+          out = Path("p0-39-real-evidence")
+          out.mkdir(parents=True, exist_ok=True)
+          for doc_id, expected_pages, output in (
+              ("RG_DECISION_8859", 89, "RG_8859_real_original_page1.png"),
+              ("RG_AMENDMENT_2025_42_ANNEX", 1, "EK20_real_original_page1.png"),
+          ):
+              page = idx.get_page(doc_id, 1)
+              assert page is not None, "HOLD: original Gazette source not indexed"
+              assert page.total_pages == expected_pages, "HOLD: synthetic/incorrect page count"
+              png, matches, digest = idx.screenshot(page, dpi=150)
+              assert png.startswith(bytes.fromhex("89504e470d0a1a0a"))
+              assert digest == page.source_sha256
+              assert matches == 0
+              assert "data:image/png;base64," in render_page_evidence_card(page, indexer=idx)
+              (out / output).write_bytes(png)
+              print("AUTHENTIC_PDF_SCREENSHOT", doc_id, "page=1", "sha256=" + digest)
+          assert idx.get_page("RG_COMMUNIQUE_2024_39", 1) is None, (
+              "Original 2024/39 publication is HTML, not a synthetic PDF"
+          )
+          assert idx.get_page("RG_DECISION_8859", 90) is None
+          print("P0_39_AUTHENTIC_ORIGINAL_PAGE_SCREENSHOTS_PASS")
+          PY
+      - name: Verify new negative and OCR indexing regression suite
+        run: |
+          python -m pytest -q --no-cov backend/tests/unit/test_pdf_page_indexer.py backend/tests/unit/test_pinned_gazette_installer.py backend/tests/unit/test_verified_ocr_index.py backend/tests/unit/test_document_links.py
+      - name: Archive real rendered source pages for independent visual review
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-39-authentic-gazette-page-images
+          path: p0-39-real-evidence/*.png
+          retention-days: 30
+      - name: Explain original-source failure
+        if: failure()
+        run: |
+          echo "### P0-39 Original Page Screenshot HOLD" >> "$GITHUB_STEP_SUMMARY"
+          echo "This run could not reproduce images from SHA-pinned authentic Resmi Gazete original bytes. Never accept synthetic or guessed evidence." >> "$GITHUB_STEP_SUMMARY"
