@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "clauses": [
+    {
+      "support_id": "BASIC_SUPPORT_2026",
+      "source_id": "RG_COMMUNIQUE_2024_39",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm",
+      "source_sha256": "efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530",
+      "article": "MADDE 4",
+      "paragraph": "1",
+      "year": 2026,
+      "exact_quote": "Desteklemelerden yararlanmak için destekleme uygulamalarında ayrıntıları verilen Bakanlık kayıt sistemlerine ilgili üretim yılında kayıtlı olma şartı aranır.",
+      "verification_status": "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW",
+      "legal_review_completed": false,
+      "notes": "Literal excerpt from the immutable original 2024/39 Gazette HTML, MADDE 4(1). This is a location proof, not entitlement or temporal/legal approval."
+    }
+  ]
+}

@@ -65,7 +65,13 @@ def test_template_explainer_eligible():
     assert explanation.status_label_tr == "Uygun görünüyor"
     assert "9,300.00 TL" in explanation.summary_tr
     assert len(explanation.citations) >= 1
-    assert explanation.citations[0].source_id == "RG-2026-BITKISEL"
+    # Once an authentic PDF is installed, its SHA-verified citation may be
+    # ranked ahead of the semantic/mock chunk. Do not require the unverified
+    # retrieval result to outrank stronger original-document evidence.
+    assert any(
+        c.source_id == "RG-2026-BITKISEL" and c.snippet == chunk.text
+        for c in explanation.citations
+    )
 
 
 def test_template_explainer_review():

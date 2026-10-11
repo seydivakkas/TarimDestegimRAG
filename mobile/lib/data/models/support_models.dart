@@ -10,6 +10,10 @@ class CitationDetail {
   final int year;
   final String snippet;
   final String? url;
+  final String verificationStatus;
+  final String? highlightedPdfUrl;
+  final String? documentSha256;
+  final int? pageNumber;
 
   CitationDetail({
     required this.sourceId,
@@ -18,7 +22,61 @@ class CitationDetail {
     required this.year,
     required this.snippet,
     this.url,
+    this.verificationStatus = 'UNVERIFIED_EXPLANATION',
+    this.highlightedPdfUrl,
+    this.documentSha256,
+    this.pageNumber,
   });
+
+  /// UI route validation supplements server-side original-SHA verification.
+  String? verifiedHighlightPath({String? supportId}) {
+    final digest = documentSha256;
+    final link = highlightedPdfUrl;
+    if (digest == null ||
+        !RegExp(r'^[a-f0-9]{64}$').hasMatch(digest) ||
+        link == null ||
+        !link.startsWith('/evidence/highlight/')) {
+      return null;
+    }
+    final uri = Uri.tryParse(link);
+    if (uri == null || uri.hasScheme || uri.hasAuthority ||
+        uri.path.startsWith('//')) {
+      return null;
+    }
+    final query = uri.queryParametersAll;
+    if (query.values.any((values) => values.length != 1)) return null;
+    final value = uri.queryParameters;
+    if (verificationStatus == 'ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW') {
+      if (uri.path != '/evidence/highlight/html/$digest' ||
+          query.length != 1 || !query.containsKey('support_id') ||
+          uri.fragment != 'tarim-evidence-highlight' ||
+          (value['support_id'] ?? '').isEmpty ||
+          (supportId != null && value['support_id'] != supportId)) {
+        return null;
+      }
+    } else if (verificationStatus == 'VISUAL_SOURCE_LOCATED_PENDING_SECOND_REVIEW') {
+      if (pageNumber == null || pageNumber! < 1 ||
+          uri.path != '/evidence/highlight/visual/$digest' ||
+          query.length != 1 || !query.containsKey('support_id') ||
+          uri.fragment != 'page=$pageNumber' ||
+          (value['support_id'] ?? '').isEmpty ||
+          (supportId != null && value['support_id'] != supportId)) {
+        return null;
+      }
+    } else if (verificationStatus == 'EXACT_PDF_MATCH_PENDING_LEGAL_REVIEW') {
+      if (pageNumber == null || pageNumber! < 1 ||
+          uri.path != '/evidence/highlight/$digest' ||
+          query.length != 2 || !query.containsKey('page') ||
+          !query.containsKey('quote') || uri.fragment.isNotEmpty ||
+          value['page'] != pageNumber.toString() ||
+          value['quote'] != snippet || snippet.isEmpty) {
+        return null;
+      }
+    } else {
+      return null;
+    }
+    return link;
+  }
 
   factory CitationDetail.fromJson(Map<String, dynamic> json) => CitationDetail(
         sourceId: json['source_id'] ?? '',
@@ -27,6 +85,10 @@ class CitationDetail {
         year: json['year'] ?? 2026,
         snippet: json['snippet'] ?? '',
         url: json['url'],
+        verificationStatus: json['verification_status'] ?? 'UNVERIFIED_EXPLANATION',
+        highlightedPdfUrl: json['highlighted_pdf_url'],
+        documentSha256: json['document_sha256'],
+        pageNumber: json['page_number'] is int ? json['page_number'] as int : null,
       );
 }
 
