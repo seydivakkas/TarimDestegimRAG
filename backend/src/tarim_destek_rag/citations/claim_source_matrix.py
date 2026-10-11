@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 from typing import Any
@@ -98,13 +99,24 @@ def validate_source_span(
 
 def highlighted_amendment_html_copy(
     span_id: str, expected_sha256: str, *,
-    matrix_path: Path = Path("configs/p0_10_7_claim_source_matrix.json"),
-    manifest_path: Path = Path("configs/p0_10_3_original_source_manifest.json"),
-    archive_root: Path = Path("data/legal_update_archive"),
+    matrix_path: Path | None = None,
+    manifest_path: Path | None = None,
+    archive_root: Path | None = None,
 ) -> bytes:
     """Highlight exactly one located amendment span in an immutable copy."""
     from bs4 import NavigableString
 
+    matrix_path = matrix_path or Path(os.getenv(
+        "TARIM_RAG_CLAIM_SOURCE_MATRIX",
+        "configs/p0_10_7_claim_source_matrix.json",
+    ))
+    manifest_path = manifest_path or Path(os.getenv(
+        "TARIM_RAG_ORIGINAL_SOURCE_MANIFEST",
+        "configs/p0_10_3_original_source_manifest.json",
+    ))
+    archive_root = archive_root or Path(os.getenv(
+        "TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive",
+    ))
     matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     matches = [s for s in matrix.get("spans", [])
