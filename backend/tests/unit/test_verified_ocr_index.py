@@ -8,7 +8,6 @@ from unittest.mock import patch
 
 import pymupdf
 import pytest
-
 from tarim_destek_rag.citations.pdf_page_indexer import OfficialPdfIndexer
 from tarim_destek_rag.citations.verified_ocr_index import (
     index_official_document,
