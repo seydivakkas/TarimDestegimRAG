@@ -157,6 +157,18 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 "görüntüsüyle karşılaştırılabilir.</p>"
             )
 
+            from tarim_destek_rag.citations.ocr_spatial_layout import (
+                render_ocr_spatial_review,
+            )
+
+            btn_ocr_spatial = gr.Button(
+                "Gerçek PDF üzerinde OCR satır kutularını göster (HOLD)",
+                variant="secondary",
+            )
+            ocr_spatial_display = gr.HTML(
+                "<p>OCR satır kutularını görmek için doğrulanmış sayfayı seçin. "
+                "Bu kutular kesin mevzuat alıntısı değildir.</p>"
+            )
             btn_page_ocr = gr.Button(
                 "Seçili gerçek sayfayı yerel OCR ile oku (inceleme taslağı)",
                 variant="secondary",
@@ -218,6 +230,11 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 inputs=[article_selector, page_search_input],
                 outputs=[article_display],
             )
+            btn_ocr_spatial.click(
+                render_ocr_spatial_review,
+                inputs=[article_selector],
+                outputs=[ocr_spatial_display],
+            )
             btn_page_ocr.click(
                 render_ocr_page_by_key,
                 inputs=[article_selector],
@@ -259,6 +276,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "article_selector": article_selector,
         "article_display": article_display,
         "ocr_display": ocr_display,
+        "ocr_spatial_display": ocr_spatial_display,
         "region_selector": region_selector,
         "region_display": region_display,
         "raster_cell_selector": raster_cell_selector,
