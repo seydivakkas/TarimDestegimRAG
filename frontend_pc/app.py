@@ -223,6 +223,14 @@ def build_ui() -> gr.Blocks:
             inputs=[eval_state, p2["claim_selector"]],
             outputs=[p2["claim_display"]],
         )
+        from tarim_destek_rag.citations.ek20_review_workbench import (
+            render_ek20_candidate,
+        )
+        p2["ek20_selector"].change(
+            render_ek20_candidate,
+            inputs=[p2["ek20_selector"], eval_state],
+            outputs=[p2["ek20_display"]],
+        )
 
         # Değerlendirme Butonu Bağlantısı
         p1["btn_calculate"].click(
