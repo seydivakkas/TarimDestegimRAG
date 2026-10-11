@@ -329,15 +329,10 @@ def render_details_dataframe(
         else:
             status_text = "UYGUN DEĞİL"
 
-        LEGAL_BASIS_MAP = {
-            "BASIC_SUPPORT_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 1",
-            "PLANNED_PRODUCTION_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 2",
-            "CERTIFIED_SEED_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 3",
-            "WATER_RESTRICTION_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 4",
-            "CERTIFIED_SAPLING_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 6",
-        }
-        legal_basis = LEGAL_BASIS_MAP.get(sid, "Resmî Gazete Karar 8859 & 11781")
-        app_period = "1 Eylül 2026 - 31 Aralık 2026 (ÇKS ve Destek Takvimi)"
+        # Support-level labels are not proof of a particular rule condition.
+        # Evidence is shown separately via exact claim_id -> SHA -> passage.
+        legal_basis = "Tekil mevzuat kanıtı: HOLD"
+        app_period = "Başvuru süresi: resmî güncel kaynak kontrolü gerekli"
 
         table_rows.append(
             {
