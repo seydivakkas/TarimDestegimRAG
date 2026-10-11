@@ -83,9 +83,75 @@ def validate_source_span(
             raise ValueError("No unique exact clause within claimed official article")
         result["source_location_status"] = "ORIGINAL_HTML_SPAN_LOCATED"
         result["verified_quote"] = entry["exact_quote"]
+        if source_id == "RG_AMENDMENT_2025_42":
+            from urllib.parse import urlencode
+
+            result["highlighted_html_url"] = (
+                f"/evidence/highlight/amendment/{sha}?"
+                + urlencode({"span_id": entry["span_id"]})
+                + "#tarim-evidence-highlight"
+            )
     except (OSError, ValueError, TypeError, KeyError, ImportError) as exc:
         result["reason"] = type(exc).__name__ + ": " + str(exc)
     return result
+
+
+def highlighted_amendment_html_copy(
+    span_id: str, expected_sha256: str, *,
+    matrix_path: Path = Path("configs/p0_10_7_claim_source_matrix.json"),
+    manifest_path: Path = Path("configs/p0_10_3_original_source_manifest.json"),
+    archive_root: Path = Path("data/legal_update_archive"),
+) -> bytes:
+    """Highlight exactly one located amendment span in an immutable copy."""
+    from bs4 import NavigableString
+
+    matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    matches = [s for s in matrix.get("spans", [])
+               if s.get("span_id") == span_id]
+    if len(matches) != 1:
+        raise ValueError("Unknown or ambiguous amendment span")
+    entry = matches[0]
+    if (entry.get("source_id") != "RG_AMENDMENT_2025_42"
+        or entry.get("source_sha256") != expected_sha256
+        or not isinstance(expected_sha256, str)
+        or not _PIN.fullmatch(expected_sha256)):
+        raise ValueError("Unexpected original amendment identity")
+    proof = validate_source_span(entry, manifest, archive_root)
+    if proof["source_location_status"] != "ORIGINAL_HTML_SPAN_LOCATED":
+        raise ValueError("Exact original amendment passage not verified")
+    raw = (archive_root / "originals" / (expected_sha256 + ".html")).read_bytes()
+    document = BeautifulSoup(raw, "html.parser")
+    pattern = _normalized_match(entry["exact_quote"])
+    found = []
+    current = None
+    for node in document.find_all(string=True):
+        if node.parent.name in {"script", "style", "title"}:
+            continue
+        transition = _TRANSITION.search(str(node))
+        regular = _ARTICLE.search(str(node))
+        if transition:
+            current = "GEÇİCİ MADDE " + transition.group(1)
+        elif regular:
+            current = "MADDE " + regular.group(1)
+        hit = pattern.search(str(node))
+        if hit:
+            if current != entry["article"]:
+                raise ValueError("Amendment quote shifted to another article")
+            found.append((node, hit))
+    if len(found) != 1:
+        raise ValueError("Nonunique original amendment quote")
+    node, hit = found[0]
+    raw_text = str(node)
+    marked = document.new_tag("mark", id="tarim-evidence-highlight")
+    marked["style"] = "background:#ffed52;outline:2px solid #bf9300;padding:2px"
+    marked.string = raw_text[hit.start():hit.end()]
+    node.replace_with(
+        NavigableString(raw_text[:hit.start()]),
+        marked,
+        NavigableString(raw_text[hit.end():]),
+    )
+    return str(document).encode("utf-8")
 
 
 def audit_claim_matrix(

@@ -155,6 +155,41 @@ def test_ek20_transcript_requires_all_rows_and_nonnegative_cell_values(
     ] == []
 
 
+
+def test_original_amendment_highlight_returns_source_bound_sandboxed_copy() -> None:
+    from fastapi.testclient import TestClient
+
+    from tarim_destek_rag.api.main import app
+
+    matrix = _matrix()
+    sha = matrix["spans"][1]["source_sha256"]
+    root = Path("data/legal_update_archive") / "originals"
+    if not (root / (sha + ".html")).is_file():
+        pytest.skip("Real original amendment not installed in offline CI")
+    client = TestClient(app)
+    span_id = matrix["spans"][1]["span_id"]
+    response = client.get(
+        f"/evidence/highlight/amendment/{sha}",
+        params={"span_id": span_id},
+    )
+    assert response.status_code == 200, response.text[:400]
+    assert response.content.count(b'id="tarim-evidence-highlight"') == 1
+    assert response.headers["x-original-source-sha256"] == sha
+    assert "sandbox" in response.headers["content-security-policy"]
+    assert (root / (sha + ".html")).read_bytes().find(b"<mark") == -1
+
+    not_this_article = client.get(
+        f"/evidence/highlight/amendment/{sha}",
+        params={"span_id": "BASE_2024_39_ART4_P1"},
+    )
+    assert not_this_article.status_code == 409
+    wrong_sha = client.get(
+        "/evidence/highlight/amendment/" + "a" * 64,
+        params={"span_id": span_id},
+    )
+    assert wrong_sha.status_code == 409
+
+
 def test_original_2025_42_amendment_clauses_are_exact_when_available() -> None:
     matrix, sources = _matrix(), _manifest()
     root = Path("data/legal_update_archive")

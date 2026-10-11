@@ -621,6 +621,38 @@ def show_exact_original_gazette_html(sha256: str, support_id: str) -> Response:
     )
 
 
+@app.get("/evidence/highlight/amendment/{sha256}", tags=["Özgün HTML Kanıtı"])
+def show_exact_amendment_gazette_html(sha256: str, span_id: str) -> Response:
+    """Render SHA-verified 2025/42 amendment as a sandboxed highlighted COPY."""
+    from tarim_destek_rag.citations.claim_source_matrix import highlighted_amendment_html_copy
+    from tarim_destek_rag.updates.pdf_evidence import SHA_PATTERN
+
+    if not SHA_PATTERN.fullmatch(sha256):
+        raise HTTPException(status_code=422, detail="Geçersiz değişiklik belgesi SHA-256")
+    try:
+        marked = highlighted_amendment_html_copy(span_id, sha256)
+    except (OSError, ValueError, TypeError, KeyError) as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="2025/42 özgün HTML içinde tam ve tekil hüküm bulunamadı",
+        ) from exc
+    return Response(
+        content=marked,
+        media_type="text/html; charset=utf-8",
+        headers={
+            "Content-Disposition": 'inline; filename="resmi-gazete-2025-42-isaretli.html"',
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": (
+                "sandbox; default-src 'none'; style-src 'unsafe-inline'; "
+                "img-src data:; base-uri 'none'; form-action 'none'"
+            ),
+            "X-Original-Source-SHA256": sha256,
+            "X-Legal-Evidence": "ORIGINAL_HTML_TEXT_LOCATED_PENDING_LEGAL_REVIEW",
+        },
+    )
+
+
 @app.get("/evidence/highlight/basin/{sha256}", tags=["PDF Belge Kanıtı"])
 def show_official_basin_crop_highlight(
     sha256: str, province: str, district: str, crop: str,
