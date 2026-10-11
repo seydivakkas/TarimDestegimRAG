@@ -26,13 +26,15 @@
           "rule_id": "RULE_BASIC_SUPPORT_2026",
           "support_id": "BASIC_SUPPORT_2026",
           "field": "passed_checks",
-          "exact_claim_text": "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif."
+          "exact_claim_text": "Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif.",
+          "production_year": 2026
         },
         {
           "rule_id": "RULE_BASIC_SUPPORT_2026",
           "support_id": "BASIC_SUPPORT_2026",
           "field": "failed_checks",
-          "exact_claim_text": "Çiftçi Kayıt Sistemi (ÇKS) kaydı bulunmuyor."
+          "exact_claim_text": "Çiftçi Kayıt Sistemi (ÇKS) kaydı bulunmuyor.",
+          "production_year": 2026
         }
       ]
     },

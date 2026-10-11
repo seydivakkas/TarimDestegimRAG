@@ -13,8 +13,6 @@ from typing import Any
 
 from bs4 import BeautifulSoup
 
-from tarim_destek_rag.citations.original_html import lookup_html_clause
-
 _PIN = re.compile(r"[0-9a-f]{64}\Z")
 _ARTICLE = re.compile(r"^\s*MADDE\s+(\d+)\s*[-–]", re.I)
 
@@ -54,38 +52,31 @@ def validate_source_span(
         raw = (archive_root / "originals" / (sha + ".html")).read_bytes()
         if not raw or len(raw) > 2_000_000 or hashlib.sha256(raw).hexdigest() != sha:
             raise ValueError("Original HTML bytes do not match official SHA")
-        if source_id == "RG_COMMUNIQUE_2024_39":
-            # Preserve the existing strict paragraph (1) locator, which also
-            # checks the article index and forbids guesses about article 4.
-            proof = lookup_html_clause("BASIC_SUPPORT_2026")
-            if (
-                entry.get("span_id") != "BASE_2024_39_ART4_P1"
-                or proof is None or proof["source_sha256"] != sha
-                or proof["exact_quote"] != entry["exact_quote"]
-                or entry.get("article") != "MADDE 4"
-                or entry.get("target_provision") != "MADDE 4(1)"
-            ):
-                raise ValueError("Base provision proof differs from indexed original")
-        else:
-            pattern = _normalized_match(entry["exact_quote"])
-            required_article = entry["article"]
-            if not re.fullmatch(r"MADDE \d+", required_article):
-                raise ValueError("Invalid amendment article identity")
-            document = BeautifulSoup(raw, "html.parser")
-            active_article = None
-            located = 0
-            for node in document.find_all(string=True):
-                if node.parent.name in {"script", "style", "title"}:
-                    continue
-                found_heading = _ARTICLE.search(str(node))
-                if found_heading:
-                    active_article = "MADDE " + found_heading.group(1)
-                if pattern.search(str(node)):
-                    if active_article != required_article:
-                        raise ValueError("Quote found under different amendment article")
-                    located += 1
-            if located != 1:
-                raise ValueError("No unique exact clause within claimed amendment")
+        pattern = _normalized_match(entry["exact_quote"])
+        required_article = entry["article"]
+        if not re.fullmatch(r"MADDE \d+", required_article):
+            raise ValueError("Invalid legal source article identity")
+        document = BeautifulSoup(raw, "html.parser")
+        active_article = None
+        located = 0
+        for node in document.find_all(string=True):
+            if node.parent.name in {"script", "style", "title"}:
+                continue
+            found_heading = _ARTICLE.search(str(node))
+            if found_heading:
+                active_article = "MADDE " + found_heading.group(1)
+            if pattern.search(str(node)):
+                if active_article != required_article:
+                    raise ValueError("Quote found under different official article")
+                if source_id == "RG_COMMUNIQUE_2024_39" and (
+                    entry.get("span_id") != "BASE_2024_39_ART4_P1"
+                    or entry.get("target_provision") != "MADDE 4(1)"
+                    or not re.match(r"^\s*\(1\)\s", str(node))
+                ):
+                    raise ValueError("Base provision must be original MADDE 4(1)")
+                located += 1
+        if located != 1:
+            raise ValueError("No unique exact clause within claimed official article")
         result["source_location_status"] = "ORIGINAL_HTML_SPAN_LOCATED"
         result["verified_quote"] = entry["exact_quote"]
     except (OSError, ValueError, TypeError, KeyError, ImportError) as exc:
@@ -125,6 +116,7 @@ def audit_claim_matrix(
                     and binding.get("support_id") == support_id
                     and binding.get("field") == field
                     and binding.get("exact_claim_text") == text
+                    and binding.get("production_year") == year
                     and type(year) is int and year in row.get("production_years", [])
                 ]
                 key = hashlib.sha256(json.dumps(
@@ -161,8 +153,15 @@ def audit_claim_matrix(
                 and s.get("original_sha256") == ek.get("source_sha256")
                 for s in manifest.get("sources", []))
     ):
-        # A 1-page image table is *not* a verified rate/claim span.
-        ek_status = "VISUAL_TABLE_PENDING_INDEPENDENT_CELL_REVIEW"
+        # An annex digest/byte match proves only the original attachment.
+        # Its raster-only cells have not been independently approved.
+        try:
+            sha = ek["source_sha256"]
+            raw = (archive_root / "originals" / (sha + ".pdf")).read_bytes()
+            if hashlib.sha256(raw).hexdigest() == sha and len(raw) == 695625:
+                ek_status = "VISUAL_TABLE_PENDING_INDEPENDENT_CELL_REVIEW"
+        except (OSError, ValueError, TypeError):
+            pass
     return {
         "schema_version": 1,
         "production_year": year,
