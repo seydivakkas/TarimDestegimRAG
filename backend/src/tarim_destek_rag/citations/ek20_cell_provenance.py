@@ -347,6 +347,46 @@ def render_review_overlay(selected: str | None) -> str:
     except (OSError, ValueError, KeyError, RuntimeError, ImportError, TypeError):
         return "<p>HOLD — Kaynak piksel hücresi yeniden doğrulanamadı.</p>"
 
+
+def render_ek20_review_coverage() -> str:
+    """Show truthful 48-field feature coverage, not an approval dashboard."""
+    from html import escape
+    from tarim_destek_rag.citations.ek20_review_workbench import _table
+
+    data = _table()
+    if data is None or len(data.get("rows", [])) != 12:
+        return "<p>HOLD — EK-20 kaynak veya 12 satırlık kayıt eksik.</p>"
+    try:
+        sha = _original_context(data["rows"][0]["row_id"], FIELD_IDS[0])["sha"]
+    except (ValueError, OSError, KeyError, ImportError, RuntimeError):
+        return "<p>HOLD — Özgün EK-20 PDF arşivi görüntülenemiyor.</p>"
+    count = 0
+    rows_html = []
+    for row in data["rows"]:
+        for field in FIELD_IDS:
+            path = _proposal_path(sha, row["row_id"], field)
+            status = verdict(row["row_id"], field)["status"] if path.is_file() else (
+                "NO_AUTHENTIC_ROI_PROPOSAL"
+            )
+            count += status == "CELL_VISUAL_DUAL_VERIFIED"
+            rows_html.append(
+                "<tr>"
+                f'<td>{escape(row["product_pest"][:100])}</td>'
+                f'<td><code>{escape(field)}</code></td>'
+                f'<td><code>{escape(status)}</code></td>'
+                "</tr>"
+            )
+    return (
+        '<section style="padding:12px;background:white">'
+        f"<strong>EK-20 gerçek hücre bağlama kapsamı: {count}/48</strong>"
+        "<p>Her satır-sütun çifti ayrı koordinat, özgün piksel hash'i ve "
+        "iki ayrı imza gerektirir. Eksik veya reddedilen hücrede sarı vurgu yok. "
+        "48/48 görsel doğrulama dahi hukukî yürürlük/ödeme onayı değildir.</p>"
+        "<table><thead><tr><th>Ürün/etmen</th><th>Alan</th>"
+        "<th>Görsel konum/çift imza durumu</th></tr></thead><tbody>"
+        + "".join(rows_html) + "</tbody></table></section>"
+    )
+
 def _write_new(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     # Exclusive create forbids quietly replacing a signed review/proposal.
