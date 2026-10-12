@@ -257,7 +257,6 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
             )
             from tarim_destek_rag.citations.unlimited_ocr_review import (
                 render_unlimited_ocr_page,
-                engine_status,
             )
             with gr.Accordion("Baidu Unlimited-OCR — isteğe bağlı yerel OCR", open=False):
                 gr.Markdown(
