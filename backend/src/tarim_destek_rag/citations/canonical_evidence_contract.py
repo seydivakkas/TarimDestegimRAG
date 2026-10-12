@@ -207,15 +207,20 @@ def render_claim_contract_html(
             'birebir madde/fıkra/paragraf konumu yoktur. Bağlantı üretilmez.</p>'
         )
     else:
+        from tarim_destek_rag.citations.original_html_navigator import (
+            render_original_html_position,
+        )
+
         parts.extend([
             f'<p><strong>Tekil kanıt ID:</strong> <code>{escape(rec["evidence_id"])}</code></p>',
             f'<p><strong>Özgün kaynak:</strong> {escape(source["document_id"])} · '
             f'{escape(source["article"])} · {escape(source["target_provision"])}</p>',
             f'<p><strong>SHA-256:</strong> <code>{escape(source["source_sha256"])}</code></p>',
             '<p><strong>Birebir özgün HTML pasajı (konum doğrulandı):</strong></p>',
-            f'<p><mark>{escape(source["exact_quote"])}</mark></p>',
+            render_original_html_position(source),
             f'<p><a href="{escape(source["original_url"], quote=True)}" '
-            'target="_blank" rel="noopener noreferrer">Resmî özgün HTML ↗</a></p>',
+            'target="_blank" rel="noopener noreferrer">'
+            'Resmî özgün HTML belgesini aç (genel bağlantı) ↗</a></p>',
         ])
     parts.append(
         '<p><strong>Yıl/değişiklik zinciri:</strong> HOLD — '
