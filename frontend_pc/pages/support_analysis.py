@@ -401,7 +401,7 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
 
             with gr.Row():
                 btn_report = gr.Button(
-                    "📄 Resmî Ön Değerlendirme Raporu Oluştur & İndir (.md)",
+                    "📄 Bağımsız Ön Değerlendirme Raporunu İndir (.md)",
                     variant="primary",
                     size="lg",
                 )
