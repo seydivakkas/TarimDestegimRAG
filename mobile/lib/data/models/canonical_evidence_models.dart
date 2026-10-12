@@ -9,6 +9,7 @@ class CanonicalClaimEvidence {
   final String? supportId;
   final int? productionYear;
   final String? claimText;
+  final String? claimField;
   final String sourceLocationStatus;
   final String temporalLegalStatus;
   final String paymentStatus;
@@ -23,6 +24,7 @@ class CanonicalClaimEvidence {
     this.supportId,
     this.productionYear,
     this.claimText,
+    this.claimField,
     this.source,
     this.amendmentChain = const {},
     required this.sourceLocationStatus,
@@ -77,6 +79,7 @@ class CanonicalClaimEvidence {
       productionYear: json['production_year'] is int
           ? json['production_year'] : null,
       claimText: json['claim_text'] is String ? json['claim_text'] : null,
+      claimField: json['claim_field'] is String ? json['claim_field'] : null,
       source: exactSource,
       amendmentChain: json['amendment_chain'] is Map<String, dynamic>
           ? Map<String, dynamic>.unmodifiable(json['amendment_chain'])
@@ -98,6 +101,7 @@ class CanonicalClaimEvidence {
 class CanonicalEvidenceIndex {
   final int? productionYear;
   final List<CanonicalClaimEvidence> claims;
+  final int claimCount;
   final bool legalApproval;
   final bool paymentApproval;
   final String acceptance;
@@ -105,6 +109,7 @@ class CanonicalEvidenceIndex {
   const CanonicalEvidenceIndex({
     this.productionYear,
     required this.claims,
+    required this.claimCount,
     this.legalApproval = false,
     this.paymentApproval = false,
     this.acceptance = 'HOLD',
@@ -122,6 +127,7 @@ class CanonicalEvidenceIndex {
     return CanonicalEvidenceIndex(
       productionYear: json['production_year'] is int
           ? json['production_year'] : null,
+      claimCount: json['claim_count'] is int ? json['claim_count'] : -1,
       claims: List.unmodifiable(raw.map((item) {
         if (item is! Map<String, dynamic>) {
           throw const FormatException('Invalid single claim evidence');
