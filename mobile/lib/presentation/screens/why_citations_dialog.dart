@@ -1,162 +1,165 @@
-// Telif Hakkı (c) 2026 Seydi Eryılmaz (@seydivakkas)
-// ÖZEL LİSANS — TÜM HAKLAR SAKLIDIR
-
+// F10 — exact claim evidence only; generic RAG citations are NOT official.
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
-import '../../core/theme/app_theme.dart';
 import '../../data/models/support_models.dart';
+import '../../data/models/canonical_evidence_models.dart';
 
 class WhyCitationsDialog extends StatelessWidget {
   final ExplanationResult explanation;
+  final RuleResult? rule;
+  final CanonicalEvidenceIndex? evidenceIndex;
 
-  const WhyCitationsDialog({super.key, required this.explanation});
+  const WhyCitationsDialog({
+    super.key,
+    required this.explanation,
+    this.rule,
+    this.evidenceIndex,
+  });
 
-  static void show(BuildContext context, ExplanationResult explanation) {
+  static void show(
+    BuildContext context,
+    ExplanationResult explanation, {
+    RuleResult? rule,
+    CanonicalEvidenceIndex? evidenceIndex,
+  }) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      builder: (ctx) => WhyCitationsDialog(
+        explanation: explanation,
+        rule: rule,
+        evidenceIndex: evidenceIndex,
       ),
-      builder: (ctx) => WhyCitationsDialog(explanation: explanation),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final scoped = evidenceIndex?.claims.where((c) =>
+        rule != null &&
+        c.ruleId == rule!.ruleId &&
+        c.supportId == rule!.supportId).toList() ?? [];
+
     return DraggableScrollableSheet(
-      initialChildSize: 0.7,
-      maxChildSize: 0.9,
-      minChildSize: 0.4,
+      initialChildSize: 0.74,
+      minChildSize: 0.40,
+      maxChildSize: 0.93,
       expand: false,
-      builder: (context, scrollController) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: ListView(
-            controller: scrollController,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  const Icon(Icons.menu_book_rounded, color: AppTheme.primaryGreen, size: 28),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      "Resmî Karar Gerekçesi & Atıf",
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryGreen,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-              const Divider(height: 24),
-              Text(
-                explanation.supportName,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Text(
-                  explanation.detailedReasonTr,
-                  style: const TextStyle(fontSize: 14, height: 1.5, color: Colors.black87),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                "Doğrulanan Mevzuat Kaynakları (Citations):",
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              if (explanation.citations.isEmpty)
-                const Text("Doğrulanmış atıf bulunamadı.", style: TextStyle(color: Colors.grey))
-              else
-                ...explanation.citations.map((c) => _buildCitationCard(c)),
-              const SizedBox(height: 20),
-            ],
+      builder: (context, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.all(18),
+        children: [
+          Text('Neden? — Tekil Gerekçe ve Kaynak Kanıtı',
+              style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 12),
+          Text(explanation.supportName,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text(explanation.detailedReasonTr),
+          const SizedBox(height: 12),
+          const Text(
+            'YASAL UYARI: Kaynak pasajının bulunması, üretim yılının '
+            'hukukî geçerliliği, çiftçi olguları veya ödeme onayı değildir. '
+            'Bu alanlar HOLD.',
+            style: TextStyle(color: Color(0xFF92400E)),
           ),
-        );
-      },
+          const Divider(height: 25),
+          const Text('Bu değerlendirmeye ait tekil gerekçeler',
+              style: TextStyle(fontWeight: FontWeight.bold)),
+          if (scoped.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'HOLD — Aynı değerlendirmeye bağlı kaynak sözleşmesi '
+                'bulunamadı. Genel arama linki resmî kanıt gibi açılmaz.',
+              ),
+            )
+          else
+            ...scoped.map((proof) => _proofCard(proof)),
+          if (explanation.citations.isNotEmpty) ...[
+            const Divider(height: 26),
+            const Text(
+              'Genel arama parçaları — kaynak konumu doğrulanmadı',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            ...explanation.citations.take(5).map((citation) => Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(citation.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(citation.section),
+                    const Text(
+                      'HOLD — Birebir SHA/madde/pasaj denetimi yok. '
+                      'Bu arama sonucu tıklanabilir resmî kanıt değildir.',
+                    ),
+                  ],
+                ),
+              ),
+            )),
+          ],
+        ],
+      ),
     );
   }
 
-  Widget _buildCitationCard(CitationDetail citation) {
+  Widget _proofCard(CanonicalClaimEvidence proof) {
+    final source = proof.source;
+    final located = proof.hasVerifiableSourceLocation && source != null;
+    final uri = proof.originalSourceUri;
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
-      elevation: 0,
-      color: const Color(0xFFF4F8F4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: Color(0xFFC8E6C9)),
-      ),
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Icon(Icons.gavel_rounded, size: 16, color: AppTheme.primaryGreen),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    citation.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: AppTheme.primaryGreen,
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Text(
-                    "${citation.year}",
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
+            Text(proof.claimText ?? 'Şart metni bulunamadı',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
-            Text(
-              "Bölüm/Madde: ${citation.section}",
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade800),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '"${citation.snippet}"',
-              style: const TextStyle(fontSize: 13, fontStyle: FontStyle.italic, color: Colors.black87),
-            ),
-            if (citation.url != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                "Resmî Gazete Linki: ${citation.url}",
-                style: const TextStyle(fontSize: 11, color: Colors.blueAccent, decoration: TextDecoration.underline),
+            SelectableText('claim_id: ' + (proof.claimId ?? 'HOLD')),
+            if (located) ...[
+              SelectableText('evidence_id: ' + (proof.evidenceId ?? 'HOLD')),
+              Text(source['document_id'].toString() + ' • ' +
+                  source['article'].toString() + ' • ' +
+                  source['target_provision'].toString()),
+              SelectableText('SHA-256: ' + source['source_sha256'].toString()),
+              const SizedBox(height: 7),
+              Container(
+                color: const Color(0xFFFFED52),
+                padding: const EdgeInsets.all(10),
+                child: SelectableText(
+                  source['exact_quote'].toString(),
+                  style: const TextStyle(color: Colors.black87),
+                ),
               ),
-            ],
+              const Text(
+                'Birebir HTML pasajı özgün kaynakta konumlandırıldı. '
+                'Sarı metin uygulama önizlemesidir; yürürlük/ödeme HOLD.',
+              ),
+              if (uri != null)
+                TextButton.icon(
+                  onPressed: () async {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  },
+                  icon: const Icon(Icons.open_in_new),
+                  label: const Text('Doğrulanmış özgün kaynak belgesini aç'),
+                ),
+            ] else
+              const Text(
+                'HOLD — Tekil gerekçenin kaynak konumu doğrulanmadı. '
+                'Sarı pasaj veya kaynak bağlantısı üretilmez.',
+                style: TextStyle(color: Color(0xFF92400E)),
+              ),
+            const Text(
+              'Mevzuat değişiklik zinciri: HOLD • Yıl geçerliliği: HOLD • '
+              'Çiftçi koşulu: doğrulanmadı • Ödeme: HOLD',
+              style: TextStyle(color: Color(0xFF92400E)),
+            ),
           ],
         ),
       ),
