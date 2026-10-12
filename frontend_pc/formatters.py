@@ -582,10 +582,8 @@ def generate_report_markdown(
         report_lines.append("")
 
     # One source of truth: same exact per-claim identity in exported report & UI.
-    from tarim_destek_rag.citations.claim_evidence_workbench import (
-        claim_choices,
-        claim_evidence_record,
-    )
+    from tarim_destek_rag.citations.claim_evidence_workbench import claim_choices
+    from tarim_destek_rag.citations.canonical_evidence_contract import claim_contract
 
     report_lines.extend([
         "---",
@@ -596,20 +594,29 @@ def generate_report_markdown(
         "",
     ])
     for label, claim_id in claim_choices(resp):
-        matched = claim_evidence_record(resp, claim_id)
-        quote = matched.get("source_passage")
+        matched = claim_contract(resp, claim_id)
+        source = matched.get("source")
+        quote = source.get("exact_quote") if isinstance(source, dict) else None
         report_lines.append(f"#### {label}")
         report_lines.append(f"- **Kanıt kimliği:** `{claim_id}`")
+        if matched.get("evidence_id"):
+            report_lines.append(
+                f"- **Kaynak-konum kanıt ID:** `{matched['evidence_id']}`"
+            )
+        report_lines.append(
+            "- **Mevzuat değişiklik / üretim yılı:** HOLD — " 
+            "yıllara göre değişiklik zinciri bağımsız kapanmadı."
+        )
         if isinstance(quote, str):
             report_lines.append(
-                f"- **Özgün kaynak konumu:** {matched['source_id']} · "
-                f"{matched['article']} · {matched['target_provision']}"
+                f"- **Özgün kaynak konumu:** {source['document_id']} · "
+                f"{source['article']} · {source['target_provision']}"
             )
             report_lines.append(f"- **Birebir normatif pasaj:** {quote}")
             report_lines.append(
-                f"- **Orijinal HTML adresi:** {matched['source_url']}"
+                f"- **Orijinal HTML adresi:** {source['original_url']}"
             )
-            report_lines.append(f"- **SHA-256:** `{matched['source_sha256']}`")
+            report_lines.append(f"- **SHA-256:** `{source['source_sha256']}`")
             report_lines.append(
                 "- **Durum:** Kaynak pasajı bulundu. Yürürlük, olgular "
                 "ve ödeme hâlâ HOLD."
