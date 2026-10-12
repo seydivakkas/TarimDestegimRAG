@@ -21,6 +21,23 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
         Sorunuzu doğrudan doğal dille yazın. Sistem yürürlükteki 2026 Resmî Gazete destekleme mevzuatı,
         5488 sayılı Tarım Kanunu, ÇKS yönetmeliği ve mevcut veritabanından kaynaklı ön bilgi sunar; güncel mevzuatla bağımsız teyit edilmelidir.
         """)
+        with gr.Accordion("Tekil değerlendirme kanıtı — Neden? ile aynı ID", open=False):
+            gr.Markdown(
+                "Bu seçici yalnız aynı oturumda hesaplanan **tekil kural şartlarını** "
+                "gösterir. SSS arama sonucunu tahminen bir mevzuat maddesine "
+                "bağlamaz. Birebir kaynak konumu yoksa HOLD; yürürlük ve ödeme "
+                "kanıtlanmış sayılmaz."
+            )
+            faq_claim_selector = gr.Dropdown(
+                choices=[], value=None,
+                label="Mevcut değerlendirmeden tam claim_id seç",
+                interactive=True,
+            )
+            faq_claim_display = gr.HTML(
+                "<p>Değerlendirme yapıp kesin gerekçeyi seçin. "
+                "Genel SSS yanıtı burada resmî kanıta dönüşmez.</p>"
+            )
+
         chatbot = gr.Chatbot(height=420, label="Mevzuat & Soru-Cevap Sohbeti")
         with gr.Row():
             chat_input = gr.Textbox(
@@ -146,4 +163,6 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
         "chat_submit": chat_submit,
         "chat_clear": chat_clear,
         "faq_df": faq_df,
+        "faq_claim_selector": faq_claim_selector,
+        "faq_claim_display": faq_claim_display,
     }
