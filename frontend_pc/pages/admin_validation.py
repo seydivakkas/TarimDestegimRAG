@@ -11,6 +11,7 @@ from typing import Any
 import gradio as gr
 
 from frontend_pc.api_client import ApiClient
+from frontend_pc.services.feature_gap_service import gap_register_view
 from frontend_pc.services.benchmark_service import (
     get_benchmark_kpi_html,
     get_benchmark_summary,
@@ -25,6 +26,37 @@ IMG_EVIDENCE = os.path.join(PROJECT_ROOT, "proje_tanıtım_resim", "Xiaohei_Huku
 def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.components.Component]:
     """Yönetim & Doğrulama sekmesini inşa eder ve bileşen sözlüğünü döner."""
     with gr.TabItem("⚙️ Yönetim & Doğrulama", id="tab_admin_validation"):
+        with gr.Accordion(
+            "🧩 Geliştirme Eksikleri ve Çözüm Takibi (F01–F14)",
+            open=False,
+        ):
+            gap_summary, gap_items = gap_register_view()
+            gap_overview = gr.Markdown(gap_summary)
+            gap_table = gr.DataFrame(
+                value=gap_items,
+                headers=[
+                    "İş ID", "Paket", "Öncelik", "Durum",
+                    "Eksik", "Çözüm", "Tamamlanma ölçütü",
+                ],
+                datatype=["str"] * 7,
+                interactive=False,
+                label="30 maddelik GitHub iş takip envanteri",
+            )
+            btn_gap_refresh = gr.Button(
+                "GitHub'dan güncellenmiş yerel iş kayıtlarını yeniden yükle",
+                variant="secondary",
+            )
+            btn_gap_refresh.click(
+                gap_register_view,
+                inputs=[],
+                outputs=[gap_overview, gap_table],
+            )
+            gr.Markdown(
+                "Gösterilen dosya yerel uygulama paketindeki kayıt anlık "
+                "görüntüsüdür; ağdan yeni GitHub commit'lerini otomatik çekmez. "
+                "Kaynak dosya: configs/feature_gap_register.json"
+            )
+
         gr.Markdown("### 🌾 Tarımsal Soru-Cevap Bilgi Tabanı Web Harvester & Doğrulama Paneli")
         gr.Markdown("""
         Tarım ve Orman Bakanlığı, BÜGEM, TAGEM Zirai Mücadele, TARSİM Sigortası, TKDK IPARD ve Ziraat Odaları gibi resmî kurumsal
