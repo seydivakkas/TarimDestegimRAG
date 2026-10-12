@@ -32,8 +32,8 @@ def client():
         yield c
 
 
-def test_build_ui_has_exactly_five_user_tasks():
-    """Gradio bloklarında tam olarak 5 ana kullanıcı görevi (TabItem) olduğunu doğrular."""
+def test_build_ui_has_user_tasks():
+    """Gradio bloklarında ana kullanıcı görevleri ve Kanıt Zinciri sekmesi (TabItem) olduğunu doğrular."""
     app_blocks = build_ui()
     assert app_blocks is not None
 
@@ -42,11 +42,12 @@ def test_build_ui_has_exactly_five_user_tasks():
         b for b in app_blocks.blocks.values()
         if isinstance(b, gr.TabItem)
     ]
-    assert len(tab_items) == 5, f"Beklenen 5 sekme, bulunan: {len(tab_items)}"
+    assert len(tab_items) == 6, f"Beklenen 6 sekme, bulunan: {len(tab_items)}"
 
     tab_labels = [t.label for t in tab_items]
     assert any("Çiftçi & Parsellerim" in lbl for lbl in tab_labels)
     assert any("Destek Analizi" in lbl for lbl in tab_labels)
+    assert any("Kanıt Zinciri" in lbl for lbl in tab_labels)
     assert any("Mevzuat Asistanı" in lbl for lbl in tab_labels)
     assert any("Kaynaklar & Takvim" in lbl for lbl in tab_labels)
     assert any("Yönetim & Doğrulama" in lbl for lbl in tab_labels)

@@ -43,6 +43,7 @@ try:
     )
     from frontend_pc.geo_data import TURKEY_DISTRICTS, TURKEY_PROVINCES
     from frontend_pc.pages.admin_validation import render_admin_validation_tab
+    from frontend_pc.pages.evidence_chain import render_evidence_chain_tab
     from frontend_pc.pages.farmer_parcels import (
         CROPS,
         DISTRICTS,
@@ -82,6 +83,7 @@ except ModuleNotFoundError:
     )
     from geo_data import TURKEY_DISTRICTS, TURKEY_PROVINCES  # type: ignore[no-redef]
     from pages.admin_validation import render_admin_validation_tab  # type: ignore[no-redef]
+    from pages.evidence_chain import render_evidence_chain_tab  # type: ignore[no-redef]
     from pages.farmer_parcels import (  # type: ignore[no-redef]
         CROPS,
         DISTRICTS,
@@ -119,7 +121,7 @@ api_client = ApiClient()
 
 
 def build_ui() -> gr.Blocks:
-    """5 Kullanıcı Görevine İndirgenmiş Modern Gradio Arayüzünü İnşa Eder."""
+    """Modern Gradio Arayüzünü İnşa Eder."""
     with gr.Blocks(title="TarımDestekRAG 2026") as app:
         # Üst Hero Header
         gr.HTML("""
@@ -145,16 +147,19 @@ def build_ui() -> gr.Blocks:
             # 1. Görev: Çiftçi & Parsellerim
             p1 = render_farmer_parcels_tab()
 
-            # 2. Görev: Destek Analizi (Kartlar + Formül + Mevzuat + Eksik Belge / Raporlama)
+            # 2. Görev: Destek Analizi (Kartlar + Formül + Eksik Belge / Raporlama)
             p2 = render_support_analysis_tab()
 
-            # 3. Görev: Mevzuat Asistanı
+            # 3. Görev: Kanıt Zinciri & Resmî Gazete Gezgini (Neden?)
+            p_evidence = render_evidence_chain_tab()
+
+            # 4. Görev: Mevzuat Asistanı
             p3 = render_legal_assistant_tab()
 
-            # 4. Görev: Kaynaklar & Takvim
+            # 5. Görev: Kaynaklar & Takvim
             p4 = render_sources_calendar_tab()
 
-            # 5. Görev: Yönetim & Doğrulama (Rol Tabanlı)
+            # 6. Görev: Yönetim & Doğrulama (Rol Tabanlı)
             p5 = render_admin_validation_tab(api_client)
 
         # Girdi ve Çıktı Bağlantıları
@@ -178,7 +183,7 @@ def build_ui() -> gr.Blocks:
             p2["out_kpi"],
             p2["out_cards"],
             p2["out_table"],
-            p2["out_reasons"],
+            p_evidence["out_reasons"],
             p2["out_disclaimer"],
         ]
 
