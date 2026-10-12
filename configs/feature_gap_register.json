@@ -338,9 +338,9 @@
       "gap_id": "G26",
       "feature_id": "F13",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "CODE_IN_PROGRESS",
       "title": "Tahmini tutar vs ödeme onayı ayrımı",
-      "solution": "Destek kartı, KPI, rapor ve mobilde ekonomik simülasyon ile mevzuat/olgu ödeme yetkisini ayrı etiketle.",
+      "solution": "Destek kartı, KPI, rapor ve mobilde ekonomik simülasyon ile mevzuat/olgu ödeme yetkisini ayrı etiketle. Kod ek adımı: masaüstü ve mobilde null tutarı 0 TL diye sunma; raporu bağımsız olarak adlandır. Ayrı ödeme otorite geçidi hâlâ açık.",
       "definition_of_done": "Hiçbir tahmini tutar ödeme kararı veya kesin hak ediş diye görünmez.",
       "responsible_role": "ENGINEERING"
     },
