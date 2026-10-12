@@ -10,7 +10,6 @@ import hashlib
 import json
 import re
 from html import escape
-from pathlib import Path
 from typing import Any
 
 from tarim_destek_rag.citations.claim_evidence_workbench import (
