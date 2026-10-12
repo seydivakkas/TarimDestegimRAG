@@ -24,7 +24,7 @@ class SupportDetailScreen extends StatelessWidget {
   });
 
   String _formatCurrency(double? amount) {
-    if (amount == null) return "0.00 TL";
+    if (amount == null) return "Hesaplanmadı";
     final fmt = NumberFormat("#,##0.00", "tr_TR");
     return "${fmt.format(amount)} TL";
   }
