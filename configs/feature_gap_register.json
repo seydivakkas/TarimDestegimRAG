@@ -208,9 +208,9 @@
       "gap_id": "G13",
       "feature_id": "F07",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "CODE_IN_PROGRESS",
       "title": "Kaynak kapsam sayacı ve bilinmeyen nedenler",
-      "solution": "Tüm destek şartları için unmapped/ambiguous/located/year-HOLD durumlarını arayüzde say.",
+      "solution": "Tüm destek şartları için unmapped/ambiguous/located/year-HOLD durumlarını arayüzde say. Eklenen özellik: güncel değerlendirmedeki tekil kaynak-konum eşleşen/eşleşmeyen gerekçeleri say ve Neden alanında açık kanıt kimlikleriyle göster; kapsam tamamlama henüz açık.",
       "definition_of_done": "Eksik gerekçelerin listesi ve tam coverage yüzdesi doğrudan görülebilir.",
       "responsible_role": "ENGINEERING"
     },
