@@ -2,11 +2,13 @@
 // ÖZEL LİSANS — TÜM HAKLAR SAKLIDIR
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../data/models/support_models.dart';
 import '../widgets/status_badge.dart';
+import '../providers/destek_provider.dart';
 import 'why_citations_dialog.dart';
 
 class SupportDetailScreen extends StatelessWidget {
@@ -187,9 +189,14 @@ class SupportDetailScreen extends StatelessWidget {
           // Neden? (Resmî Gerekçe ve Atıflar) Butonu
           if (explanation != null)
             ElevatedButton.icon(
-              onPressed: () => WhyCitationsDialog.show(context, explanation!),
+              onPressed: () => WhyCitationsDialog.show(
+                context,
+                explanation!,
+                rule: rule,
+                evidenceIndex: context.read<DestekProvider>().evidenceIndex,
+              ),
               icon: const Icon(Icons.help_center_rounded),
-              label: const Text("Neden Bu Karar Verildi? (Resmî Atıflar)"),
+              label: const Text("Neden? (Tekil Kanıt ve HOLD Durumları)"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accentAmber,
                 foregroundColor: Colors.black,
