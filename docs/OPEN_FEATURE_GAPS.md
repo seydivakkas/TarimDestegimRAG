@@ -4,7 +4,7 @@
 
 **Tek kaynak:** configs/feature_gap_register.json. Bu okunabilir sayfa aynı veriden oluşturulmuştur. Yeniden üretmek için scripts/render_feature_gap_register.py --write.
 
-**Toplam açık iş:** 30 • BLOCKED_EXTERNAL: 4 / OPEN: 21 / CODE_IN_PROGRESS: 2 / DEFERRED_F14: 3. Bunlar iş kalemidir; 48 EK-20 hücresi G05/G17'de ayrı izlenir.
+**Toplam açık iş:** 30 • BLOCKED_EXTERNAL: 4 / OPEN: 20 / CODE_IN_PROGRESS: 3 / DEFERRED_F14: 3. Bunlar iş kalemidir; 48 EK-20 hücresi G05/G17'de ayrı izlenir.
 
 ## F01–F14 özellik düzeyi
 
@@ -41,7 +41,7 @@
 | G10 | P0 | F06 | OPEN | Gerekçeden gerçek PDF sayfasına otomatik geçiş | Claim→source_id/page/bbox kabul kontratı; var olan dropdown/image viewer otomatik güncelle; sahte PDF sayfası engeli. | Bir claim için tek doğrulanmış PDF konumu varsa oraya gider, yoksa HOLD. |
 | G11 | P1 | F06 | OPEN | PDF/HTML tek kanıt geçerlilik ekranı | HTML exact passage, PDF text, tablo ROI ve bağımsız sarı/amber statülerini tek gezginde birleştir. | Yellow yalnız doğrulanmış kanıt türünü gösterir; hukukî/geçerli yıl ayrı. |
 | G12 | P0 | F07 | OPEN | Tüm kural şartlarını tekil hükme bağlama | Her rule_id/support_id/year/field/exact_claim_text için kaynak madde/fıkra veya tablo hücresiyle curated binding üret. | Bütün destek gerekçeleri tekil olarak eşlenir ya da görünür HOLD kalır. |
-| G13 | P1 | F07 | OPEN | Kaynak kapsam sayacı ve bilinmeyen nedenler | Tüm destek şartları için unmapped/ambiguous/located/year-HOLD durumlarını arayüzde say. | Eksik gerekçelerin listesi ve tam coverage yüzdesi doğrudan görülebilir. |
+| G13 | P1 | F07 | CODE_IN_PROGRESS | Kaynak kapsam sayacı ve bilinmeyen nedenler | Tüm destek şartları için unmapped/ambiguous/located/year-HOLD durumlarını arayüzde say. Eklenen özellik: güncel değerlendirmedeki tekil kaynak-konum eşleşen/eşleşmeyen gerekçeleri say ve Neden alanında açık kanıt kimlikleriyle göster; kapsam tamamlama henüz açık. | Eksik gerekçelerin listesi ve tam coverage yüzdesi doğrudan görülebilir. |
 | G14 | P0 | F08 | OPEN | Mevzuat değişiklik/ilga grafiği | 2024/39, 2025/13, 2025/42, 8859, 10394, 11781 değişikliklerinin affected provision ve yürürlük etkisini madde bazında modellendir. | Değişiklik silsilesi ve ilga edilen hükümler kaynak kanıtıyla ilişkilidir. |
 | G15 | P0 | F08 | OPEN | 2025/2026/2027 hukukî yıl geçerliliği | Geçiş ve geriye dönük koşullar dahil her hüküm için dönem/yıl applicability kararını doğrulanmış değişiklik zincirine bağla. | Yalnız tam kaynak yılı kanıtlanmış hükümlere temporal PASS verilebilir. |
 | G16 | P1 | F08 | OPEN | EK-20 oranlarını yıllar arasında karıştırmama | 2026 annex aktarımını 2025/2027'ye taşımayı engelleyen yıl bazlı değişiklik/değer seçimini tamamla. | 2025 ve 2027 için 2026 EK-20 tutarı asla varsayılan kullanılmaz. |
