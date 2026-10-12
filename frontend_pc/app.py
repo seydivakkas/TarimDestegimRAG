@@ -262,6 +262,24 @@ def build_ui() -> gr.Blocks:
                 p2["roi_preview_display"],
             ],
         )
+        from tarim_destek_rag.citations.unlimited_ocr_review import (
+            render_unlimited_ocr_ek20,
+        )
+        p2["btn_unlimited_ek20"].click(
+            render_unlimited_ocr_ek20,
+            inputs=[
+                p2["ek20_selector"],
+                p2["roi_x0"], p2["roi_y0"], p2["roi_x1"], p2["roi_y1"],
+                eval_state,
+            ],
+            outputs=[p2["unlimited_ek20_display"]],
+        )
+        eval_state.change(
+            lambda: "<p>Değerlendirme değişti: OCR önizlemesi geçersiz. HOLD.</p>",
+            inputs=[],
+            outputs=[p2["unlimited_ek20_display"]],
+        )
+
         # Never reuse a previous year's OCR/grid cell proposal after a new
         # evaluation, even if the dropdown holds the same apparent row name.
         eval_state.change(
