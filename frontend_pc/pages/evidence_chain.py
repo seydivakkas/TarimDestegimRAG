@@ -47,10 +47,22 @@ def render_evidence_chain_tab() -> dict[str, gr.components.Component]:
 
         with gr.Accordion("📄 Resmî Gazete Sayfa, Tablo ve Görsel Kanıt Gezgini (OCR & Sayfa İndeksi)", open=True):
             gr.Markdown(
-                "Aşağıdaki listeden incelemek istediğiniz **Resmî Gazete sayfasını, tablosunu veya mevzuat maddesini** seçiniz "
-                "ya da belge içi arama kutusuna ürün, katsayı veya konu yazınız. Sistem ilgili sayfayı, çıkarılan tabloyu, "
-                "grafik analizini ve **yüksek çözünürlüklü sayfa görselini** sunar:"
+                "Aşağıdaki **madde butonlarına doğrudan tıklayarak** ilgili Resmî Gazete sayfasını, tablosunu ve orijinal sayfa görselini anında aşağıda açabilirsiniz:"
             )
+
+            with gr.Row():
+                btn_m1 = gr.Button("🟢 MADDE 1: Temel Destek & ÇKS (S.1)", variant="secondary", size="sm")
+                btn_m2 = gr.Button("🟢 MADDE 2: Planlı Üretim & Havza (S.1)", variant="secondary", size="sm")
+                btn_m3 = gr.Button("🟢 MADDE 3: Sertifikalı Tohum (S.2)", variant="secondary", size="sm")
+                btn_m4 = gr.Button("🟢 MADDE 4: Su Kısıtı Havzaları (S.2)", variant="secondary", size="sm")
+
+            with gr.Row():
+                btn_m5 = gr.Button("🟢 MADDE 5: Genç & Kadın Çiftçi (S.2)", variant="secondary", size="sm")
+                btn_m6 = gr.Button("🟢 MADDE 6: Sertifikalı Fidan (S.2)", variant="secondary", size="sm")
+                btn_tablo = gr.Button("📊 EK TABLO: 2026 Destek Tutarları (S.2)", variant="secondary", size="sm")
+                btn_11781 = gr.Button("📜 KARAR 11781: 367 TL Katsayı (S.1)", variant="secondary", size="sm")
+                btn_teblig = gr.Button("📋 TEBLİĞ 2024/39: Askı & İtiraz (S.1)", variant="secondary", size="sm")
+
             with gr.Row():
                 article_selector = gr.Dropdown(
                     choices=[
@@ -97,6 +109,46 @@ def render_evidence_chain_tab() -> dict[str, gr.components.Component]:
                 inputs=[article_selector, page_search_input],
                 outputs=[article_display],
             )
+
+            # Doğrudan Tıklanabilir Madde Butonları Bağlantıları
+            v_m1 = "MADDE 1 - Temel Destek ve ÇKS Zorunluluğu (Karar 8859 S.1)"
+            v_m2 = "MADDE 2 - Tarım Havzaları Planlı Üretim Desteği (Karar 8859 S.1)"
+            v_m3 = "MADDE 3 - Sertifikalı Tohum Kullanım Desteği (Karar 8859 S.2)"
+            v_m4 = "MADDE 4 - Yeraltı Su Kısıtı Olan Havzalar Desteği (Karar 8859 S.2)"
+            v_m5 = "MADDE 5 - Kadın ve Genç Çiftçi İlave Desteği (Karar 8859 S.2)"
+            v_m6 = "MADDE 6 - Sertifikalı Fidan ve Kapama Bahçe Şartı (Karar 8859 S.2)"
+            v_tablo = "EK TABLO - 2026 Birim Destek Katsayıları & Fiyat Cetveli (Karar 8859 S.2)"
+            v_11781 = "KARAR 11781 - 2026 Destekleme Katsayısı Güncellemesi (367 TL/da S.1)"
+            v_teblig = "TEBLİĞ 2024/39 - Askı İcmalleri, 5 Günlük İtiraz ve ÇKS Süreçleri"
+
+            btn_m1.click(lambda: v_m1, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+            btn_m2.click(lambda: v_m2, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+            btn_m3.click(lambda: v_m3, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+            btn_m4.click(lambda: v_m4, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+            btn_m5.click(lambda: v_m5, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+            btn_m6.click(lambda: v_m6, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+            btn_tablo.click(lambda: v_tablo, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+            btn_11781.click(lambda: v_11781, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+            btn_teblig.click(lambda: v_teblig, outputs=[article_selector]).then(
+                update_article_view, inputs=[article_selector, page_search_input], outputs=[article_display]
+            )
+
 
     return {
         "out_reasons": out_reasons,

@@ -964,6 +964,15 @@ def render_page_evidence_card(
     t_pages = record.total_pages
     clean_url = escape(record.official_url, quote=True)
 
+    # Yerel PDF dosya adı (hızlı erişim için)
+    pdf_filename_map = {
+        "RG_DECISION_8859": "RG_20240829_8859.pdf",
+        "RG_DECISION_11781": "RG_20260908_11781.pdf",
+        "RG_COMMUNIQUE_2024_39": "RG_20241231_TEBLIG_2024_39.pdf",
+    }
+    local_pdf = pdf_filename_map.get(record.doc_id, "RG_20240829_8859.pdf")
+    local_url = f"http://127.0.0.1:8000/documents/{local_pdf}#page={p_num}"
+
     # 1. Tablo HTML'i (Eğer sayfada tablo varsa)
     table_section_html = ""
     if record.tables:
@@ -971,7 +980,7 @@ def render_page_evidence_card(
             table_rows_html = ""
             for r in t.rows:
                 cells_html = "".join(
-                    f'<td style="padding: 6px 10px; border: 1px solid #cbd5e1; font-size: 0.88rem; color: #1e293b;">{escape(c)}</td>'
+                    f'<td style="padding: 7px 10px; border: 1px solid #cbd5e1; font-size: 0.88rem; color: #1e293b;">{escape(c)}</td>'
                     for c in r
                 )
                 table_rows_html += f'<tr style="background: #ffffff;">{cells_html}</tr>\n'
@@ -982,8 +991,8 @@ def render_page_evidence_card(
             )
 
             table_section_html += f"""
-            <div class="evidence-table-container" style="margin: 12px 0; border: 1px solid #0f766e; border-radius: 6px; overflow: hidden; background: #f0fdfa;">
-                <div style="background: #0f766e; color: #ffffff; padding: 6px 12px; font-weight: 700; font-size: 0.9rem; display: flex; justify-content: space-between;">
+            <div class="evidence-table-container" style="margin-bottom: 12px; border: 1px solid #0f766e; border-radius: 8px; overflow: hidden; background: #f0fdfa;">
+                <div style="background: #0f766e; color: #ffffff; padding: 7px 12px; font-weight: 700; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;">
                     <span>📊 Sayfadan OCR/Yerleşim ile Çıkarılan Resmî Tablo: {escape(t.table_id)}</span>
                     <span style="font-size: 0.8rem; background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px;">{t.row_count} Satır &middot; {t.col_count} Sütun</span>
                 </div>
@@ -1012,43 +1021,34 @@ def render_page_evidence_card(
         """
 
     # 3. Sayfa Görseli (Görsel Kanıt Önizleme)
-    image_section_html = ""
-    if record.image_base64:
-        image_section_html = f"""
-        <div class="evidence-image-preview" style="margin-top: 14px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #f8fafc;">
-            <div style="padding: 6px 12px; background: #334155; color: #ffffff; font-size: 0.85rem; font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
-                <span>🖼️ Orijinal Resmî Gazete Sayfası Görsel Delili (144 DPI Sayfa Taraması)</span>
-                <span style="font-size: 0.78rem; opacity: 0.85;">Sayfa {p_num} / {t_pages}</span>
-            </div>
-            <div style="text-align: center; padding: 10px; background: #64748b; max-height: 520px; overflow-y: auto;">
-                <img src="{record.image_base64}" alt="Resmî Gazete Sayfa {p_num}" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.25);" />
-            </div>
-        </div>
-        """
+    image_src = record.image_base64 or ""
 
     paragraphs_html = "\n".join(
-        f'<p class="legal-reader-paragraph" style="margin-bottom: 8px;">{p.strip()}</p>'
+        f'<p class="legal-reader-paragraph" style="margin-bottom: 8px; line-height: 1.65;">{p.strip()}</p>'
         for p in record.highlighted_html.split("\n")
         if p.strip()
     )
 
     return f"""
-    <div class="legal-reader-container" style="border: 2px solid #047857; border-radius: 8px; padding: 16px; background: #ffffff; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
+    <div class="legal-reader-container" style="border: 2px solid #047857; border-radius: 10px; padding: 16px; background: #ffffff; margin-bottom: 16px; box-shadow: 0 4px 14px rgba(0,0,0,0.07);">
         <!-- Üst Künye Çubuğu -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid #e2e8f0; padding-bottom: 12px;">
             <div>
-                <span style="display: inline-block; background: #047857; color: #ffffff; padding: 3px 10px; border-radius: 4px; font-weight: 700; font-size: 0.85rem;">
+                <span style="display: inline-block; background: #047857; color: #ffffff; padding: 4px 12px; border-radius: 6px; font-weight: 700; font-size: 0.9rem;">
                     📄 Resmî Gazete Sayfa {p_num} / {t_pages}
                 </span>
-                <span style="margin-left: 6px; font-weight: 600; color: #0f172a; font-size: 0.95rem;">
+                <span style="margin-left: 8px; font-weight: 600; color: #0f172a; font-size: 0.95rem;">
                     Sayı: {issue} &middot; Tarih: {g_date}
                 </span>
-                <h4 style="margin: 6px 0 0 0; color: #064e3b; font-size: 1.1rem; line-height: 1.3;">
+                <h4 style="margin: 6px 0 0 0; color: #064e3b; font-size: 1.15rem; line-height: 1.35;">
                     🏛️ {doc_title}
                 </h4>
             </div>
-            <div>
-                <a href="{clean_url}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; background: #047857; color: #ffffff !important; padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.9rem; box-shadow: 0 2px 4px rgba(4,120,87,0.3);">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a href="{local_url}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; background: #0284c7; color: #ffffff !important; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(2,132,199,0.3);">
+                    📑 Yerel PDF'te Sayfa {p_num}'yi Aç ↗
+                </a>
+                <a href="{clean_url}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 6px; background: #047857; color: #ffffff !important; padding: 8px 14px; border-radius: 6px; text-decoration: none; font-weight: 700; font-size: 0.88rem; box-shadow: 0 2px 4px rgba(4,120,87,0.3);">
                     📄 Orijinal PDF'te Sayfa {p_num}'yi Aç (#page={p_num}) ↗
                 </a>
             </div>
@@ -1056,35 +1056,55 @@ def render_page_evidence_card(
 
         <!-- İlgili Maddeler & Grafik Özeti -->
         <div style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
-            <span style="font-size: 0.84rem; font-weight: 600; color: #334155;">Bu Sayfadaki Hükümler:</span>
-            {''.join(f'<span style="background: #e2e8f0; color: #0f172a; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600;">{escape(a)}</span>' for a in record.articles_contained) if record.articles_contained else '<span style="color: #64748b; font-size: 0.82rem;">Belge Başlığı ve Tanımlar</span>'}
+            <span style="font-size: 0.86rem; font-weight: 700; color: #334155;">Bu Sayfadaki Hükümler:</span>
+            {''.join(f'<span style="background: #e2e8f0; color: #0f172a; padding: 3px 9px; border-radius: 4px; font-size: 0.82rem; font-weight: 700;">{escape(a)}</span>' for a in record.articles_contained) if record.articles_contained else '<span style="color: #64748b; font-size: 0.84rem;">Belge Başlığı ve Tanımlar</span>'}
         </div>
 
         {graphics_html}
 
-        {table_section_html}
-
-        <!-- İşaretli Metin Katmanı -->
-        <div style="margin-top: 12px;">
-            <div style="font-weight: 700; color: #334155; font-size: 0.9rem; margin-bottom: 6px; display: flex; justify-content: space-between;">
-                <span>📜 Doğrulanmış Resmî Sayfa Metni &amp; Renkli Şart Vurguları:</span>
-                <span style="font-size: 0.8rem; color: #047857; font-weight: 600;">✓ Sayfa {p_num} İle Birebir Eşleşti</span>
+        <!-- 2 Sütunlu Yan Yana İkiz Görünüm: Sol Sayfa Görseli, Sağ Renkli Metin ve Tablo -->
+        <div style="display: grid; grid-template-columns: minmax(340px, 1fr) minmax(360px, 1.25fr); gap: 16px; margin-top: 14px; align-items: start;">
+            <!-- Sol: Orijinal 144 DPI Resmî Gazete Sayfası Taraması -->
+            <div class="evidence-image-preview" style="border: 2px solid #334155; border-radius: 8px; overflow: hidden; background: #0f172a; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <div style="padding: 8px 12px; background: #1e293b; color: #ffffff; font-size: 0.88rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155;">
+                    <span>🖼️ Orijinal Resmî Gazete Sayfası Görsel Delili (144 DPI Sayfa Taraması)</span>
+                    <span style="background: #047857; color: #ffffff; padding: 2px 8px; border-radius: 4px; font-size: 0.78rem;">Sayfa {p_num} / {t_pages}</span>
+                </div>
+                <div style="padding: 10px; background: #475569; text-align: center; max-height: 720px; overflow-y: auto;">
+                    <img src="{image_src}" alt="Resmî Gazete Sayfa {p_num}" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 16px rgba(0,0,0,0.4); background: #ffffff; display: block; margin: 0 auto;" />
+                </div>
+                <div style="padding: 6px 12px; background: #1e293b; color: #94a3b8; font-size: 0.78rem; text-align: center;">
+                    144 DPI Yüksek Çözünürlüklü Optik Tarama &middot; Sayfa {p_num} Orijinal Baskısı
+                </div>
             </div>
-            <div class="legal-reader-body" style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; line-height: 1.7; font-size: 0.92rem; max-height: 380px; overflow-y: auto;">
-                {paragraphs_html}
+
+            <!-- Sağ: OCR Metni, Renkli Şart Vurguları ve Çıkarılan Tablolar -->
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                {table_section_html}
+
+                <div style="border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+                    <div style="padding: 8px 12px; background: #0f766e; color: #ffffff; font-size: 0.88rem; font-weight: 700; display: flex; justify-content: space-between; align-items: center;">
+                        <span>📜 Doğrulanmış Resmî Sayfa Metni &amp; Renkli Şart Vurguları:</span>
+                        <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">✓ Sayfa {p_num} İle Birebir Eşleşti</span>
+                    </div>
+                    <div class="legal-reader-body" style="padding: 14px; line-height: 1.7; font-size: 0.92rem; max-height: 640px; overflow-y: auto; background: #f8fafc;">
+                        {paragraphs_html}
+                    </div>
+                </div>
             </div>
         </div>
 
-        {image_section_html}
-
         <!-- Alt Bağlantı -->
-        <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-            <span style="font-size: 0.82rem; color: #64748b;">
-                T.C. Resmî Gazete Orijinal Metin Arşivi &middot; Sayfa Hash &amp; Koordinat Onaylı
-            </span>
-            <a href="{clean_url}" target="_blank" rel="noopener noreferrer" style="font-size: 0.85rem; color: #047857; font-weight: 700; text-decoration: underline;">
-                🔗 Orijinal Resmî Gazete PDF'ine Git (Sayfa {p_num}) ↗
-            </a>
+        <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; padding-top: 10px; font-size: 0.82rem; color: #64748b; flex-wrap: wrap; gap: 8px;">
+            <span>T.C. Resmî Gazete Orijinal Metin Arşivi &middot; Sayfa Hash &amp; Koordinat Onaylı</span>
+            <div style="display: flex; gap: 12px;">
+                <a href="{local_url}" target="_blank" rel="noopener noreferrer" style="color: #0284c7; font-weight: 700; text-decoration: underline;">
+                    📑 Yerel PDF Belgesi (Sayfa {p_num}) ↗
+                </a>
+                <a href="{clean_url}" target="_blank" rel="noopener noreferrer" style="color: #047857; font-weight: 700; text-decoration: underline;">
+                    🔗 Resmî Gazete PDF Portalı (Sayfa {p_num}) ↗
+                </a>
+            </div>
         </div>
     </div>
     """

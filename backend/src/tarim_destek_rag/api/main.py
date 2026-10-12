@@ -116,6 +116,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.staticfiles import StaticFiles
+
+_doc_dir = Path("data/documents")
+_doc_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/documents", StaticFiles(directory=str(_doc_dir)), name="documents")
+
 
 @app.exception_handler(HTTPException)
 async def custom_http_exception_handler(request, exc: HTTPException):
