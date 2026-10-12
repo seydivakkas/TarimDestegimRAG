@@ -1,6 +1,6 @@
 # TarımDestekRAG — Benchmark v1 Değerlendirme Raporu
 
-**Rapor Tarihi:** 2026-10-11
+**Rapor Tarihi:** 2026-10-12
 **Test Edilen Vaka Sayısı:** 100
 **Lisans:** Özel Lisans — Tüm Hakları Saklıdır (c) 2026 Seydi Eryılmaz (@seydivakkas)
 
@@ -42,10 +42,10 @@
 
 | Bileşen | Ortalama Süre (ms) |
 |---|---|
-| **Rule Engine Değerlendirmesi** | 10.56 ms |
+| **Rule Engine Değerlendirmesi** | 9.74 ms |
 | **Hibrit Arama (RRF Retrieval)** | 15.00 ms |
 | **Deterministik Açıklama Üretimi** | 0.03 ms |
-| **Uçtan Uca (End-to-End Latency)** | **12.50 ms** |
+| **Uçtan Uca (End-to-End Latency)** | **11.46 ms** |
 
 ---
 
