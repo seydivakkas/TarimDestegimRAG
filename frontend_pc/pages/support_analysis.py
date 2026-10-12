@@ -211,6 +211,16 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 roi_preview_display = gr.HTML(
                     "<p>Özgün görüntü koordinatları girilmedi. HOLD.</p>"
                 )
+                btn_unlimited_ek20 = gr.Button(
+                    "Baidu Unlimited-OCR ile seçili gerçek EK-20 hücre ROI'sini oku",
+                    variant="secondary",
+                )
+                unlimited_ek20_display = gr.HTML(
+                    "<p>Baidu Unlimited-OCR yalnız SHA-doğrulanmış 180 DPI "
+                    "hücre görüntüsünde, özel onaylı yerel GPU modeli "
+                    "kurulmuşsa isteğe bağlı çalışır. Sonuç HOLD.</p>"
+                )
+
 
             gr.Markdown(
                 "**48 hücre kanıt envanteri:** Her EK-20 tutar alanının özgün "
@@ -245,6 +255,26 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 value="<p>OCR yalnızca isteğiniz üzerine çalışır; "
                 "OCR sonucu resmî alıntı veya onay değildir.</p>"
             )
+            from tarim_destek_rag.citations.unlimited_ocr_review import (
+                render_unlimited_ocr_page,
+                engine_status,
+            )
+            with gr.Accordion("Baidu Unlimited-OCR — isteğe bağlı yerel OCR", open=False):
+                gr.Markdown(
+                    "Bu motor **Baidu/Unlimited-OCR**'dır; PaddleOCR değildir. "
+                    "Önceden kurulmuş yerel NVIDIA GPU modeli, onaylı özel "
+                    "model kodu ve özgün SHA-doğrulanmış kaynak PDF gerektirir. "
+                    "OCR sonucu yalnız karşılaştırmalı metin taslağıdır; "
+                    "imzalı hücre, kanıt vurgusu veya ödeme PASS değildir."
+                )
+                btn_unlimited_page = gr.Button(
+                    "Seçili özgün PDF sayfasını Baidu Unlimited-OCR ile oku",
+                    variant="secondary",
+                )
+                unlimited_page_display = gr.HTML(
+                    "<p>Kaynak seçilmedi veya yerel model kurulmadı: HOLD.</p>"
+                )
+
 
             def update_article_view(choice: str | None, query: str = "") -> str:
                 return render_evidence_by_key(choice or "", query or "")
@@ -338,6 +368,23 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 inputs=[article_selector],
                 outputs=[ocr_display],
             )
+            btn_unlimited_page.click(
+                render_unlimited_ocr_page,
+                inputs=[article_selector],
+                outputs=[unlimited_page_display],
+            )
+            # Switching source pages invalidates any prior local OCR preview.
+            article_selector.change(
+                lambda: "<p>Sayfa değişti: Baidu OCR yeniden istenmeli. HOLD.</p>",
+                inputs=[],
+                outputs=[unlimited_page_display],
+            )
+            ek20_selector.change(
+                lambda: "<p>EK-20 hücre seçimi değişti: OCR sonucu temizlendi. HOLD.</p>",
+                inputs=[],
+                outputs=[unlimited_ek20_display],
+            )
+
 
         with gr.Accordion("📁 Başvuru İçin Gerekli Belgeler & Ön Değerlendirme Raporu", open=True):
             gr.Markdown("""
@@ -390,6 +437,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "ek20_display": ek20_display,
         "ek20_coverage_display": ek20_coverage_display,
         "roi_preview_display": roi_preview_display,
+        "btn_unlimited_ek20": btn_unlimited_ek20,
+        "unlimited_ek20_display": unlimited_ek20_display,
         "btn_report": btn_report,
         "file_report": file_report,
         "out_disclaimer": out_disclaimer,
