@@ -196,3 +196,48 @@ ve gerekirse kurumsal güvenlik/onay sistemi. PR #41 DRAFT, main değişmez.
 gerçek NVIDIA/Windows cihazında model çalıştırılmadı, 48 hücreye ait
 kaynak geometrisi ölçülmedi, iki gerçek insan imzası alınmadı.
 Bu nedenle F04/F09 henüz tamamlanmadı. F14 en son.
+
+
+## PR #41 — G09/G13/G26 özellik geliştirme ve canlı açık iş panosu (12 Ekim 2026)
+
+**Yeni takip altyapısı:** configs/feature_gap_register.json bütün F01–F14
+özellik başlıklarını ve tek tek gap_id/P0–P3/durum/çözüm/kapanış ölçütlerini
+tutar. Şu an 30 açık mühendislik iş kalemi vardır; 48 EK-20 hücresi ve 2
+insan incelemecisi tek tek "tamam" işaretlenmemiştir. Okunabilir
+docs/OPEN_FEATURE_GAPS.md dosyası bu kayıt dosyasından
+scripts/render_feature_gap_register.py ile yeniden üretilebilir.
+Masaüstü Yönetim & Doğrulama sekmesindeki salt-okunur "Geliştirme
+Eksikleri ve Çözüm Takibi" paneli, uygulamanın paketindeki yerel kaydı
+yeniden okuyabilir; GitHub'daki güncel commit'leri kendi kendine çekmez.
+
+**G09 (F06) özgün HTML düğümü:** Neden? ve SSS'de açık seçilen exact
+claim_id kaynak denetiminden geçerse original_html_navigator.py,
+yerel arşivdeki resmî HTML baytlarını SHA-256 ve manifest ile yeniden
+karşılaştırıp doğru MADDE/GECICI MADDE altında **tek** birebir metin
+düğümünü bulur. Özgün düğümün escape edilmiş komşu metnini, sarı
+birebir parçasını ve Chrome/Edge gibi destekleyen tarayıcılar için
+Text Fragment yönlendirmesini gösterir. Tarayıcı scroll garantisi
+verilmez; güvenli yerel düğüm önizlemesi kesin fallback'tir.
+Özgün HTML belgesi değiştirilmez. Bu yalnız kaynak **konumu**:
+üretim yılı, çiftçi koşulu ve ödeme her zaman ayrı HOLD.
+G10 gerçek PDF sayfası/hücre auto-navigasyonu açık kalır.
+
+**G13 (F07) kaynak kapsam listesi:** Neden? bölümünde hesaplanmış
+parseldeki bütün tekil şartların sayısı, özgün HTML'de
+konumlandırılabilenlerin sayısı ve karşılığı bulunmayan/arşivi eksik
+olanların exact claim_id + rule_id + şart metni listelenebilir. Yıllık
+hukukî doğrulama veya ödeme onay yüzdesi değildir. Bütün kural
+şartlarının curated source mapping'i (G12) hâlâ açık kalır.
+
+**G26 (F13) yanlış sıfır tutar düzeltmesi:** Desktop detay birim
+tutarında, raporda ve Flutter toplam/kalem kartlarında null/eksik
+tutar **0,00 TL değil Hesaplanmadı** gösterilir. "Resmî rapor"
+şeklindeki yanıltıcı arayüz düğmesi bağımsız ön değerlendirme
+olarak değiştirildi. Temel simülasyon ve kesin ödeme ayrımı ile
+legacy endpoint aktivasyon kapısı (G26/G27) bitmedi.
+
+**Durum:** Feature-first kodlama/arayüz entegrasyonu işlendi.
+Gerçek kaynak/satır geometrisi, 48×2 insan onayı, bütün
+mevzuat yıl/değişiklik zincirinin kanıtlanması ve Windows/Flutter
+çalışma kabulü tamamlanmadı. PR #41 DRAFT, main değişmeden;
+F14 son kabul en sona bırakılmıştır.
