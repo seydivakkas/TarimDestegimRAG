@@ -261,6 +261,24 @@ def evaluate_all(
     )
 
 
+
+@app.post("/api/v1/evidence/evaluation", tags=["Tekil Kanıt Kontratı"])
+def evaluate_evidence_index(
+    payload: FullEvaluationRequest, session: Session = Depends(get_db_session),
+) -> dict:
+    """Return privacy-minimal claim IDs and SOURCE-LOCATION-only proof statuses.
+
+    Uses the same evaluation request but never exports farmer identifiers or
+    implicitly grants payment/legal activation. All unmatched claims HOLD.
+    """
+    from tarim_destek_rag.citations.canonical_evidence_contract import (
+        evaluation_contract,
+    )
+
+    evaluated = evaluate_all(payload, session)
+    return evaluation_contract(evaluated.model_dump(mode="json"))
+
+
 @app.post("/ask", response_model=AskQuestionResponse, tags=["Chatbot / Semantik Arama"])
 def ask_question(payload: AskQuestionRequest) -> AskQuestionResponse:
     """Kullanıcı sorusuna hibrit arama ve deterministik mevzuat senteziyle yanıt döner."""
