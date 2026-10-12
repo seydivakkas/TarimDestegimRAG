@@ -1,0 +1,388 @@
+{
+  "schema_version": 1,
+  "last_reviewed": "2026-10-12",
+  "branch": "feature/p1-unified-evidence-workbench",
+  "pr": 41,
+  "assessment": "Feature implementation code and known external blockers only; not a validated test pass.",
+  "status_vocabulary": [
+    "OPEN",
+    "CODE_IN_PROGRESS",
+    "BLOCKED_EXTERNAL",
+    "DEFERRED_F14",
+    "CLOSED_IMPLEMENTED"
+  ],
+  "features": [
+    {
+      "id": "F01",
+      "title": "Özgün mevzuat arşivi",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F02",
+      "title": "Gerçek PDF sayfası",
+      "status": "IMPLEMENTED_PENDING_F14"
+    },
+    {
+      "id": "F03",
+      "title": "PDF/OCR indeksleme",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F04",
+      "title": "Tablo ve hücre geometrisi",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F05",
+      "title": "Görsel/şekil bölgeleri",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F06",
+      "title": "PDF/HTML kanıt gezgini",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F07",
+      "title": "Tekil kural → kaynak",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F08",
+      "title": "Yürürlük ve değişiklik zinciri",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F09",
+      "title": "EK-20 çift inceleme",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F10",
+      "title": "Neden/SSS/rapor/mobil",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F11",
+      "title": "Windows offline paket",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F12",
+      "title": "Kaynak güncelleme ve geri alma",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F13",
+      "title": "Hak ediş ile onay ayrımı",
+      "status": "PARTIAL"
+    },
+    {
+      "id": "F14",
+      "title": "Nihai teknik/hukukî kabul",
+      "status": "DEFERRED_FINAL"
+    }
+  ],
+  "work_items": [
+    {
+      "gap_id": "G01",
+      "feature_id": "F01",
+      "priority": "P0",
+      "status": "BLOCKED_EXTERNAL",
+      "title": "Resmî kaynakların ve ek PDF'lerin tam arşivi",
+      "solution": "2024/39, 2025/13, 2025/42, 8859, 10394, 11781 ve ilgili eklerin özgün dosyalarını resmî kaynaktan elde edip SHA/URL/uzunlukla manifestle eşleştir.",
+      "definition_of_done": "Eksiksiz, SHA-pinned özgün kaynak listesi; olmayan belge HOLD.",
+      "responsible_role": "SOURCE_OPERATOR"
+    },
+    {
+      "gap_id": "G02",
+      "feature_id": "F01",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Kaynak edinme / güncelleme yetkisi",
+      "solution": "Kaynak keşif→indirme→karantina→SHA doğrulama→sürüm kaydı ve insan inceleme kapısı kur.",
+      "definition_of_done": "Orijinal olmayan dosya asla resmî kaynak yapılmaz.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G03",
+      "feature_id": "F03",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Bütün PDF sayfalarında OCR durumu",
+      "solution": "Sayfa başına native/OCR/boş/hata + DPI/SHA/geometri durumunu ortak indeksle, fail-closed.",
+      "definition_of_done": "Tüm arşiv sayfalarının durumları ve boş kalanların açık nedeni görülür.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G04",
+      "feature_id": "F03",
+      "priority": "P1",
+      "status": "BLOCKED_EXTERNAL",
+      "title": "Baidu Unlimited-OCR gerçek Windows GPU çalışması",
+      "solution": "Yerel model revizyonunu sabitle; gerekli bağımlılıkları, CUDA uyumluluğunu ve yürütülebilir özel kodu incele; cihazda fiilen çalıştır.",
+      "definition_of_done": "Gerçek donanım kaydı ve gerekli lisans kanıtı; metin sonucu OCR_UNREVIEWED.",
+      "responsible_role": "WINDOWS_OPERATOR"
+    },
+    {
+      "gap_id": "G05",
+      "feature_id": "F04",
+      "priority": "P0",
+      "status": "BLOCKED_EXTERNAL",
+      "title": "EK-20 48 gerçek hücre ROI'si",
+      "solution": "Kaynağın tek sayfasındaki 12×4 hücreyi gerçek 180-DPI piksel kutularıyla insan gözetiminde eşleştir; tutar/null ayrımı koru.",
+      "definition_of_done": "48/48 SHA/RGB/row/column/bbox birbiriyle tutarlı ve gerçek PDF üzerinde incelenmiş.",
+      "responsible_role": "HUMAN_REVIEW"
+    },
+    {
+      "gap_id": "G06",
+      "feature_id": "F04",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Çizgisiz/birleşik raster tablolar",
+      "solution": "Satır/sütun/hücre ayrıştırıcıları + görsel OCR önerisi + insan seçimli belirsizlik yönetimi uygula.",
+      "definition_of_done": "Tahmine dayalı koordinat ve otomatik hücre PASS yok.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G07",
+      "feature_id": "F04",
+      "priority": "P2",
+      "status": "OPEN",
+      "title": "Born-digital tablo coordinate mapping",
+      "solution": "PDF point→raster pixel dönüşümü ve kaynak kimliği/kolon span eşleştirmesi ekle.",
+      "definition_of_done": "Gerçek hücreler doğru sayfa ve DPI'ya bağlı.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G08",
+      "feature_id": "F05",
+      "priority": "P2",
+      "status": "OPEN",
+      "title": "Şekil/çizim/tabloda semantik inceleme",
+      "solution": "Kaynak orijinaline bağlı ROI önizlemeyi açıklama/insan kanıt durumundan ayır.",
+      "definition_of_done": "Grafik anlamı OCR/detection'dan otomatik kesinleşmez.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G09",
+      "feature_id": "F06",
+      "priority": "P0",
+      "status": "CODE_IN_PROGRESS",
+      "title": "Gerekçeden doğrulanmış HTML hükmüne tek tık",
+      "solution": "Özgün SHA'lı HTML'de birebir madde/alıntının indekslenen pasajını göster; tarayıcı text-fragment yönlendirmesi ekle.",
+      "definition_of_done": "Doğru madde/pasaj görünür; arşiv yoksa bağlantı üretilemez.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G10",
+      "feature_id": "F06",
+      "priority": "P0",
+      "status": "OPEN",
+      "title": "Gerekçeden gerçek PDF sayfasına otomatik geçiş",
+      "solution": "Claim→source_id/page/bbox kabul kontratı; var olan dropdown/image viewer otomatik güncelle; sahte PDF sayfası engeli.",
+      "definition_of_done": "Bir claim için tek doğrulanmış PDF konumu varsa oraya gider, yoksa HOLD.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G11",
+      "feature_id": "F06",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "PDF/HTML tek kanıt geçerlilik ekranı",
+      "solution": "HTML exact passage, PDF text, tablo ROI ve bağımsız sarı/amber statülerini tek gezginde birleştir.",
+      "definition_of_done": "Yellow yalnız doğrulanmış kanıt türünü gösterir; hukukî/geçerli yıl ayrı.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G12",
+      "feature_id": "F07",
+      "priority": "P0",
+      "status": "OPEN",
+      "title": "Tüm kural şartlarını tekil hükme bağlama",
+      "solution": "Her rule_id/support_id/year/field/exact_claim_text için kaynak madde/fıkra veya tablo hücresiyle curated binding üret.",
+      "definition_of_done": "Bütün destek gerekçeleri tekil olarak eşlenir ya da görünür HOLD kalır.",
+      "responsible_role": "LEGAL_CONTENT"
+    },
+    {
+      "gap_id": "G13",
+      "feature_id": "F07",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Kaynak kapsam sayacı ve bilinmeyen nedenler",
+      "solution": "Tüm destek şartları için unmapped/ambiguous/located/year-HOLD durumlarını arayüzde say.",
+      "definition_of_done": "Eksik gerekçelerin listesi ve tam coverage yüzdesi doğrudan görülebilir.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G14",
+      "feature_id": "F08",
+      "priority": "P0",
+      "status": "OPEN",
+      "title": "Mevzuat değişiklik/ilga grafiği",
+      "solution": "2024/39, 2025/13, 2025/42, 8859, 10394, 11781 değişikliklerinin affected provision ve yürürlük etkisini madde bazında modellendir.",
+      "definition_of_done": "Değişiklik silsilesi ve ilga edilen hükümler kaynak kanıtıyla ilişkilidir.",
+      "responsible_role": "LEGAL_CONTENT"
+    },
+    {
+      "gap_id": "G15",
+      "feature_id": "F08",
+      "priority": "P0",
+      "status": "OPEN",
+      "title": "2025/2026/2027 hukukî yıl geçerliliği",
+      "solution": "Geçiş ve geriye dönük koşullar dahil her hüküm için dönem/yıl applicability kararını doğrulanmış değişiklik zincirine bağla.",
+      "definition_of_done": "Yalnız tam kaynak yılı kanıtlanmış hükümlere temporal PASS verilebilir.",
+      "responsible_role": "LEGAL_CONTENT"
+    },
+    {
+      "gap_id": "G16",
+      "feature_id": "F08",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "EK-20 oranlarını yıllar arasında karıştırmama",
+      "solution": "2026 annex aktarımını 2025/2027'ye taşımayı engelleyen yıl bazlı değişiklik/değer seçimini tamamla.",
+      "definition_of_done": "2025 ve 2027 için 2026 EK-20 tutarı asla varsayılan kullanılmaz.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G17",
+      "feature_id": "F09",
+      "priority": "P0",
+      "status": "BLOCKED_EXTERNAL",
+      "title": "48 hücreye iki gerçek insan onayı",
+      "solution": "Her gerçek ROI için iki farklı kayıtlı kişinin görsel okumasını, Ed25519 imzasını ve uyuşmazlık/REJECT işlemlerini topla.",
+      "definition_of_done": "48×2 gerçek onay veya alan bazlı açık REJECT/HOLD; sahte otomatik imza yok.",
+      "responsible_role": "HUMAN_REVIEW"
+    },
+    {
+      "gap_id": "G18",
+      "feature_id": "F09",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "ROI kaydetme ve inceleme UI iş akışı",
+      "solution": "Gradio'da öneri oluşturma/çatışma engeli, onay görev listesi ve kayıt durumlarını kontrollü operatör akışına geçir.",
+      "definition_of_done": "Ekrandan öneri yaratılabilir; istemci özel anahtar alamaz.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G19",
+      "feature_id": "F09",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "İncelemeci yetkileri, iptal ve arşiv",
+      "solution": "Anahtar envanteri, kurum dışı imzalama, iptal, değiştirilemez operasyon kayıtları ve kimlik kontrolü kur.",
+      "definition_of_done": "Anahtar iptalinde görsel PASS düşer; kayıtlara kontrollü erişim.",
+      "responsible_role": "SECURITY_OPERATOR"
+    },
+    {
+      "gap_id": "G20",
+      "feature_id": "F10",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Mobil/SSS/rapor tam navigasyon",
+      "solution": "Aynı claim_id ve evidence_id için kanallar arasında kaynak açma, PDF ROI ve HOLD eşitliğini tamamla.",
+      "definition_of_done": "Her kanalda aynı gerçek kanıt konumu, farklı yıl/oturum sızıntısı yok.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G21",
+      "feature_id": "F10",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "SSS/RAG alıntıların tekil hukukî sözleşmesi",
+      "solution": "Yakın anlamsal eşleşmeden kesin madde üretme; açık claim seçme veya ayrı kaynak kanıt pipeline'ı oluştur.",
+      "definition_of_done": "Tüm SSS kaynakları ya exact verified ya da HOLD.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G22",
+      "feature_id": "F11",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Offline Windows yayımlama paketi",
+      "solution": "Ana uygulama + ayrı opsiyonel OCR ortamı + kaynak arşivi yönetimi; kurulum ve sürümleme sihirbazı.",
+      "definition_of_done": "İnternetsiz normal kullanım ve özelleştirilebilir GPU yolu.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G23",
+      "feature_id": "F11",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Üçüncü taraf yeniden dağıtım lisansı",
+      "solution": "Baidu MIT, model revizyonu ve PyTorch/CUDA/NVIDIA/OCR bağımlılıklarının binary/weight dağıtım şartlarını dosyala.",
+      "definition_of_done": "Dağıtılan her dosya için kaynak/sürüm/lisans kanıtı.",
+      "responsible_role": "LICENSING"
+    },
+    {
+      "gap_id": "G24",
+      "feature_id": "F12",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Mevzuat diff/onay görevleri",
+      "solution": "İndirilen yeni sürümü eklemeli kaynak grafına al, değişen madde/hücreleri HOLD inceleme kuyruğuna düşür.",
+      "definition_of_done": "Eski kural otomatik yeni yıl için geçerli kalmaz.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G25",
+      "feature_id": "F12",
+      "priority": "P1",
+      "status": "OPEN",
+      "title": "Revizyon geri alma ve yeniden üretilebilir kanıt",
+      "solution": "Kaynak revision/sha ve açıklama/plan anlık durumlarını tut, kontrollü geri al.",
+      "definition_of_done": "Yanlış güncellemeden önceki kanıtlar hash ve dönemle ayrı bulunur.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G26",
+      "feature_id": "F13",
+      "priority": "P0",
+      "status": "OPEN",
+      "title": "Tahmini tutar vs ödeme onayı ayrımı",
+      "solution": "Destek kartı, KPI, rapor ve mobilde ekonomik simülasyon ile mevzuat/olgu ödeme yetkisini ayrı etiketle.",
+      "definition_of_done": "Hiçbir tahmini tutar ödeme kararı veya kesin hak ediş diye görünmez.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G27",
+      "feature_id": "F13",
+      "priority": "P0",
+      "status": "OPEN",
+      "title": "Bütün eski endpoint'lerde fail-closed",
+      "solution": "Legacy API, hesaplama, RAG/SSS ve yeni kaynak sürümü girişlerinde aynı aktivasyon kapısı uygula.",
+      "definition_of_done": "Eksik hukukî onaylı tutar ücret/ödeme motorunu aktive etmez.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G28",
+      "feature_id": "F14",
+      "priority": "P3",
+      "status": "DEFERRED_F14",
+      "title": "Bütün fonksiyonel/regresyon/failure testleri",
+      "solution": "F01–F13 ve arayüz kapsamı bitince birikmiş sentetik+CI+gerçek kaynak negatif testleri çalıştır.",
+      "definition_of_done": "Referans sentetik/entegrasyon testleri ve açık kalan hatalar raporlanır.",
+      "responsible_role": "QA"
+    },
+    {
+      "gap_id": "G29",
+      "feature_id": "F14",
+      "priority": "P3",
+      "status": "DEFERRED_F14",
+      "title": "Gerçek Windows ve GPU kabulü",
+      "solution": "Windows 10/11, ekran kartı olan/olmayan, offline ve model-kurulu akışlarını sona bırak.",
+      "definition_of_done": "Donanım, OCR doğruluk, performans ve lisans paket kabul raporları.",
+      "responsible_role": "QA"
+    },
+    {
+      "gap_id": "G30",
+      "feature_id": "F14",
+      "priority": "P3",
+      "status": "DEFERRED_F14",
+      "title": "Bağımsız mevzuat ve kurumsal son kabul",
+      "solution": "Tüm iddiaları yetkili hukuki incelemeye bağla; ödeme aktivasyonu bağımsız karar.",
+      "definition_of_done": "Mevzuat/yıl/üretici ve veri yetki onayları ayrıştırılmış imza kaydı.",
+      "responsible_role": "LEGAL_REVIEW"
+    }
+  ]
+}
