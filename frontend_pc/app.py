@@ -203,6 +203,7 @@ def build_ui() -> gr.Blocks:
         from tarim_destek_rag.citations.claim_evidence_workbench import claim_choices
         from tarim_destek_rag.citations.canonical_evidence_contract import (
             render_claim_contract_html,
+            render_claim_coverage_html,
         )
 
         render_claim_evidence = render_claim_contract_html
@@ -224,6 +225,16 @@ def build_ui() -> gr.Blocks:
             render_claim_evidence,
             inputs=[eval_state, p2["claim_selector"]],
             outputs=[p2["claim_display"]],
+        )
+        p2["btn_claim_coverage"].click(
+            render_claim_coverage_html,
+            inputs=[eval_state],
+            outputs=[p2["claim_coverage_display"]],
+        )
+        eval_state.change(
+            lambda: "<p>Değerlendirme yenilendi; kanıt kapsamını yeniden isteyin.</p>",
+            inputs=[],
+            outputs=[p2["claim_coverage_display"]],
         )
         # FAQ is a different retrieval channel, but an explicitly selected
         # evaluation claim displays the identical source/evidence ID contract.
