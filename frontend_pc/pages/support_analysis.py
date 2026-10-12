@@ -61,6 +61,20 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 value="<p>Hesaplama sonucundaki tekil gerekçeler "
                 "burada seçilebilir. Kaynağı olmayanlar HOLD kalır.</p>"
             )
+            with gr.Accordion("Tüm gerekçeler için kanıt-konum kapsamı (HOLD)", open=False):
+                gr.Markdown(
+                    "Bu liste yalnız bu değerlendirmede hangi şartın özgün "
+                    "madde konumuna bağlandığını sayar. Hukukî yıl veya ödeme "
+                    "PASS oranı değildir."
+                )
+                btn_claim_coverage = gr.Button(
+                    "Bu değerlendirmedeki eşleşmeyen kanıtları listele",
+                    variant="secondary",
+                )
+                claim_coverage_display = gr.HTML(
+                    "<p>Önce değerlendirme yapın; ardından kaynak kapsamını inceleyin.</p>"
+                )
+
 
             from tarim_destek_rag.citations.pdf_page_indexer import (
                 get_page_dropdown_choices,
@@ -417,6 +431,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "claim_selector": claim_selector,
         "btn_claim_show": btn_claim_show,
         "claim_display": claim_display,
+        "btn_claim_coverage": btn_claim_coverage,
+        "claim_coverage_display": claim_coverage_display,
         "article_selector": article_selector,
         "article_display": article_display,
         "ocr_display": ocr_display,
