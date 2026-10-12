@@ -18,10 +18,10 @@
 | F04 | Tablolar ve hücreler | KISMİ: native find_tables, OCR sözcük kutuları, gerçek raster ızgara hücreleri, orijinal hücre kırpımı ve EK-20 için kontrollü manuel semantik–piksel kutusu eşleştirme önizlemesi | Born-digital ve raster tabloların satır/sütun/hücre konumları özgün piksel/point sistemine bağlı; hata/boş/dash belirsizlikleri korunur |
 | F05 | Grafik/şekil/çizim | KISMİ: bölge kırpımı | Gerçek sayfa görselleri ve bölgeler bulunur; semantik iddialar yalnız kanıtlı inceleme ile |
 | F06 | PDF/HTML ortak kanıt gezgini | KISMİ: PDF görüntüsü, SHA-doğrulanmış HTML pasajı | Her iki belge türü aynı kanıt kimliği ve kaynak bağlantı kontratıyla gezilebilir |
-| F07 | Tekil gerekçe → kaynak | KISMİ: her gerekçe seçimi, sadece mevcut curated claim_bindings | Bütün sonuç metinleri kaynak paragrafı/ek hücresi/yıl ile ayrı ayrı eşlenir; bulunamayan HOLD |
+| F07 | Tekil gerekçe → kaynak | KISMİ: tekil claim_id ve SHA/doğrulanmış HTML kaynak-konum kanıt kimliği; tüm rule-binding kapsamı yok | Bütün sonuç metinleri kaynak paragrafı/ek hücresi/yıl ile ayrı ayrı eşlenir; bulunamayan HOLD |
 | F08 | Yıllara göre değişiklik zinciri | KISMİ: 2025/42 bazı pasajlar, 2025 geçiş | 2024/39, 2025/13, 2025/42, 8859, 10394, 11781 ve diğer uygulanabilir revizyonların etkisi hüküm bazlı izlenir |
 | F09 | EK-20 satır/hücre kanıtı | KISMİ: 2026 taslak 12x4, gerçek sayfa ROI, ölçülen ızgara kutusundan kullanıcı kontrollü ROI ön doldurma, 48 hücre envanteri, iki ayrı Ed25519 inceleme imzası; 48 gerçek hücrenin bağımsız onayı henüz yok | Her sayısal hücrenin tam ROI, iki bağımsız görsel okuma ve geçerli yıl kaydı olmadan hukukî/ödeme PASS olmaz |
-| F10 | Neden / SSS / rapor / mobil birlikteliği | KISMİ: Neden + raporda tekil claim_id; SSS/mobil henüz değil | Tüm açıklamalar tekil aynı claim_id, source_id, SHA, sayfa ve pasaj/ROI bağını kullanır |
+| F10 | Neden / SSS / rapor / mobil birlikteliği | KISMİ: ortak v1 kanıt kontratı, Neden/rapor/SSS claim navigator, mobil API + DTO; uçtan uca mobil ekran kabulü eksik | Tüm açıklamalar tekil aynı claim_id, source_id, SHA, sayfa ve pasaj/ROI bağını kullanır |
 | F11 | Offline Windows kullanım paketi | KISMİ: özgün kaynak yükleme, opsiyonel Tesseract | İlk kurulumdan indeks yenilemeye kadar ücretli API/bulut gerektirmeden Türkçe OCR ve resmî dosya yönetimi |
 | F12 | Kaynak değişikliği ve doğrulama yönetimi | KISMİ: manifest, draft hukukî eşleşmeler | Yeni resmî belgeden eski kuralı iptal/değiştirme, fark inceleme, insan onayına sunma ve geri alma |
 | F13 | Güvenli hak ediş/ödeme ayrımı | KISMİ: fail-closed ayrı PR37 | Ürün arayüzündeki görünür tahmini tutarlar da güvenilmeyen mevzuat aktivasyonundan ayrılır; ücret/ödeme kaynak onayı olmadan aktive olmaz |
@@ -113,3 +113,46 @@ Bu dalda `ek20_raster_alignment.py` özelliği eklendi. Artık incelemeci, özg�
 **Kalan F04/F09 özelliği:** Öncelikle tam 48 EK-20 hücresinin gerçek PDF piksel ROI haritalaması ve görsel gözden geçirme; sonra kenarlıksız, birleşik başlıklı ve çizgisi kesilmiş tarama tabloları için güvenli yerleşim analizinde karşılaştırmalı insan incelemesi. Bu eksikler kapatılmadan F04/F09 `TAMAM` değildir.
 
 **Test ve nihai doğrulama sırası değişmedi:** Kullanıcı kararı gereği geniş regresyon/gerçek Windows kabul turu bütün özellikler bittikten sonra F14 sırasında yapılır. CI'nin push ile otomatik çalışması bir işlevi tamamlanmış saymaz.
+
+
+## P1 — F07–F10 ortak kanıt kimliği, kanallar arası sözleşme (özellik geliştirme)
+
+Yeni `canonical_evidence_contract.py`, `claim_evidence_workbench.claim_evidence_record` tarafından
+zaten özgün SHA + madde + birebir HTML düğümüyle konumlandırılmış olan **aynı**
+gerekçeyi tekrar yorumlamadan tekil JSON sözleşmesine dönüştürür:
+
+- `claim_id`: mevcut kural/değerlendirme gerekçesinin değişmeyen kimliği.
+- `evidence_id`: yalnız birebir özgün kaynak konumu gösterilebilirse, belirli
+  kaynak belgesi + SHA + span_id + claim_id birleşiminden türetilmiş sabit
+  `TRAG-EV1-...` kimliği. Kanıt yoksa **null**.
+- `source`: yalnız gerçek kaynak pasajı yeniden doğrulandıysa açıklanan özgün
+  HTML URL, madde, hedef fıkra, SHA ve birebir pasaj. Destek ailesinin genel
+  linki bireysel şartın kanıtı sayılmaz.
+- `amendment_chain.status = NOT_PROVEN_COMPLETE`: revizyonların eksiksizliği
+  ispatlanmadı. `review_required` yalnız kayıtta bulunan açık inceleme
+  yükümlülüklerini içerir; gelecekteki değişiklikleri keşfetmiş gibi sunmaz.
+- `temporal_legal_status = HOLD`, `farmer_fact_status =
+  NOT_INDEPENDENTLY_VERIFIED`, `payment_status = HOLD`: kaynak konumu bulunsa
+  bile hukukî, olgusal ve ödeme kabulünü yükseltmez.
+- Aynı v1 kontratı: Neden sekmesi, indirilebilir rapor, SSS'de kullanıcı
+  tarafından **açıkça** seçilen değerlendirme şartı ve
+  `POST /api/v1/evidence/evaluation` endpoint'inden döner.
+- Flutter `CanonicalClaimEvidence/CanonicalEvidenceIndex` modeli ve istemci
+  metodu eklendi; mobil istemci ancak şema, SHA, kanıt kimliği ve resmî HTTPS
+  hostu doğruysa özgün kaynak linkini gösterebilir. API değerlendirme çıktısı
+  içindeki çiftçi kimliği yerine yalnız kanıt metaverisini döndürür.
+- Genel SSS/RAG metin benzerliği, alıntı kırpıntısı veya sadece kaynak başlığı
+  **bir gerekçeye veya ödeme maddesine otomatik bağlanamaz**. SSS'de yalnız
+  kullanıcının tam `claim_id` seçimi aynı doğrulanmış pasajı açar.
+
+**Tamamlanmadı:** tüm destek kural şartlarının birebir kaynak bağları (F07),
+2025/2026/2027 değişikliklerin madde/fıkra seviyesinde uygulanabilirlik ve
+iptal zinciri (F08), gerçek 48 EK-20 hücresinin bağımsız görsel onayları
+(F04/F09), Flutter ekranında tam akış/rapor/SSS birlikte son kabul (F10),
+resmî HTML sayfa içi derin gezinti, PDF/HTML ortak tıklama görüntüleyicisinin
+tam kapsamı. Yeni API/Flutter yolu güvenlik entegrasyonunun son testine tabi
+olmalıdır; bu kod yazımı bir Windows veya hukukî kabul sonucu değildir.
+
+Sıra F01–F13 özellik tamamlanması → arayüz ve modül bütünleşmesi → en son
+F14 kapsamlı regresyon, gerçek Windows kabulü, bağımsız mevzuat incelemesi
+ve gerekirse kurumsal güvenlik/onay sistemi. PR #41 DRAFT, main değişmez.
