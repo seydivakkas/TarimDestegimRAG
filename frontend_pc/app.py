@@ -200,10 +200,12 @@ def build_ui() -> gr.Blocks:
 
         # A common, explicit per-claim source navigator. Never bind proof by
         # guessed article name, overall support ID, or keyword similarity.
-        from tarim_destek_rag.citations.claim_evidence_workbench import (
-            claim_choices,
-            render_claim_evidence,
+        from tarim_destek_rag.citations.claim_evidence_workbench import claim_choices
+        from tarim_destek_rag.citations.canonical_evidence_contract import (
+            render_claim_contract_html,
         )
+
+        render_claim_evidence = render_claim_contract_html
 
         def update_claim_selector(response):
             return gr.update(choices=claim_choices(response), value=None)
@@ -223,6 +225,19 @@ def build_ui() -> gr.Blocks:
             inputs=[eval_state, p2["claim_selector"]],
             outputs=[p2["claim_display"]],
         )
+        # FAQ is a different retrieval channel, but an explicitly selected
+        # evaluation claim displays the identical source/evidence ID contract.
+        eval_state.change(
+            update_claim_selector,
+            inputs=[eval_state],
+            outputs=[p3["faq_claim_selector"]],
+        )
+        p3["faq_claim_selector"].change(
+            render_claim_contract_html,
+            inputs=[eval_state, p3["faq_claim_selector"]],
+            outputs=[p3["faq_claim_display"]],
+        )
+
         from tarim_destek_rag.citations.ek20_review_workbench import (
             render_ek20_candidate,
         )
