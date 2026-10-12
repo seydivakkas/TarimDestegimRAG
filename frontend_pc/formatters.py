@@ -118,7 +118,7 @@ def render_inline_summary_html(
     rules = resp.get("rules", [])
     calculations = resp.get("calculations", [])
     calc_map = {c.get("support_id"): c for c in calculations}
-    total_payout = resp.get("total_estimated_amount", 0.0)
+    total_payout = resp.get("total_estimated_amount")
 
     effective_statuses = [
         calc_map.get(r.get("support_id"), {}).get("status", r.get("status"))
@@ -198,7 +198,7 @@ def render_kpi_html(resp: dict[str, Any] | None) -> str:
     rules = resp.get("rules", [])
     calculations = resp.get("calculations", [])
     calc_map = {c.get("support_id"): c for c in calculations}
-    total_payout = resp.get("total_estimated_amount", 0.0)
+    total_payout = resp.get("total_estimated_amount")
 
     effective_statuses = [
         calc_map.get(r.get("support_id"), {}).get("status", r.get("status"))
@@ -338,11 +338,7 @@ def render_details_dataframe(
             {
                 "Destek Programı": sname,
                 "Durum": status_text,
-                "Birim Fiyat (TL/da)": (
-                    f"{float(unit_amt):.2f} ₺"
-                    if unit_amt is not None and float(unit_amt) > 0
-                    else "0.00 ₺"
-                ),
+                "Birim Fiyat (TL/da)": format_currency(unit_amt),
                 "Alan (da)": f"{area_da:.1f}",
                 "Tahmini Tutar": format_currency(total_amt),
                 "Hesaplama Formülü": formula,
@@ -439,7 +435,7 @@ def generate_report_markdown(
     parcel_data: dict[str, Any],
 ) -> str:
     """Bağımsız yazılımın resmî olmayan ön değerlendirme raporu metnini oluşturur."""
-    total_payout = resp.get("total_estimated_amount", 0.0)
+    total_payout = resp.get("total_estimated_amount")
     rules = resp.get("rules", [])
     calculations = resp.get("calculations", [])
     explanations = resp.get("explanations", [])
@@ -534,8 +530,8 @@ def generate_report_markdown(
         sname = r.get("support_name", sid)
         st = r.get("status", "NOT_ELIGIBLE")
         c = calc_map.get(sid, {})
-        amt = c.get("estimated_amount", 0.0)
-        uamt = c.get("unit_amount", 0.0)
+        amt = c.get("estimated_amount")
+        uamt = c.get("unit_amount")
         st_tr = "✅ UYGUN" if st == "ELIGIBLE" else ("⚠️ İNCELEME" if st == "REVIEW" else "❌ UYGUN DEĞİL")
         report_lines.append(
             f"| {sname} | {st_tr} | {format_currency(uamt)}/da | {area_da:.1f} da | {format_currency(amt)} | Tekil kaynak HOLD |"
