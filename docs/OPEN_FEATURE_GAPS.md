@@ -1,10 +1,10 @@
 # Açık Mühendislik Eksikleri ve Çözüm Takip Listesi
 
-**Son değerlendirme:** 12 Ekim 2026 — Kod envanteri, PR #41. Gerçek Windows/GPU, bağımsız hukukî kabul ve 48 EK-20 insan onayı bu tarihte yapılmış sayılmaz.
+**Son değerlendirme:** 2026-10-12 — Kod envanteri, PR #41. Gerçek Windows/GPU, bağımsız hukukî kabul ve 48 EK-20 insan onayı bu tarihte yapılmış sayılmaz.
 
-**Tek kaynak:** `configs/feature_gap_register.json`. Bu okunabilir sayfa aynı veriden oluşturulmuştur. Her değişiklikte iki dosya birlikte güncellenmelidir.
+**Tek kaynak:** configs/feature_gap_register.json. Bu okunabilir sayfa aynı veriden oluşturulmuştur. Yeniden üretmek için scripts/render_feature_gap_register.py --write.
 
-**Toplam açık iş:** 30 • Durumlar: BLOCKED_EXTERNAL: 4 / OPEN: 22 / CODE_IN_PROGRESS: 1 / DEFERRED_F14: 3. Bunlar **iş kalemi** sayısıdır; 48 EK-20 hücresi bu kalemlerden yalnızca G05/G17 içinde ayrıca takip edilir.
+**Toplam açık iş:** 30 • BLOCKED_EXTERNAL: 4 / OPEN: 21 / CODE_IN_PROGRESS: 2 / DEFERRED_F14: 3. Bunlar iş kalemidir; 48 EK-20 hücresi G05/G17'de ayrı izlenir.
 
 ## F01–F14 özellik düzeyi
 
@@ -54,7 +54,7 @@
 | G23 | P1 | F11 | OPEN | Üçüncü taraf yeniden dağıtım lisansı | Baidu MIT, model revizyonu ve PyTorch/CUDA/NVIDIA/OCR bağımlılıklarının binary/weight dağıtım şartlarını dosyala. | Dağıtılan her dosya için kaynak/sürüm/lisans kanıtı. |
 | G24 | P1 | F12 | OPEN | Mevzuat diff/onay görevleri | İndirilen yeni sürümü eklemeli kaynak grafına al, değişen madde/hücreleri HOLD inceleme kuyruğuna düşür. | Eski kural otomatik yeni yıl için geçerli kalmaz. |
 | G25 | P1 | F12 | OPEN | Revizyon geri alma ve yeniden üretilebilir kanıt | Kaynak revision/sha ve açıklama/plan anlık durumlarını tut, kontrollü geri al. | Yanlış güncellemeden önceki kanıtlar hash ve dönemle ayrı bulunur. |
-| G26 | P0 | F13 | OPEN | Tahmini tutar vs ödeme onayı ayrımı | Destek kartı, KPI, rapor ve mobilde ekonomik simülasyon ile mevzuat/olgu ödeme yetkisini ayrı etiketle. | Hiçbir tahmini tutar ödeme kararı veya kesin hak ediş diye görünmez. |
+| G26 | P0 | F13 | CODE_IN_PROGRESS | Tahmini tutar vs ödeme onayı ayrımı | Destek kartı, KPI, rapor ve mobilde ekonomik simülasyon ile mevzuat/olgu ödeme yetkisini ayrı etiketle. Kod ek adımı: masaüstü ve mobilde null tutarı 0 TL diye sunma; raporu bağımsız olarak adlandır. Ayrı ödeme otorite geçidi hâlâ açık. | Hiçbir tahmini tutar ödeme kararı veya kesin hak ediş diye görünmez. |
 | G27 | P0 | F13 | OPEN | Bütün eski endpoint'lerde fail-closed | Legacy API, hesaplama, RAG/SSS ve yeni kaynak sürümü girişlerinde aynı aktivasyon kapısı uygula. | Eksik hukukî onaylı tutar ücret/ödeme motorunu aktive etmez. |
 | G28 | P3 | F14 | DEFERRED_F14 | Bütün fonksiyonel/regresyon/failure testleri | F01–F13 ve arayüz kapsamı bitince birikmiş sentetik+CI+gerçek kaynak negatif testleri çalıştır. | Referans sentetik/entegrasyon testleri ve açık kalan hatalar raporlanır. |
 | G29 | P3 | F14 | DEFERRED_F14 | Gerçek Windows ve GPU kabulü | Windows 10/11, ekran kartı olan/olmayan, offline ve model-kurulu akışlarını sona bırak. | Donanım, OCR doğruluk, performans ve lisans paket kabul raporları. |
@@ -62,12 +62,13 @@
 
 ## Mühendislik sırası / bağımlılıklar
 
-1. **Kaynak gerçekliği:** G01 → G05 ve G12/G14. Orijinal SHA doğrulanmadan koordinat veya madde konumu yok.
-2. **EK-20:** G05 gerçek 48 ROI → G17 iki kişi ve 96 imzalı inceleme → G19 iptal güvenliği. Çakışma, ret veya eksik onay HOLD.
-3. **İşlevsel navigasyon:** G09 HTML kanıt konumu → G10 PDF sayfa/ROI → G11 ortak kanıt paneli → G20 masaüstü/SSS/rapor/mobil.
-4. **Mevzuat yılı:** G12 tekil kural kaynakları + G14 değişiklik grafiği → G15 2025/2026/2027 geçerlilik → G16 EK-20 yıl izolasyonu.
-5. **Ürün paketleme:** G22/G23, G24/G25 ve G26/G27 özellikleri biter; **G28–G30 F14 son kabul** en sona bırakılır.
+1. Kaynak gerçekliği: G01 → G05 ve G12/G14. SHA olmayan özgün dosyadan koordinat veya madde üretme.
+2. EK-20: G05 gerçek 48 ROI → G17 iki kişinin ayrı incelemesi → G19 iptal güvenliği. Eksik onay HOLD.
+3. Navigasyon: G09 HTML metin düğümü → G10 PDF kaynak/ROI → G11 tek gezgin → G20 Neden/SSS/rapor/mobil.
+4. Yıl geçerliliği: G12 tekil şartlar + G14 değişiklik grafiği → G15 2025/2026/2027 → G16 EK-20 izolasyonu.
+5. Ürün: G22/G23 Windows/lisans, G24/G25 güncelleme, G26/G27 ödeme ayrımı → G28–G30 son F14.
 
-**Durum etiketleri** yalnız kod kapsamı ve dış girdi engelidir; 'CLOSED_IMPLEMENTED' bile F14 hukukî/geçerlik PASS değildir. `BLOCKED_EXTERNAL`: gerçek resmî PDF, gerçek insan veya donanım/donanım lisansı gerekir. `CODE_IN_PROGRESS`: yazılım geliştirilir. `DEFERRED_F14`: bilinçli son etap.
+Durum kodları: OPEN (özellik açığı), CODE_IN_PROGRESS (kodlanıyor), BLOCKED_EXTERNAL (gerçek kaynak, insan veya donanım), DEFERRED_F14 (son kabulde), CLOSED_IMPLEMENTED (özellik kodu kapandı, F14 hukukî/teknik PASS değil).
 
-**PR politikası:** #41 DRAFT/unmerged; main değişmeyecek. `HOLD` ve sarı vurgu türleri ayrıdır.
+**PR politikası:** #41 DRAFT/unmerged, main değiştirilmez. Sarı görsel doğrulama, yürürlük ve ödeme onayı birbirinden ayrıdır.
+
