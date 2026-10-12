@@ -170,3 +170,29 @@ olmalıdır; bu kod yazımı bir Windows veya hukukî kabul sonucu değildir.
 Sıra F01–F13 özellik tamamlanması → arayüz ve modül bütünleşmesi → en son
 F14 kapsamlı regresyon, gerçek Windows kabulü, bağımsız mevzuat incelemesi
 ve gerekirse kurumsal güvenlik/onay sistemi. PR #41 DRAFT, main değişmez.
+
+
+## F04 — Baidu Unlimited-OCR ek OCR motoru (isteğe bağlı, yerel)
+
+- SHA-pinned özgün Resmî Gazete PDF sayfasını 180 DPI yeniden render eden,
+  seçilen EK-20 hücre ROI'sini üretim yılı 2026 + gerçek görüntü ve
+  ROI RGB SHA'sına bağlayan arayüz/adaptör eklendi.
+- Resmî Baidu/Unlimited-OCR Transformers GPU örneğini çalıştıran **ayrı
+  yerel Python işçisi** eklendi. Modelin önceden indirilmesi, denetlenmiş
+  yerel kod, belirgin yönetici onayı, NVIDIA CUDA ve ayrı Python ortamı
+  gerekir. Varsayılan sistem otomatik kurulum veya bulut isteği yapmaz.
+- Genel kaynak PDF sayfası ve EK-20 piksel hücresi için ayrı Baidu OCR
+  arayüz düğmeleri, Tesseract karşılaştırması, kaynak SHA / işlenen görüntü
+  kimliği ve açık **OCR_UNREVIEWED / HOLD** sınırı tanımlandı.
+- Çıktılar hiçbir zaman imzalı hücre önerisi, sarı kanıt doğrulaması,
+  production-year legal PASS veya ödeme motoruna otomatik aktarılmaz.
+- Kaynak projesi ve lisans: https://github.com/baidu/Unlimited-OCR
+  (kod MIT; model kartı MIT); bağımlılık/CUDA ve model dağıtımı müşteri
+  lisans incelemesine tabidir.
+- Windows adım adım hazırlık ve kısıtlar:
+  [F04_UNLIMITED_OCR_OFFLINE_INTEGRATION.md](F04_UNLIMITED_OCR_OFFLINE_INTEGRATION.md).
+
+**Dürüst durum:** OCR adaptörünün kodu ve arayüz bağlantıları vardır;
+gerçek NVIDIA/Windows cihazında model çalıştırılmadı, 48 hücreye ait
+kaynak geometrisi ölçülmedi, iki gerçek insan imzası alınmadı.
+Bu nedenle F04/F09 henüz tamamlanmadı. F14 en son.
