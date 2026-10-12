@@ -9,7 +9,6 @@ from __future__ import annotations
 import hashlib
 import re
 from html import escape
-from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlsplit
 
@@ -39,7 +38,6 @@ def locate_exact_html_node(source: dict[str, Any]) -> dict[str, Any]:
         "source_sha256": None, "verified_article": None,
     }
     try:
-        from tarim_destek_rag.citations.claim_evidence_workbench import _paths
         sha = source["source_sha256"]
         url = source["original_url"]
         article = source["article"]
@@ -51,9 +49,10 @@ def locate_exact_html_node(source: dict[str, Any]) -> dict[str, Any]:
             raise ValueError("Missing source identity")
         parsed = urlsplit(url)
         if (parsed.scheme != "https" or parsed.hostname not in _ALLOWED_HOSTS
-                or parsed.username or parsed.password or parsed.fragment):
+                or parsed.username or parsed.password or parsed.fragment
+                or parsed.port is not None):
             raise ValueError("Untrusted official HTML URI")
-        matrix_path, manifest_path, archive_root = _paths()
+        _, manifest_path, archive_root = _paths()
         # Re-check actual manifest, even though the parent claim verifier
         # already did so, before publishing a deep link.
         import json
