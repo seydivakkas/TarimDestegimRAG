@@ -21,7 +21,7 @@
 | F07 | Tekil gerekçe → kaynak | KISMİ: tekil claim_id ve SHA/doğrulanmış HTML kaynak-konum kanıt kimliği; tüm rule-binding kapsamı yok | Bütün sonuç metinleri kaynak paragrafı/ek hücresi/yıl ile ayrı ayrı eşlenir; bulunamayan HOLD |
 | F08 | Yıllara göre değişiklik zinciri | KISMİ: 2025/42 bazı pasajlar, 2025 geçiş | 2024/39, 2025/13, 2025/42, 8859, 10394, 11781 ve diğer uygulanabilir revizyonların etkisi hüküm bazlı izlenir |
 | F09 | EK-20 satır/hücre kanıtı | KISMİ: 2026 taslak 12x4, gerçek sayfa ROI, ölçülen ızgara kutusundan kullanıcı kontrollü ROI ön doldurma, 48 hücre envanteri, iki ayrı Ed25519 inceleme imzası; 48 gerçek hücrenin bağımsız onayı henüz yok | Her sayısal hücrenin tam ROI, iki bağımsız görsel okuma ve geçerli yıl kaydı olmadan hukukî/ödeme PASS olmaz |
-| F10 | Neden / SSS / rapor / mobil birlikteliği | KISMİ: ortak v1 kanıt kontratı, Neden/rapor/SSS claim navigator, mobil API + DTO; uçtan uca mobil ekran kabulü eksik | Tüm açıklamalar tekil aynı claim_id, source_id, SHA, sayfa ve pasaj/ROI bağını kullanır |
+| F10 | Neden / SSS / rapor / mobil birlikteliği | KISMİ: ortak v1 kanıt kontratı, Neden/rapor/SSS claim navigator, mobil API/DTO/provider ve mobil Neden ekranı; gerçek cihaz kabulü ve PDF hücre kanıtı eksik | Tüm açıklamalar tekil aynı claim_id, source_id, SHA, sayfa ve pasaj/ROI bağını kullanır |
 | F11 | Offline Windows kullanım paketi | KISMİ: özgün kaynak yükleme, opsiyonel Tesseract | İlk kurulumdan indeks yenilemeye kadar ücretli API/bulut gerektirmeden Türkçe OCR ve resmî dosya yönetimi |
 | F12 | Kaynak değişikliği ve doğrulama yönetimi | KISMİ: manifest, draft hukukî eşleşmeler | Yeni resmî belgeden eski kuralı iptal/değiştirme, fark inceleme, insan onayına sunma ve geri alma |
 | F13 | Güvenli hak ediş/ödeme ayrımı | KISMİ: fail-closed ayrı PR37 | Ürün arayüzündeki görünür tahmini tutarlar da güvenilmeyen mevzuat aktivasyonundan ayrılır; ücret/ödeme kaynak onayı olmadan aktive olmaz |
@@ -144,6 +144,20 @@ gerekçeyi tekrar yorumlamadan tekil JSON sözleşmesine dönüştürür:
 - Genel SSS/RAG metin benzerliği, alıntı kırpıntısı veya sadece kaynak başlığı
   **bir gerekçeye veya ödeme maddesine otomatik bağlanamaz**. SSS'de yalnız
   kullanıcının tam `claim_id` seçimi aynı doğrulanmış pasajı açar.
+
+
+**Mobil arayüz ek adımı:** `DestekProvider` aynı çiftçi/parsel
+değerlendirmesi için `/evaluate` ile kanıt endpoint'inin döndürdüğü
+`production_year`, tüm `rule_id + support_id + field + exact_claim_text`
+kümesini eşitlik kontrolünden geçirir. Farklı, eksik, yinelenen veya
+ulaşılamayan kanıt seti `HOLD` kalır. Mobil **Neden?** penceresi
+`claim_id`, doğrulanmış kaynak varsa aynı `TRAG-EV1` kanıt kimliği,
+özgün SHA, sarı birebir HTML pasajı ve kullanıcı isteğiyle açılan
+resmî HTTPS URL'yi gösterir. Doğrulanmamış RAG atıfları yalnız
+`HOLD` genel kaynak adayı olarak listelenir, tıklanabilir delil
+bağlantısı üretmez. Flutter `url_launcher` bağımlılığı eklendi.
+Kaynak arşivi olmayan cihaz, yürürlük/geçerlilik veya ödeme için
+bağımsız imza doğrulayan kurum rolüne dönüşmez.
 
 **Tamamlanmadı:** tüm destek kural şartlarının birebir kaynak bağları (F07),
 2025/2026/2027 değişikliklerin madde/fıkra seviyesinde uygulanabilirlik ve
