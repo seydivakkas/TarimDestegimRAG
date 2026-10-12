@@ -229,3 +229,46 @@ def render_claim_contract_html(
         '<strong>Ödeme:</strong> HOLD.</p></section>'
     )
     return "".join(parts)
+
+
+
+def render_claim_coverage_html(evaluation: dict[str, Any] | None) -> str:
+    """Per-current-evaluation evidence location coverage; never legal coverage.
+
+    An exact original-source span can be marked *located* while every
+    temporal/farmer/payment gate still remains HOLD. Does not compute a
+    misleading full-legal-approval percentage.
+    """
+    if not isinstance(evaluation, dict) or not evaluation.get("rules"):
+        return "<p>HOLD — Önce bu parsel için bir değerlendirme oluşturun.</p>"
+    audit = evaluation_contract(evaluation)
+    total = audit["unique_claim_count"]
+    verified = audit["source_located_count"]
+    unmapped = [row for row in audit["claims"]
+                if not row.get("navigation_available")]
+    from html import escape as safe
+    return (
+        '<section style="padding:12px;border:1px solid #cbd5e1;background:white">'
+        "<strong>Tekil gerekçe → özgün kaynak konumu kapsamı</strong>"
+        f"<p>Toplam tekil gerekçe: <b>{total}</b> · "
+        f"Özgün HTML'de konumu doğrulanabilen: <b>{verified}</b> · "
+        f"Eşleşmeyen/arşivi eksik/konumu doğrulanamayan: "
+        f"<b>{len(unmapped)}</b></p>"
+        "<p><strong>Hukukî yıl ve ödeme kabulü: HOLD.</strong> "
+        "Bu sayılar kaç kez doğru hukukî sonuç verildiğini değil yalnız "
+        "bu değerlendirmedeki kanıt-konum durumunu gösterir.</p>"
+        + (
+            "<details><summary>Eksik veya konumu doğrulanmamış gerekçeleri göster</summary>"
+            "<ul>"
+            + "".join(
+                f"<li><code>{safe(str(row['claim_id']))}</code> · "
+                f"{safe(str(row['rule_id']))} · "
+                f"{safe(str(row['claim_text'])[:220])}</li>"
+                for row in unmapped[:200]
+            )
+            + "</ul></details>"
+            if unmapped else "<p>Bu değerlendirmede kaynak konumu açık kalan gerekçe yok; "
+            "üretim yılı ve ödeme yine HOLD.</p>"
+        )
+        + "</section>"
+    )
