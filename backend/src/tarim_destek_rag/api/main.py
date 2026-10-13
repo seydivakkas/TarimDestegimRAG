@@ -413,6 +413,37 @@ def view_uploaded_text(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
+@app.get("/documents/annual-original-page/{sha}/page/{page}",
+         tags=["Belge Analizi / RAG"])
+def view_discovered_annual_source_page(
+    sha: str, page: int, request: Request,
+) -> Response:
+    """Read-only real scanned Gazette PDF PNG, local session only.
+
+    No administrative credential is put in a clickable browser URL.
+    Every request rechecks the discovered original PDF's SHA/inventory.
+    """
+    _require_local_document_access(request)
+    from tarim_destek_rag.updates.annual_pdf_pipeline import (
+        render_yearly_pdf_page,
+    )
+    try:
+        png, _ = render_yearly_pdf_page(
+            page_key=f"{sha}:{page}", query="",
+            root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE",
+                                "data/legal_update_archive")),
+        )
+    except (OSError, ValueError, KeyError, TypeError, ImportError,
+            RuntimeError, AttributeError) as exc:
+        raise HTTPException(
+            status_code=404, detail="SHA-doğrulanmış gerçek PDF sayfası yok"
+        ) from exc
+    return Response(
+        content=png, media_type="image/png",
+        headers={"Cache-Control": "no-store", "X-Evidence-Status": "OCR-OR-NATIVE-DRAFT-HOLD"},
+    )
+
+
 @app.get("/documents/status", tags=["Belge Analizi / RAG"])
 def document_rag_status(request: Request) -> dict[str, Any]:
     """Private status includes names of user-uploaded local documents."""
