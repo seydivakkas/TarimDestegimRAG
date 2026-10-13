@@ -289,6 +289,101 @@ class OriginalDocumentRAG:
         self._dense: Any = None
         self._dense_vectors: Any = None
 
+    def _add_discovered_annual_pdf_passages(self, seen_ids: set[str]) -> None:
+        """Add only verified original PDF pages from annual scan to RAG.
+
+        These are DISCOVERED_UNREVIEWED publications, not curated year-effective
+        rule sources. Every OCR result is labelled unreviewed and points to a
+        true original PDF page. Canonical source approval remains separate.
+        """
+        file = self.archive_root / "annual_research" / "catalog.json"
+        if not file.is_file() or file.stat().st_size > 10_000_000:
+            return
+        try:
+            data = json.loads(file.read_text(encoding="utf-8"))
+            if data.get("schema_version") != 1:
+                return
+            rows = data.get("documents", [])
+            if not isinstance(rows, list) or len(rows) > 1000:
+                return
+        except (OSError, ValueError, TypeError):
+            return
+        for row in rows:
+            try:
+                from tarim_destek_rag.updates.annual_pdf_pipeline import (
+                    _verify_doc,
+                )
+                sha = row["sha256"]
+                key = "RG_DISCOVERED_" + sha[:16].upper()
+                if key in seen_ids:
+                    continue
+                raw = _verify_doc(self.archive_root, row)
+                source = {
+                    "id": key,
+                    "role": "DISCOVERED_OFFICIAL_UNREVIEWED",
+                    "format": "pdf",
+                    "url": row["source_url"],
+                    "original_sha256": sha,
+                    "original_bytes": len(raw),
+                    "expected_legal_number": row.get("source_title") or key,
+                }
+                # Recheck original bytes via the existing RAG manifest reader.
+                _read_original(self.archive_root, source)
+                index = self.archive_root / "annual_research" / (sha + ".json")
+                if not index.is_file() or index.stat().st_size > 30_000_000:
+                    raise ValueError("Oversized/missing annually discovered index")
+                draft = json.loads(index.read_text(encoding="utf-8"))
+                page_rows = draft.get("pages", [])
+                if (draft.get("schema_version") != 1
+                        or draft.get("source_sha256") != sha
+                        or draft.get("source_url") != row["source_url"]
+                        or draft.get("original_bytes") != len(raw)
+                        or not isinstance(page_rows, list)
+                        or len(page_rows) > 120):
+                    raise ValueError("Untrusted annual page index")
+                from pymupdf import open as open_pdf
+                with open_pdf(stream=raw, filetype="pdf") as pdf:
+                    count = len(pdf)
+                    if draft.get("original_page_count") != count:
+                        raise ValueError("Original page count mismatched")
+                    if any(type(item.get("page")) is not int
+                           or not 1 <= item["page"] <= count
+                           or item.get("source_sha256") != sha
+                           for item in page_rows):
+                        raise ValueError("Unverified annual page location")
+                new: list[SourcePassage] = []
+                for item in page_rows:
+                    text = item.get("text")
+                    if not isinstance(text, str) or not text.strip():
+                        continue
+                    method = item.get("method")
+                    if method not in (
+                        "PDF_NATIVE_TEXT_UNREVIEWED",
+                        "TESSERACT_OCR_180DPI_UNREVIEWED",
+                    ):
+                        continue
+                    for ordinal, fragment in enumerate(_windows(text)):
+                        new.append(_passage(
+                            source, fragment, section=f"PDF sayfa {item['page']}",
+                            page=item["page"],
+                            extraction=("OCR_DRAFT" if method.startswith("TESSERACT")
+                                        else "PDF_NATIVE_TEXT"),
+                            ordinal=ordinal,
+                        ))
+                if len(self.passages) + len(new) > MAX_PASSAGES:
+                    self.missing_sources.append(key + ":PASSAGE_LIMIT_HOLD")
+                    continue
+                self.passages.extend(new)
+                seen_ids.add(key)
+                if not draft.get("complete_page_coverage"):
+                    self.missing_sources.append(key + ":PARTIAL_PDF_INDEX_HOLD")
+            except (OSError, ValueError, KeyError, RuntimeError,
+                    ImportError, TypeError, AttributeError):
+                self.missing_sources.append(
+                    "RG_DISCOVERED_" + str(row.get("sha256", ""))[:16] + ":HOLD"
+                )
+
+
     def build(self) -> dict[str, Any]:
         self.passages = []
         self.missing_sources = []
@@ -316,6 +411,10 @@ class OriginalDocumentRAG:
                 self.passages.extend(chunks)
             except (OSError, ValueError, TypeError, ImportError, RuntimeError, KeyError):
                 self.missing_sources.append(key)
+        # Optional annual Gazette updates are research-only source candidates.
+        # They do NOT become effective rules or legal/year-approved citations.
+        self._add_discovered_annual_pdf_passages(ids)
+
         # User-uploaded files have their OWN provenance label, not an
         # official Gazette source. Their original bytes are still SHA-pinned.
         from tarim_destek_rag.retrieval.user_documents import (
