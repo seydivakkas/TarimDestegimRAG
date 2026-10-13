@@ -77,3 +77,6 @@ Thumbs.db
 data/ek20_review_proposals/
 data/ek20_signed_reviews/
 **/*.private.pem
+
+# Private locally uploaded documents (never commit users' files)
+data/user_documents/

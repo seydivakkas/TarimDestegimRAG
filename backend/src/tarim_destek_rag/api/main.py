@@ -74,18 +74,18 @@ def seed_vector_store_data() -> None:
 async def lifespan(app: FastAPI):
     """Uygulama açılışında veritabanını ve vektör indeksini hazırlar."""
     logger.info("TarımDestekRAG FastAPI servisi başlatılıyor...")
-    init_db()
-
-    try:
-        loaded_reg = SourceRegistry.load_from_yaml("configs/sources.yaml")
-        for s in loaded_reg.list_all():
-            if s.id not in source_registry._sources:
-                source_registry.register(s)
-    except Exception as e:
-        logger.warning("Kaynak kayıt defteri yükleme uyarısı: %s", e)
-
-    with SessionLocal() as session:
-        seed_2026_support_data(session)
+    if os.getenv("TARIM_RAG_SERVER_MODE", "documents") == "legacy":
+        # Historical support/payment simulator is separate from document RAG.
+        init_db()
+        try:
+            loaded_reg = SourceRegistry.load_from_yaml("configs/sources.yaml")
+            for source in loaded_reg.list_all():
+                if source.id not in source_registry._sources:
+                    source_registry.register(source)
+        except Exception as error:
+            logger.warning("Eski kaynak kayıt defteri uyarısı: %s", error)
+        with SessionLocal() as session:
+            seed_2026_support_data(session)
 
     if os.getenv("TARIM_RAG_SERVER_MODE", "documents") == "legacy":
         try:
@@ -101,7 +101,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TarımDestekRAG API",
     version="1.0.0",
-    description="Türkiye 2026 Bitkisel Üretim Destekleri Deterministik Karar ve Açıklama API'si",
+    description="Offline-first kaynaklı PDF/HTML/TXT belge analizi ve hibrit RAG API'si",
     lifespan=lifespan,
 )
 
