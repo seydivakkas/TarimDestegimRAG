@@ -7,6 +7,7 @@ import pandas as pd
 from frontend_pc.api_client import ApiClient
 from frontend_pc.services.faq_service import (
     ask_assistant,
+    ask_assistant_filtered,
     get_faq_categories,
     get_faq_table,
 )
@@ -29,6 +30,15 @@ def _corpus_status() -> str:
     )
 
 
+def _document_choices() -> list[tuple[str, str]]:
+    docs = ApiClient().get_document_analysis_status().get("indexed_documents") or []
+    return [("Tüm indekslenmiş belgeler", "")] + [
+        (str(d.get("title") or d.get("source_id") or "Belge"), str(d["source_id"]))
+        for d in docs
+        if isinstance(d, dict) and isinstance(d.get("source_id"), str)
+    ]
+
+
 def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
     """Minimal RAG-only document question/answer interface."""
     with gr.TabItem("Belge Analizi & RAG", id="tab_legal_assistant"):
@@ -41,8 +51,20 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
         )
         with gr.Row():
             status_display = gr.Markdown(value=_corpus_status())
-            refresh_status = gr.Button("Belge durumunu yenile", size="sm")
-        refresh_status.click(_corpus_status, outputs=[status_display])
+            refresh_status = gr.Button("Belge listesini yenile", size="sm")
+        document_selector = gr.Dropdown(
+            choices=_document_choices(),
+            value="",
+            label="Arama kapsamı — belirli belge veya tüm belgeler",
+            interactive=True,
+        )
+        refresh_status.click(
+            lambda: (
+                _corpus_status(),
+                gr.update(choices=_document_choices(), value=""),
+            ),
+            outputs=[status_display, document_selector],
+        )
 
         with gr.Accordion("Yeni belge ekle — PDF / HTML / TXT", open=True):
             gr.Markdown(
@@ -71,9 +93,12 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
 
             def upload_and_index(
                 file_path: str | None, with_ocr: bool,
-            ) -> tuple[str, str]:
+            ) -> tuple[str, str, gr.Dropdown]:
                 if not file_path:
-                    return "Önce bir dosya seçin.", _corpus_status()
+                    return (
+                        "Önce bir dosya seçin.", _corpus_status(),
+                        gr.update(choices=_document_choices(), value=""),
+                    )
                 outcome = ApiClient().import_document(
                     str(file_path), run_ocr=with_ocr,
                 )
@@ -82,6 +107,7 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
                         "Belge eklenemedi: "
                         + str(outcome.get("message") or "Bilinmeyen hata"),
                         _corpus_status(),
+                        gr.update(choices=_document_choices(), value=""),
                     )
                 item = outcome.get("document") or {}
                 return (
@@ -90,12 +116,16 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
                     "Dosya türü: kullanıcı yüklemesi. "
                     "Bu, belgedeki her ifadenin doğru olduğunu onaylamaz.",
                     _corpus_status(),
+                    gr.update(
+                        choices=_document_choices(),
+                        value=str(item.get("id") or ""),
+                    ),
                 )
 
             upload_button.click(
                 upload_and_index,
                 inputs=[upload_file, upload_ocr],
-                outputs=[upload_feedback, status_display],
+                outputs=[upload_feedback, status_display, document_selector],
             )
 
         chatbot = gr.Chatbot(height=500, label="Belgelerimden Soru-Cevap")
@@ -110,8 +140,8 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
         for sender in (chat_submit, chat_input):
             callback = sender.click if sender is chat_submit else sender.submit
             callback(
-                ask_assistant,
-                inputs=[chat_input, chatbot],
+                ask_assistant_filtered,
+                inputs=[chat_input, chatbot, document_selector],
                 outputs=[chat_input, chatbot],
             )
         chat_clear.click(lambda: ("", []), outputs=[chat_input, chatbot])
@@ -127,8 +157,10 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
         )
         for button, question in samples:
             button.click(
-                lambda history, prompt=question: ask_assistant(prompt, history),
-                inputs=[chatbot],
+                lambda history, src, prompt=question: ask_assistant_filtered(
+                    prompt, history, src,
+                ),
+                inputs=[chatbot, document_selector],
                 outputs=[chat_input, chatbot],
             )
 

@@ -357,8 +357,7 @@ class OriginalDocumentRAG:
             "source_count": len({p.source_id for p in self.passages}),
             "indexed_documents": [
                 {"source_id": p.source_id, "title": p.title, "format": p.format}
-                for p in {k: next(x for x in self.passages if x.source_id == k)
-                          for k in dict.fromkeys(x.source_id for x in self.passages)}.values()
+                for p in {p.source_id: p for p in self.passages}.values()
             ],
             "passage_count": len(self.passages),
             "missing_source_ids": self.missing_sources,
