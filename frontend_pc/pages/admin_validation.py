@@ -231,6 +231,7 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                 found = result.get("discovery") or {}
                 research = result.get("research") or {}
                 window = result.get("publication_window") or {}
+                rag_status = result.get("rag_refresh_status", "LOCAL_RAG_REFRESH_HOLD")
                 return (
                     f"Üretim yılı sorgu bağlamı: {value} · "
                     f"Resmî Gazete yayın taraması: "
@@ -240,6 +241,7 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                     f"{research.get('indexed_pdf_count', 0)} PDF indekslendi. "
                     f"Kaynak hatası: {len(found.get('errors', []))}, "
                     f"indeks hatası: {len(research.get('errors', []))}. "
+                    f"Belge Analizi & RAG yenileme: {rag_status}. "
                     "Tam yıl mevzuat kapsamı/üretim yılı geçerliliği/ödeme: HOLD."
                 )
 
