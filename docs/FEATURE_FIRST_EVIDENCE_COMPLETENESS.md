@@ -1,5 +1,7 @@
 # Kanıt Sistemini Önce Tamamlama Planı — Özellik Öncelikli
 
+> **Kapsam güncellemesi — 13 Ekim 2026:** Bu belge önceki hukukî kanıt/ödeme iş paketlerinin tarihsel envanteridir. Kullanıcının yeni kararıyla varsayılan ürün **gelişmiş PDF/HTML/TXT belge analiz RAG asistanıdır**. Eski kanıt ve ödeme onayı çalışmaları ana ürünün zorunlu özellikleri değildir. Güncel tek ürün kapsamı: [ADVANCED_DOCUMENT_RAG_SCOPE.md](ADVANCED_DOCUMENT_RAG_SCOPE.md). Gerçek kaynak sayfası gösterme ve metin uydurmama ilkeleri korunur.
+
 **Karar:** Önce bütün kullanıcı işlevleri ve belge türleri tamamlanır. Kapsam bütünlüğü netleşmeden yeni "tamam", "üretime hazır", "mevzuat kesin doğrulandı" iddiası verilmez. Kapsam bittiğinde son aşama Windows gerçek kullanım, sentetik negatif testler, kaynak bütünlüğü ve hukukî onaydır.
 
 ## Nihai kullanım senaryosu
