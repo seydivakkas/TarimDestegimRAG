@@ -35,6 +35,14 @@ class AskQuestionRequest(BaseModel):
     top_k: int = Field(default=3, ge=1, le=10)
 
 
+class DocumentUploadRequest(BaseModel):
+    """Local document import, independent of official Gazette identity."""
+
+    filename: str = Field(..., min_length=1, max_length=200)
+    data_base64: str = Field(..., min_length=4, max_length=34_000_000)
+    run_ocr: bool = False
+
+
 class DocumentAskRequest(BaseModel):
     """Document exploration, not an eligibility or payment decision."""
 

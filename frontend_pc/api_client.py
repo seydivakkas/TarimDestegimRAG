@@ -129,6 +129,31 @@ class ApiClient:
                 "status": "DOCUMENT_RAG_UNAVAILABLE",
             }
 
+    def import_document(self, path: str, *, run_ocr: bool = True) -> dict[str, Any]:
+        """Send a local PDF, HTML or TXT to the local-only document library."""
+        import base64
+        from pathlib import Path
+
+        file_path = Path(path)
+        if not file_path.is_file() or file_path.stat().st_size > 25_000_000:
+            return {"import_status": "ERROR", "message": "Dosya yok veya 25 MB üstünde."}
+        try:
+            encoded = base64.b64encode(file_path.read_bytes()).decode("ascii")
+            resp = self._request(
+                "POST", "/documents/import",
+                json={
+                    "filename": file_path.name,
+                    "data_base64": encoded,
+                    "run_ocr": run_ocr,
+                },
+                timeout=600,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"import_status": "ERROR", "message": str(exc)}
+
+
     def get_document_analysis_status(self) -> dict[str, Any]:
         """Inspect indexed official originals, missing files and OCR gaps."""
         try:

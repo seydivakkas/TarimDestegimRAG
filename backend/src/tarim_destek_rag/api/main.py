@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,7 @@ from tarim_destek_rag.api.schemas import (
     AskQuestionRequest,
     AskQuestionResponse,
     DocumentAskRequest,
+    DocumentUploadRequest,
     FullEvaluationRequest,
     FullEvaluationResponse,
     HarvestLiveRequest,
@@ -278,6 +279,97 @@ def evaluate_evidence_index(
 
     evaluated = evaluate_all(payload, session)
     return evaluation_contract(evaluated.model_dump(mode="json"))
+
+
+def _require_local_document_access(request: Request) -> None:
+    """Uploaded content is private to the local desktop backend."""
+    host = request.client.host if request.client else ""
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise HTTPException(
+            status_code=403,
+            detail="Yüklenen belgeler yalnız yerel bilgisayardan erişilebilir.",
+        )
+
+
+@app.post("/documents/import", tags=["Belge Analizi / RAG"])
+def import_local_document(
+    payload: DocumentUploadRequest, request: Request,
+) -> dict[str, Any]:
+    """Import PDF, HTML or TXT into user-owned local content-addressed store."""
+    import base64
+    import binascii
+
+    from tarim_destek_rag.retrieval.document_rag import get_document_rag
+    from tarim_destek_rag.retrieval.user_documents import import_user_document
+
+    _require_local_document_access(request)
+    try:
+        original = base64.b64decode(payload.data_base64, validate=True)
+        item = import_user_document(
+            payload.filename, original, run_ocr=payload.run_ocr,
+        )
+        status = get_document_rag(refresh=True).status()
+        return {
+            "document": item,
+            "corpus_status": status,
+            "import_status": "INDEXED",
+        }
+    except (ValueError, OSError, binascii.Error) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/documents/view/{sha}/page/{page}", tags=["Belge Analizi / RAG"])
+def view_uploaded_pdf_page(
+    sha: str, page: int, request: Request,
+) -> Response:
+    """Render the selected real page from uploaded original bytes, not an AI image."""
+    from tarim_destek_rag.retrieval.user_documents import load_user_original
+
+    _require_local_document_access(request)
+    if not 1 <= page <= 1000:
+        raise HTTPException(status_code=404, detail="Sayfa bulunamadı")
+    try:
+        import pymupdf
+
+        meta, original = load_user_original(sha)
+        if meta["format"] != "pdf":
+            raise ValueError("This document is not a PDF")
+        with pymupdf.open(stream=original, filetype="pdf") as doc:
+            if page > len(doc):
+                raise ValueError("Original page number does not exist")
+            png = doc[page - 1].get_pixmap(
+                dpi=160, alpha=False,
+            ).tobytes("png")
+        return Response(
+            content=png, media_type="image/png",
+            headers={"Cache-Control": "no-store"},
+        )
+    except (ValueError, OSError, RuntimeError, ImportError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/documents/view/{sha}/text", tags=["Belge Analizi / RAG"])
+def view_uploaded_text(
+    sha: str, request: Request,
+) -> PlainTextResponse:
+    """Render uploaded HTML/TXT as plain UTF-8 text, not executable HTML."""
+    from tarim_destek_rag.retrieval.user_documents import load_user_original
+
+    _require_local_document_access(request)
+    try:
+        meta, original = load_user_original(sha)
+        if meta["format"] not in ("txt", "html"):
+            raise ValueError("This document is not HTML or TXT")
+        text = original.decode("utf-8", "replace")
+        if meta["format"] == "html":
+            from bs4 import BeautifulSoup
+
+            text = BeautifulSoup(text, "html.parser").get_text("\n", strip=True)
+        return PlainTextResponse(
+            text, headers={"Cache-Control": "no-store"},
+        )
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/documents/status", tags=["Belge Analizi / RAG"])
