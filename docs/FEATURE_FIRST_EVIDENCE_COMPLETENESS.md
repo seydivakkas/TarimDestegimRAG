@@ -243,3 +243,18 @@ Gerçek kaynak/satır geometrisi, 48×2 insan onayı, bütün
 mevzuat yıl/değişiklik zincirinin kanıtlanması ve Windows/Flutter
 çalışma kabulü tamamlanmadı. PR #41 DRAFT, main değişmeden;
 F14 son kabul en sona bırakılmıştır.
+
+## 2026-10-13 — Yıllardan bağımsız resmî mevzuat güncelleme/kanıt araştırma hattı
+
+- Kullanıcı gereksinimi artık sabit: tek bir yıla bağlı destek hesaplayıcı değil; seçilen üretim yılı ve bağımsız yayın tarihi aralığındaki ilgili yeni Resmî Gazete karar/tebliğ/PDF eklerini güncelleyip her araştırmayı **asıl PDF sayfası veya orijinal HTML pasajına** götüren yazılım.
+- Yeni backend modülleri: updates/gazette_date_pages.py (1–14 günlük resmî DD.MM.YYYY tarih arşivi gezintisi); updates/annual_pdf_pipeline.py (keşfedilmiş özgün PDF SHA, her gerçek sayfanın native/Tesseract OCR inceleme taslağı ve orijinal PNG sayfa render'ı).
+- Eski link keşfi sırf URL'de resmigazete/resm geçtiği için her kararı bitkisel destek sanıyordu: artık kaynak başlığı odaklı aday seçimi ve **gerçek HTML anchor bağlantısı bulunduğunda** aynı mevzuatın ek PDF'sini keşfetme var.
+- Yeni API uçları yönetici anahtarı altında: POST /admin/legal-updates/refresh-evidence, GET /admin/legal-updates/research-pdf ve GET /admin/legal-updates/research-pdf/{sha256}/page/{page}. İlk uç yalnız kaynak keşfi, SHA arşivi, teknik OCR indeksi; kural/ödeme aktivasyonu değildir.
+- Yönetim sekmesine yıl, bağımsız yayın tarihi başlangıç/bitiş, Mevzuatı Güncelle + PDF OCR, belge metninde araştır, gerçek PDF sayfası (180 DPI) ve özgün sayfa URL'si bağlandı. OCR/native metin eşleşmesi turuncu **aday**; sarı onay ve hukukî geçerlilik değil.
+- Taranmış PDF sayfasında yerel Tesseract tur+eng TSV sözcük koordinatı kullanılır. Baidu Unlimited-OCR **henüz bu toplu indeksleme hattına otomatik bağlanmadı**; isteğe bağlı ayrı sayfa/hücre aracı olarak mevcuttur.
+- Şimdilik tek seferde 14 günlük resmî arşiv aralığı ve belge başına 120/toplam 160 sayfa sınırı vardır. Bu, eksiksiz yıllık Resmî Gazete taraması değildir; eksik sayfalar/HOLD ve hatalar görünür.
+- Her somut Neden/SSS/rapor/mobil iddiasının **PDF'deki gerçek madde-paragraf/ROI konumuna tek tıklama** desteği henüz F06/F07/G10/G33 açığıdır. Yıllık PDF araştırma panelinde ilgili gerçek sayfa açılabilir; bütün iddiaların otomatik kanıt bağı henüz yok.
+- Güncel gap/çözüm kayıt defteri **34 iş**: docs/OPEN_FEATURE_GAPS.md ve configs/feature_gap_register.json. Yeni kayıtlar: G31 tarihsel tüm RG kapsamı; G32 toplu PDF OCR/resume/Baidu; G33 her iddiadan tam PDF konumuna geçiş; G34 değişiklik/yıl uygulama kapısı.
+- Ayrıntılı yürütme kaydı: [ANNUAL_OFFICIAL_GAZETTE_UPDATE_AND_PDF_EVIDENCE.md](ANNUAL_OFFICIAL_GAZETTE_UPDATE_AND_PDF_EVIDENCE.md).
+
+**Değişmeyen sınır:** Gerçek orijinal arşiv, 48 EK-20 hücresi, iki bağımsız insan onayı ve mevzuat değişikliklerinin yıldan yıla hukukî etkisi bitmedi. F14 geniş regression, gerçek Windows/GPU ve bağımsız hukukî onay en sonda. PR #41 DRAFT, main değiştirilmez.
