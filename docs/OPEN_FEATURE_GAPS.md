@@ -1,10 +1,10 @@
 # Açık Mühendislik Eksikleri ve Çözüm Takip Listesi
 
-**Son değerlendirme:** 2026-10-12 — Kod envanteri, PR #41. Gerçek Windows/GPU, bağımsız hukukî kabul ve 48 EK-20 insan onayı bu tarihte yapılmış sayılmaz.
+**Son değerlendirme:** 2026-10-13 — Kod envanteri, PR #41. Gerçek Windows/GPU, bağımsız hukukî kabul ve 48 EK-20 insan onayı bu tarihte yapılmış sayılmaz.
 
 **Tek kaynak:** configs/feature_gap_register.json. Bu okunabilir sayfa aynı veriden oluşturulmuştur. Yeniden üretmek için scripts/render_feature_gap_register.py --write.
 
-**Toplam açık iş:** 30 • BLOCKED_EXTERNAL: 4 / OPEN: 20 / CODE_IN_PROGRESS: 3 / DEFERRED_F14: 3. Bunlar iş kalemidir; 48 EK-20 hücresi G05/G17'de ayrı izlenir.
+**Toplam açık iş:** 34 • BLOCKED_EXTERNAL: 4 / OPEN: 22 / CODE_IN_PROGRESS: 5 / DEFERRED_F14: 3. Bunlar iş kalemidir; 48 EK-20 hücresi G05/G17'de ayrı izlenir.
 
 ## F01–F14 özellik düzeyi
 
@@ -59,6 +59,10 @@
 | G28 | P3 | F14 | DEFERRED_F14 | Bütün fonksiyonel/regresyon/failure testleri | F01–F13 ve arayüz kapsamı bitince birikmiş sentetik+CI+gerçek kaynak negatif testleri çalıştır. | Referans sentetik/entegrasyon testleri ve açık kalan hatalar raporlanır. |
 | G29 | P3 | F14 | DEFERRED_F14 | Gerçek Windows ve GPU kabulü | Windows 10/11, ekran kartı olan/olmayan, offline ve model-kurulu akışlarını sona bırak. | Donanım, OCR doğruluk, performans ve lisans paket kabul raporları. |
 | G30 | P3 | F14 | DEFERRED_F14 | Bağımsız mevzuat ve kurumsal son kabul | Tüm iddiaları yetkili hukuki incelemeye bağla; ödeme aktivasyonu bağımsız karar. | Mevzuat/yıl/üretici ve veri yetki onayları ayrıştırılmış imza kaydı. |
+| G31 | P0 | F01 | CODE_IN_PROGRESS | Resmî Gazete tüm yayın dönemlerini kapsayan keşif ve eksiksizlik defteri | Üretim yılından bağımsız yayın tarihi aralıklarında resmî RG gün sayfalarını ve gerçek kaynak bağlantılarını tara. 1–14 günlük bounded backfill var; dönem-bazlı tamamlanma, mükerrer/nos issue, başlık varyasyonları ve resmi arama API adaptörü ile eksiksizlik doğrulaması eksik. | Her tarih aralığı/gazete sayısı ve ilgili belge için başarı, erişilemeyen gün ve ekler izlenmiş; tam yıllık kapsam doğrulanmadan coverage PASS yok. |
+| G32 | P0 | F03 | CODE_IN_PROGRESS | Her yeni resmî PDF için otomatik yerel OCR + arama indeksi | Güncelle→SHA-doğrulanmış PDF→sayfa native/Tesseract OCR→gerçek bbox→yıl arşivi araması ve özgün 180 DPI önizleme kodlandı; Baidu toplu fallback, büyük belgeye devam ederek tarama, performans, yeniden başlama ve Windows kurulum eksik. | İlgili tüm yeni resmî PDF sayfalarında OCR/native/başarısız/HOLD durumu ve gerçek sayfa kanıtı mevcut; indeks tamamlanmayan sayfalar ayrı görünür. |
+| G33 | P0 | F06 | OPEN | Her cevap/gerekçe için tek tıkla gerçek PDF madde, paragraf ve hücre | Yıllık aramada kaynak PDF/sayfa gösterimi eklendi; destek analizi Neden/SSS/RAG cümlesi→original SHA+sayfa+gerçek bbox otomatik yönlendirme/işaretleme ve tüm kanal/rapor bağlantısını tamamla. OCR-adayı turuncu, iki görsel onaylı kaynak sarı. | Her gösterilen somut mevzuat gerekçesinde doğru PDF sayfası ve ilgili gerçek konum doğrudan açılır; yalnız HTML yayımlanan resmî belgeler HTML asli kanıt olarak belirtilir; bulunamazsa HOLD. |
+| G34 | P0 | F08 | OPEN | Yeni OCR belgelerinden yıllık değişiklik zincirine güvenli kural güncelleme | Yeni arşivlenen belgeyi etkilenen hüküm/ek/yıl değişiklik önerisine dönüştür, insan incelemesi ve bağımsız yürürlük kanıtı olmadan 2025/2026/2027/yeni yıl tahmini tutarlarını değiştirme. | Her yıl ve destek şartı için yürürlük/ilga/değişiklik/önceki hüküm bağları kaynak konumlu; otomatik OCR kesin kural veya ödeme açamaz. |
 
 ## Mühendislik sırası / bağımlılıklar
 
@@ -67,6 +71,8 @@
 3. Navigasyon: G09 HTML metin düğümü → G10 PDF kaynak/ROI → G11 tek gezgin → G20 Neden/SSS/rapor/mobil.
 4. Yıl geçerliliği: G12 tekil şartlar + G14 değişiklik grafiği → G15 2025/2026/2027 → G16 EK-20 izolasyonu.
 5. Ürün: G22/G23 Windows/lisans, G24/G25 güncelleme, G26/G27 ödeme ayrımı → G28–G30 son F14.
+
+6. Yıl bağımsızlığı: G31 tam Resmî Gazete dönem kapsamı, G32 otomatik tüm ilgili PDF OCR, G33 her iddiadan PDF gerçek konuma geçiş, G34 yeni yılın değişiklik/kural güvenli kapısı.
 
 Durum kodları: OPEN (özellik açığı), CODE_IN_PROGRESS (kodlanıyor), BLOCKED_EXTERNAL (gerçek kaynak, insan veya donanım), DEFERRED_F14 (son kabulde), CLOSED_IMPLEMENTED (özellik kodu kapandı, F14 hukukî/teknik PASS değil).
 
