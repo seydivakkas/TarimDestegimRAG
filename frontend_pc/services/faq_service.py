@@ -8,9 +8,6 @@ from typing import Any
 import pandas as pd
 
 from frontend_pc.api_client import ApiClient
-from tarim_destek_rag.citations.document_links import (
-    format_highlighted_citation_card,
-)
 
 logger = logging.getLogger("frontend_pc.services.faq")
 
@@ -32,12 +29,12 @@ def get_faq_banner_text(client: ApiClient | None = None) -> str:
     cats = len(stats.get("category_counts", {}))
     if total > 0:
         return (
-            f"📚 **Doğrulanmış Tarımsal Çözüm Veritabanı:** Toplam **{total} adet** kayıt "
+            f"📚 **SSS Kütüphanesi:** Toplam **{total} adet** kayıt "
             f"({verified} doğrulanmış olarak işaretli, {cats} kategori). Bu kayıtların mevzuatla güncelliği ayrıca kontrol edilmelidir. "
             "Aşağıdaki tablodan soru seçebilir veya yukarıdaki sohbet alanına serbestçe yazabilirsiniz."
         )
     return (
-        "📚 **Doğrulanmış Tarımsal Çözüm Veritabanı:** Yürürlükteki mevzuat ve ziraî rehberler indekslenmiştir."
+        "📚 **Doğrulanmış Tarımsal Çözüm Veritabanı:** SSS kayıtları mevcut olabilir; özgün kaynaklar için belge analiz asistanını kullanın."
     )
 
 
@@ -69,47 +66,50 @@ def get_faq_table(
 
 def ask_assistant(
     user_message: str,
-    chat_history: list[dict[str, str]],
+    chat_history: list[dict[str, str]] | None,
     client: ApiClient | None = None,
 ) -> tuple[str, list[dict[str, str]]]:
-    """Chatbot / Semantik Arama Asistanı (Sıfır LLM - Doğrulanmış Mevzuat)."""
+    """Document RAG chat: only retrieved original passages, no template advice."""
     if not user_message or not user_message.strip():
-        return "", chat_history
+        return "", list(chat_history or [])
 
     api = client or ApiClient()
-    resp = api.ask(user_message.strip(), top_k=3)
-    answer = (
-        resp.get("summary_answer_tr")
-        or resp.get("answer")
-        or "Sorunuza ilişkin mevzuatta doğrudan eşleşen madde bulunamadı."
-    )
-    chunks = resp.get("matched_chunks") or resp.get("citations", [])
+    result = api.ask_documents(user_message.strip(), top_k=4)
+    answer = str(result.get("answer") or "Belgelerden cevap üretilemedi.")
+    citations = result.get("citations") or []
+    lines = [answer]
+    if citations:
+        lines.extend(["", "---", "#### İnceleyebileceğiniz özgün kaynaklar"])
+        for index, item in enumerate(citations[:6], 1):
+            if not isinstance(item, dict):
+                continue
+            from urllib.parse import urlsplit
+            url = item.get("url")
+            document_sha = str(item.get("source_sha256") or "")
+            label = str(item.get("title") or item.get("source_id") or "Belge")
+            page = item.get("page_number")
+            section = str(item.get("section") or "")
+            method = str(item.get("extraction_method") or "UNKNOWN")
+            if isinstance(url, str):
+                origin = urlsplit(url)
+                if origin.scheme == "https" and origin.hostname in {
+                    "resmigazete.gov.tr", "www.resmigazete.gov.tr",
+                    "tarimorman.gov.tr", "www.tarimorman.gov.tr",
+                }:
+                    # No guessed HTML page number; PDF link page is in
+                    # original indexed metadata, not from a topic guess.
+                    loc = f"PDF sayfa {page}" if type(page) is int else section
+                    lines.append(
+                        f"{index}. [{label} — {loc}]({url}) "
+                        f"(okuma: {method}, kaynak SHA: `{document_sha[:16]}…`)"
+                    )
+    else:
+        lines.append(
+            "\n**Not:** Kaynak bulunamadığında belge dışından açıklama "
+            "uydurulmadı. Eksik OCR sayfaları için özgün sayfayı açabilirsiniz."
+        )
 
-    formatted_reply = f"{answer}\n\n"
-    if chunks:
-        formatted_reply += "---\n#### Kaynak parçaları (tekil resmî pasaj incelemesi bekliyor):\n"
-        for i, c in enumerate(chunks[:3], 1):
-            if isinstance(c, dict):
-                src = c.get("source_id", "RG")
-                title = c.get("title", "Resmî Gazete")
-                sec = c.get("section") or c.get("article_ref", "") or "Madde"
-                raw_t = c.get("text", "")
-                url = c.get("url")
-                cit_dict = {
-                    "title": f"[{i}] {title}",
-                    "section": f"{sec} ({src})",
-                    "year": 2026,
-                    "snippet": raw_t if len(raw_t) <= 260 else raw_t[:260] + "...",
-                    "url": url,
-                }
-                formatted_reply += f"{format_highlighted_citation_card(cit_dict, 'ELIGIBLE')}\n\n"
-            else:
-                formatted_reply += f'\n> **[{i}]** *"{c}"*\n'
-
-    # No automatic 'top page' citation: search ranking is not exact evidence.
-
-    new_history = list(chat_history)
-    new_history.append({"role": "user", "content": user_message})
-    new_history.append({"role": "assistant", "content": formatted_reply})
-
-    return "", new_history
+    history = list(chat_history or [])
+    history.append({"role": "user", "content": user_message.strip()})
+    history.append({"role": "assistant", "content": "\n".join(lines)})
+    return "", history
