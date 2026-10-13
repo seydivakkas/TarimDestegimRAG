@@ -34,3 +34,11 @@ Yeni resmî belge indirmek için güncelleme anında internet gerekir. Daha önc
 Yeni OCR metni veya yayın yılı otomatik ödeme katsayısı, yürürlük onayı, kesin destek hakkı veya sarı onaylı alıntı yaratamaz. Tüm hukukî yıl ve ödeme kararları HOLD kalır.
 
 İş kalemleri ve çözümler: [OPEN_FEATURE_GAPS.md](OPEN_FEATURE_GAPS.md). Önce F01–F13; son F14 kapsamlı test, Windows/GPU kabulü ve hukukî incelemedir.
+
+## Belge Analizi & RAG bağlantısı
+
+Yıllık güncellemenin tamamlanmasının ardından backend mevcut kaynak-öncelikli Belge Analizi & RAG indeksini de yeniler. Yıllık araştırma kataloğundaki yeni PDF'ler yalnız gerçek özgün SHA'ları, sayfa numaraları ve arşivlenmiş OCR/native metin taslakları doğrulanabildiği ölçüde soru-cevap aramasına katılır. İlgili yanıtın kaynak bağlantısı orijinal resmî PDF'nin gerçek #page=N konumuna çıkar.
+
+RAG yenilemesi başarısız olursa güncelleme cevabında LOCAL_RAG_REFRESH_HOLD görünür; yeni tarama dosyaları kendiliğinden eski/verili hukukî kuralları veya ödeme onaylarını değiştirmez. OCR taslağı orijinal metin veya üretim yılı için kesin kanıt değildir.
+
+Tam kaynak doğrulaması gerçekleşmeden bütün ilgili PDF parçalarının araştırılabildiği, her hüküm için gerçek alt-paragraf/hücre koordinatının bulunduğu veya bütün tarihsel yıl mevzuatının kapsandığı iddia edilemez.
