@@ -17,6 +17,7 @@ from tarim_destek_rag.api.schemas import (
     ApiErrorResponse,
     AskQuestionRequest,
     AskQuestionResponse,
+    DocumentAskRequest,
     FullEvaluationRequest,
     FullEvaluationResponse,
     HarvestLiveRequest,
@@ -277,6 +278,28 @@ def evaluate_evidence_index(
 
     evaluated = evaluate_all(payload, session)
     return evaluation_contract(evaluated.model_dump(mode="json"))
+
+
+@app.get("/documents/status", tags=["Belge Analizi / RAG"])
+def document_rag_status() -> dict[str, Any]:
+    """Status reports original pages, OCR gaps and local search mode."""
+    from tarim_destek_rag.retrieval.document_rag import get_document_rag
+
+    return get_document_rag().status()
+
+
+@app.post("/ask/documents", tags=["Belge Analizi / RAG"])
+def ask_original_documents(payload: DocumentAskRequest) -> dict[str, Any]:
+    """Evidence-first answer from original PDF/HTML/OCR passages only.
+
+    This path cannot return hard-coded tariff/FAQ or calculate farmer payout.
+    """
+    from tarim_destek_rag.retrieval.document_rag import get_document_rag
+
+    return get_document_rag().answer(
+        payload.question, top_k=payload.top_k,
+        source_id=payload.source_id,
+    )
 
 
 @app.post("/ask", response_model=AskQuestionResponse, tags=["Chatbot / Semantik Arama"])

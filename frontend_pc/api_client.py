@@ -105,6 +105,40 @@ class ApiClient:
                 "source_titles": [],
             }
 
+    def ask_documents(
+        self, query: str, top_k: int = 4, source_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask only from the indexed, SHA-pinned original document corpus."""
+        try:
+            response = self._request(
+                "POST",
+                "/ask/documents",
+                json={
+                    "question": query,
+                    "top_k": top_k,
+                    "source_id": source_id,
+                },
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {
+                "question": query,
+                "answer": f"Belge analiz servisine erişilemedi: {exc}",
+                "citations": [],
+                "status": "DOCUMENT_RAG_UNAVAILABLE",
+            }
+
+    def get_document_analysis_status(self) -> dict[str, Any]:
+        """Inspect indexed official originals, missing files and OCR gaps."""
+        try:
+            response = self._request("GET", "/documents/status")
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "UNAVAILABLE", "message": str(exc)}
+
+
     def get_faqs(self, category: str | None = None, search: str | None = None) -> list[dict[str, Any]]:
         """2026 Resmî Çiftçi Sıkça Sorulan Sorular (SSS) kütüphanesini getirir."""
         try:

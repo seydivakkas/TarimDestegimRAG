@@ -35,6 +35,14 @@ class AskQuestionRequest(BaseModel):
     top_k: int = Field(default=3, ge=1, le=10)
 
 
+class DocumentAskRequest(BaseModel):
+    """Document exploration, not an eligibility or payment decision."""
+
+    question: str = Field(..., min_length=2, max_length=1000)
+    top_k: int = Field(default=4, ge=1, le=10)
+    source_id: str | None = Field(default=None, max_length=96)
+
+
 class AskQuestionResponse(BaseModel):
     """Chatbot / Semantik Arama Yanıtı (Zero LLM - Doğrulanmış Mevzuat Metni)."""
 
