@@ -118,7 +118,7 @@ logger = logging.getLogger("frontend_pc")
 api_client = ApiClient()
 
 
-def build_ui() -> gr.Blocks:
+def build_legacy_ui() -> gr.Blocks:
     """5 Kullanıcı Görevine İndirgenmiş Modern Gradio Arayüzünü İnşa Eder."""
     with gr.Blocks(title="TarımDestekRAG 2026") as app:
         # Üst Hero Header
@@ -388,6 +388,26 @@ def build_ui() -> gr.Blocks:
             outputs=[p2["file_report"]],
         )
 
+    return app
+
+
+def build_ui() -> gr.Blocks:
+    """Default user experience: document analysis and original-page RAG.
+
+    The older eligibility/evaluation tabs stay available only with
+    TARIM_RAG_UI_MODE=legacy, rather than appearing in the core document app.
+    """
+    if os.getenv("TARIM_RAG_UI_MODE", "document_rag") == "legacy":
+        return build_legacy_ui()
+    with gr.Blocks(title="TarımDestekRAG — Belge Analiz Asistanı") as app:
+        gr.Markdown(
+            "# Belge Analiz Asistanı\n"
+            "PDF / HTML / TXT içeriğinde arama, Türkçe OCR, "
+            "kaynaklı pasajlar ve gerçek sayfa görüntüleri. "
+            "Sistemin amacı belgelerdeki bilgileri açıklamaya yardımcı olmaktır."
+        )
+        with gr.Tabs():
+            render_legal_assistant_tab()
     return app
 
 
