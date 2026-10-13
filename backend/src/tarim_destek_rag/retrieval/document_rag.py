@@ -187,6 +187,41 @@ def _pdf_passages(
                     source, part, section=section,
                     page=index, extraction=method, ordinal=number,
                 ))
+            # Born-digital table cells are native original PDF content. Keep
+            # exact extracted strings in row/column order and the true page.
+            # For image-only raster tables, rely on OCR_DRAFT snippets instead
+            # of inventing headers, amounts or unseen cell relationships.
+            if native_text:
+                try:
+                    tables = pdf_page.find_tables().tables
+                    for table_no, table in enumerate(tables[:35], start=1):
+                        extracted = table.extract()
+                        if not extracted:
+                            continue
+                        columns = [str(v or "") for v in extracted[0]]
+                        table_lines = [
+                            "Sütunlar: " + " | ".join(columns)
+                        ]
+                        for row_no, row in enumerate(extracted[1:151], 1):
+                            if not isinstance(row, list):
+                                continue
+                            table_lines.append(
+                                f"Satır {row_no}: " +
+                                " | ".join(str(v or "") for v in row)
+                            )
+                        for part_no, part in enumerate(
+                            _windows("\n".join(table_lines), maximum=950)
+                        ):
+                            chunks.append(_passage(
+                                source, part,
+                                section=f"PDF sayfa {index} · Tablo {table_no}",
+                                page=index, extraction="PDF_NATIVE_TABLE",
+                                ordinal=10000 + table_no*200 + part_no,
+                            ))
+                except (AttributeError, ValueError, TypeError, RuntimeError):
+                    # If the layout engine cannot extract actual cells,
+                    # no fabricated table is added to the RAG index.
+                    pass
     return chunks, image_pages, missing_ocr
 
 
@@ -355,6 +390,9 @@ class OriginalDocumentRAG:
     def status(self) -> dict[str, Any]:
         return {
             "source_count": len({p.source_id for p in self.passages}),
+            "native_table_passage_count": sum(
+                p.extraction_method == "PDF_NATIVE_TABLE" for p in self.passages
+            ),
             "indexed_documents": [
                 {"source_id": p.source_id, "title": p.title, "format": p.format}
                 for p in {p.source_id: p for p in self.passages}.values()
