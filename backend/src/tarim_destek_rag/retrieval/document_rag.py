@@ -92,7 +92,13 @@ def _passage(
     chunk_id = hashlib.sha256(
         f"{digest}:{locator}:{ordinal}:{text}".encode("utf-8")
     ).hexdigest()[:24]
-    url = source["url"] + (f"#page={page}" if page else "")
+    if source.get("role") == "USER_DOCUMENT":
+        url = (
+            f"/documents/view/{digest}/page/{page}"
+            if page is not None else f"/documents/view/{digest}/text"
+        )
+    else:
+        url = source["url"] + (f"#page={page}" if page else "")
     return SourcePassage(
         chunk_id=chunk_id, source_id=source["id"],
         title=str(source.get("expected_legal_number") or
@@ -189,7 +195,11 @@ def _html_passages(
 ) -> list[SourcePassage]:
     # Resmi Gazete archive HTML sources in manifest are CP1254. Use the
     # original bytes, do NOT replace them with a synthesized PDF.
-    decoded = raw.decode("cp1254", errors="replace")
+    decoded = (
+        raw.decode("utf-8", errors="replace")
+        if source.get("role") == "USER_DOCUMENT"
+        else raw.decode("cp1254", errors="replace")
+    )
     soup = BeautifulSoup(decoded, "html.parser")
     for tag in soup(["style", "script", "noscript"]):
         tag.decompose()
@@ -233,6 +243,8 @@ class OriginalDocumentRAG:
             "configs/p0_10_3_original_source_manifest.json"))
         self.ocr_index_dir = ocr_index_dir or Path(os.getenv(
             "TARIM_RAG_OCR_INDEX_DIR", "data/indexes"))
+        self.user_library_root = Path(os.getenv(
+            "TARIM_RAG_USER_DOC_DIR", "data/user_documents"))
         self.passages: list[SourcePassage] = []
         self.missing_sources: list[str] = []
         self.image_only_pages: int = 0
@@ -269,6 +281,49 @@ class OriginalDocumentRAG:
                 self.passages.extend(chunks)
             except (OSError, ValueError, TypeError, ImportError, RuntimeError, KeyError):
                 self.missing_sources.append(key)
+        # User-uploaded files have their OWN provenance label, not an
+        # official Gazette source. Their original bytes are still SHA-pinned.
+        from tarim_destek_rag.retrieval.user_documents import (
+            library_entries,
+            load_user_original,
+        )
+
+        for item in library_entries(self.user_library_root):
+            digest = item.get("sha256")
+            if not isinstance(digest, str) or not _SHA.fullmatch(digest):
+                continue
+            try:
+                meta, raw = load_user_original(
+                    digest, root=self.user_library_root)
+                source = {
+                    "id": meta["id"],
+                    "role": "USER_DOCUMENT",
+                    "original_sha256": digest,
+                    "original_bytes": len(raw),
+                    "format": meta["format"],
+                    "url": f"/documents/view/{digest}",
+                    "expected_legal_number": str(meta["filename"]),
+                }
+                if source["format"] == "pdf":
+                    chunks, image_pages, missing_ocr = _pdf_passages(
+                        source, raw, self.ocr_index_dir,
+                    )
+                    self.image_only_pages += image_pages
+                    self.pages_without_ocr += missing_ocr
+                elif source["format"] == "html":
+                    chunks = _html_passages(source, raw)
+                else:
+                    text = raw.decode("utf-8", errors="replace")
+                    chunks = [
+                        _passage(source, textpart, section="TXT METNİ",
+                                 page=None, extraction="TXT_NATIVE_TEXT",
+                                 ordinal=i)
+                        for i, textpart in enumerate(_windows(text))
+                    ]
+                self.passages.extend(chunks)
+            except (OSError, ValueError, KeyError, RuntimeError, ImportError):
+                self.missing_sources.append(str(item.get("id", "USER_UNKNOWN")))
+
         if len(self.passages) > MAX_PASSAGES:
             raise ValueError("Source corpus exceeds local safety budget")
         self._tokens = [
@@ -300,6 +355,11 @@ class OriginalDocumentRAG:
     def status(self) -> dict[str, Any]:
         return {
             "source_count": len({p.source_id for p in self.passages}),
+            "indexed_documents": [
+                {"source_id": p.source_id, "title": p.title, "format": p.format}
+                for p in {k: next(x for x in self.passages if x.source_id == k)
+                          for k in dict.fromkeys(x.source_id for x in self.passages)}.values()
+            ],
             "passage_count": len(self.passages),
             "missing_source_ids": self.missing_sources,
             "image_only_pdf_pages": self.image_only_pages,
