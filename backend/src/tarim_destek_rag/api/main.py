@@ -691,6 +691,91 @@ def scan_future_legal_changes(
     return result
 
 
+
+@app.post("/admin/legal-updates/refresh-evidence",
+          tags=["Yıllık Resmî PDF Güncelleme ve Kanıt İndeksi"])
+def refresh_annual_evidence(
+    year: int,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """User-triggered official discovery → verified PDF bytes → page OCR draft.
+
+    This is only a bounded allowlisted portal *discovery* pass, NOT a complete
+    Resmi Gazete official search over an entire year. OCR and changes DO NOT
+    publish effective rates, year validity or entitlement.
+    """
+    from tarim_destek_rag.updates.discovery import read_portals, scan_official_sources
+    from tarim_destek_rag.updates.annual_pdf_pipeline import update_yearly_pdf_index
+
+    if not 2020 <= year <= 2100:
+        raise HTTPException(status_code=422, detail="Geçersiz üretim yılı")
+    root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    discovery = scan_official_sources(
+        production_year=year,
+        portals=read_portals(Path("configs/official_update_portals.json")),
+        output=root,
+    )
+    research = update_yearly_pdf_index(
+        production_year=year, discovery_batch=discovery, root=root,
+    )
+    return {
+        "schema_version": 1, "year_scanned": year,
+        "discovery": {
+            "mode": discovery["discovery_mode"],
+            "new_or_changed": discovery["new_or_changed"],
+            "scanned_document_count": len(discovery["documents"]),
+            "errors": discovery["errors"],
+        },
+        "research": research,
+        "complete_year_coverage": False,
+        "annual_applicability_verified": False,
+        "rules_activated": False,
+        "payment_approved": False,
+        "status": "DISCOVERY_AND_OCR_DRAFT_HOLD",
+    }
+
+
+@app.get("/admin/legal-updates/research-pdf",
+         tags=["Yıllık Resmî PDF Güncelleme ve Kanıt İndeksi"])
+def research_annually_archived_pdf(
+    query: str, year: int,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    from tarim_destek_rag.updates.annual_pdf_pipeline import search_yearly_pdf
+    root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    hits = search_yearly_pdf(query=query, year=year, root=root)
+    return {
+        "production_year_selected_for_scan": year,
+        "query": query, "hits": hits,
+        "year_is_legal_applicability": False,
+        "original_page_required": True,
+        "legal_status": "HOLD",
+        "payment_status": "HOLD",
+    }
+
+
+@app.get("/admin/legal-updates/research-pdf/{sha256}/page/{page}",
+         tags=["Yıllık Resmî PDF Güncelleme ve Kanıt İndeksi"])
+def view_annually_archived_original_pdf(
+    sha256: str, page: int, query: str = "",
+    _admin: None = Depends(require_admin_key),
+) -> Response:
+    from tarim_destek_rag.updates.annual_pdf_pipeline import render_yearly_pdf_page
+    try:
+        png, _ = render_yearly_pdf_page(
+            page_key=f"{sha256}:{page}", query=query,
+            root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
+        )
+    except (OSError, ValueError, KeyError, RuntimeError, ImportError, TypeError):
+        raise HTTPException(
+            status_code=404, detail="Özgün SHA-doğrulanmış sayfa bulunamadı"
+        )
+    return Response(
+        content=png, media_type="image/png",
+        headers={"Cache-Control": "no-store", "X-Evidence-Status": "UNREVIEWED-HOLD"},
+    )
+
+
 class AnalyzeRawLegislationRequest(BaseModel):
     source_url: str
     text_or_base64: str
