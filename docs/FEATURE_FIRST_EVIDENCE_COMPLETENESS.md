@@ -264,3 +264,5 @@ F14 son kabul en sona bırakılmıştır.
 - Yeni discovered-official PDF'ler SHA, URL ve arşiv envanteri tekrar doğrulanarak Belge Analizi & RAG araştırma kümesine de katılır. OCR-native pasajlar gerçek PDF sayfası/URL taşır ve hukukî onaysızdır.
 - Yıllık güncelleme isteği RAG indeksini açıkça yeniler; sonuç LOCAL_RAG_REFRESHED_DRAFT veya LOCAL_RAG_REFRESH_HOLD olarak arayüzde raporlanır. RAG kaynaklı yanıtlar yeni arşiv verisini kullanabilir.
 - Keşif/indeksleme kural motorunda yürürlük/ödeme PASS oluşturmaz. PDF sayfa görüntüsü ve arama eşleşmesinin görülmesi de bağımsız hüküm-geçerliliği kanıtı değildir.
+
+- Yıllık RAG alıntıları için dinamik kaynak kimliğine bağlı, SHA'yi her çağrıda yeniden doğrulayan yerel gerçek PDF sayfa görüntüsü URL'si eklendi. Resmî PDF dışarıda #page=N konumunda da açılabilir; kaynakta tam paragraf ROI ve bağımsız hukukî onay hâlâ G33/G10 altında açıktır.
