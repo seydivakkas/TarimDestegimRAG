@@ -726,6 +726,15 @@ def refresh_annual_evidence(
     research = update_yearly_pdf_index(
         production_year=year, discovery_batch=discovery, root=root,
     )
+    # Explicitly refresh the local document-first RAG corpus after each
+    # operator-triggered update. If it fails, published rules are unchanged.
+    try:
+        from tarim_destek_rag.retrieval.document_rag import get_document_rag
+        corpus = get_document_rag(refresh=True).status()
+        rag_state = "LOCAL_RAG_REFRESHED_DRAFT"
+    except (OSError, ValueError, RuntimeError, ImportError, KeyError, TypeError):
+        corpus = None
+        rag_state = "LOCAL_RAG_REFRESH_HOLD"
     return {
         "schema_version": 1,
         "production_year_selected_for_research": year,
@@ -737,6 +746,8 @@ def refresh_annual_evidence(
             "errors": discovery["errors"],
         },
         "research": research,
+        "rag_refresh_status": rag_state,
+        "rag_corpus": corpus,
         "complete_year_coverage": False,
         "annual_applicability_verified": False,
         "rules_activated": False,
