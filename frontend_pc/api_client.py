@@ -225,6 +225,66 @@ class ApiClient:
         except Exception as exc:
             return {"status": "ERROR", "message": f"Resmî kaynak taraması başarısız: {exc}"}
 
+
+    def refresh_yearly_official_pdf_evidence(self, production_year: int) -> dict[str, Any]:
+        """Scan relevant approved Gazette sources, archive and OCR draft-index PDFs."""
+        admin_key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        if not admin_key:
+            return {"status": "ADMIN_NOT_CONFIGURED"}
+        try:
+            r = self._request(
+                "POST", "/admin/legal-updates/refresh-evidence",
+                params={"year": int(production_year)},
+                headers={"X-Admin-Key": admin_key}, timeout=900,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def research_yearly_official_pdf(
+        self, *, production_year: int, query: str,
+    ) -> dict[str, Any]:
+        """Return source candidates with actual SHA, source PDF page and HOLD."""
+        admin_key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        if not admin_key:
+            return {"status": "ADMIN_NOT_CONFIGURED", "hits": []}
+        try:
+            r = self._request(
+                "GET", "/admin/legal-updates/research-pdf",
+                params={"year": int(production_year), "query": query},
+                headers={"X-Admin-Key": admin_key}, timeout=60,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc), "hits": []}
+
+    def get_yearly_original_pdf_page(
+        self, *, page_key: str, query: str = "",
+    ) -> bytes | None:
+        """Read server rendered genuine page (never an AI-generated page)."""
+        import re
+        if not re.fullmatch(r"[a-f0-9]{64}:[1-9][0-9]{0,3}", page_key or ""):
+            return None
+        admin_key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        if not admin_key:
+            return None
+        sha, page = page_key.split(":")
+        try:
+            r = self._request(
+                "GET", f"/admin/legal-updates/research-pdf/{sha}/page/{page}",
+                params={"query": query},
+                headers={"X-Admin-Key": admin_key}, timeout=120,
+            )
+            r.raise_for_status()
+            if r.headers.get("content-type", "").startswith("image/png"):
+                return r.content if len(r.content) <= 20_000_000 else None
+        except Exception:
+            pass
+        return None
+
+
     def get_grounding_evidence(self, sentence_id: int, year: int) -> dict[str, Any]:
         """Read authenticated-by-source, but unapproved, exact PDF citation details."""
         try:
