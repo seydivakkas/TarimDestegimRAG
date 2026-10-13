@@ -69,12 +69,26 @@ def ask_assistant(
     chat_history: list[dict[str, str]] | None,
     client: ApiClient | None = None,
 ) -> tuple[str, list[dict[str, str]]]:
-    """Document RAG chat: only retrieved original passages, no template advice."""
+    """Backward-compatible default unfiltered document RAG chat."""
+    return ask_assistant_filtered(user_message, chat_history, None, client=client)
+
+
+def ask_assistant_filtered(
+    user_message: str,
+    chat_history: list[dict[str, str]] | None,
+    source_id: str | None = None,
+    *,
+    client: ApiClient | None = None,
+) -> tuple[str, list[dict[str, str]]]:
+    """Optional exact source filter, never a guessed document reference."""
     if not user_message or not user_message.strip():
         return "", list(chat_history or [])
 
     api = client or ApiClient()
-    result = api.ask_documents(user_message.strip(), top_k=4)
+    result = api.ask_documents(
+        user_message.strip(), top_k=4,
+        source_id=source_id if source_id else None,
+    )
     answer = str(result.get("answer") or "Belgelerden cevap üretilemedi.")
     citations = result.get("citations") or []
     lines = [answer]
@@ -92,10 +106,18 @@ def ask_assistant(
             method = str(item.get("extraction_method") or "UNKNOWN")
             if isinstance(url, str):
                 origin = urlsplit(url)
-                if origin.scheme == "https" and origin.hostname in {
+                is_local_page = (
+                    url.startswith("/documents/view/")
+                    and ".." not in url and "//" not in url
+                )
+                if is_local_page or (
+                    origin.scheme == "https" and origin.hostname in {
                     "resmigazete.gov.tr", "www.resmigazete.gov.tr",
                     "tarimorman.gov.tr", "www.tarimorman.gov.tr",
-                }:
+                }
+                ):
+                    if is_local_page:
+                        url = api.base_url.rstrip("/") + url
                     # No guessed HTML page number; PDF link page is in
                     # original indexed metadata, not from a topic guess.
                     loc = f"PDF sayfa {page}" if type(page) is int else section

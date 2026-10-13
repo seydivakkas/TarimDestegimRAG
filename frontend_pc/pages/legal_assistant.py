@@ -44,6 +44,60 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
             refresh_status = gr.Button("Belge durumunu yenile", size="sm")
         refresh_status.click(_corpus_status, outputs=[status_display])
 
+        with gr.Accordion("Yeni belge ekle — PDF / HTML / TXT", open=True):
+            gr.Markdown(
+                "Dosya kendi bilgisayarınızda işlenir; ücretli bulut API'si "
+                "gerekmez. **Taranmış PDF'lerde Türkçe OCR**, kurulu yerel "
+                "Tesseract ile çalışır. OCR sonucu belgeye bakarak kontrol "
+                "edilebilir ve kaynak sayfa olduğu gibi saklanır."
+            )
+            with gr.Row():
+                upload_file = gr.File(
+                    label="İncelenecek belge",
+                    file_types=[".pdf", ".html", ".htm", ".txt"],
+                    type="filepath",
+                    scale=6,
+                )
+                upload_ocr = gr.Checkbox(
+                    label="Taranmış PDF sayfalarını OCR ile oku",
+                    value=True,
+                    scale=3,
+                )
+            upload_button = gr.Button("Belgeyi kütüphaneye ekle ve indeksle")
+            upload_feedback = gr.Markdown(
+                "Henüz yeni belge eklenmedi. Resmî kaynak arşivindeki mevcut "
+                "belgeler de ayrıca aranabilir."
+            )
+
+            def upload_and_index(
+                file_path: str | None, with_ocr: bool,
+            ) -> tuple[str, str]:
+                if not file_path:
+                    return "Önce bir dosya seçin.", _corpus_status()
+                outcome = ApiClient().import_document(
+                    str(file_path), run_ocr=with_ocr,
+                )
+                if outcome.get("import_status") != "INDEXED":
+                    return (
+                        "Belge eklenemedi: "
+                        + str(outcome.get("message") or "Bilinmeyen hata"),
+                        _corpus_status(),
+                    )
+                item = outcome.get("document") or {}
+                return (
+                    f"**Kütüphaneye eklendi:** {item.get('filename', 'Belge')} · "
+                    f"Kaynak kimliği: `{item.get('id', '')}` · "
+                    "Dosya türü: kullanıcı yüklemesi. "
+                    "Bu, belgedeki her ifadenin doğru olduğunu onaylamaz.",
+                    _corpus_status(),
+                )
+
+            upload_button.click(
+                upload_and_index,
+                inputs=[upload_file, upload_ocr],
+                outputs=[upload_feedback, status_display],
+            )
+
         chatbot = gr.Chatbot(height=500, label="Belgelerimden Soru-Cevap")
         with gr.Row():
             chat_input = gr.Textbox(
