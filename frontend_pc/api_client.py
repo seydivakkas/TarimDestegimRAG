@@ -226,7 +226,10 @@ class ApiClient:
             return {"status": "ERROR", "message": f"Resmî kaynak taraması başarısız: {exc}"}
 
 
-    def refresh_yearly_official_pdf_evidence(self, production_year: int) -> dict[str, Any]:
+    def refresh_yearly_official_pdf_evidence(
+        self, production_year: int, *, published_from: str | None = None,
+        published_to: str | None = None,
+    ) -> dict[str, Any]:
         """Scan relevant approved Gazette sources, archive and OCR draft-index PDFs."""
         admin_key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
         if not admin_key:
@@ -234,7 +237,11 @@ class ApiClient:
         try:
             r = self._request(
                 "POST", "/admin/legal-updates/refresh-evidence",
-                params={"year": int(production_year)},
+                params={
+                    "year": int(production_year),
+                    **({"published_from": published_from} if published_from else {}),
+                    **({"published_to": published_to} if published_to else {}),
+                },
                 headers={"X-Admin-Key": admin_key}, timeout=900,
             )
             r.raise_for_status()
