@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_reviewed": "2026-10-12",
+  "last_reviewed": "2026-10-13",
   "branch": "feature/p1-unified-evidence-workbench",
   "pr": 41,
   "assessment": "Feature implementation code and known external blockers only; not a validated test pass.",
@@ -383,6 +383,46 @@
       "solution": "Tüm iddiaları yetkili hukuki incelemeye bağla; ödeme aktivasyonu bağımsız karar.",
       "definition_of_done": "Mevzuat/yıl/üretici ve veri yetki onayları ayrıştırılmış imza kaydı.",
       "responsible_role": "LEGAL_REVIEW"
+    },
+    {
+      "gap_id": "G31",
+      "feature_id": "F01",
+      "priority": "P0",
+      "status": "CODE_IN_PROGRESS",
+      "title": "Resmî Gazete tüm yayın dönemlerini kapsayan keşif ve eksiksizlik defteri",
+      "solution": "Üretim yılından bağımsız yayın tarihi aralıklarında resmî RG gün sayfalarını ve gerçek kaynak bağlantılarını tara. 1–14 günlük bounded backfill var; dönem-bazlı tamamlanma, mükerrer/nos issue, başlık varyasyonları ve resmi arama API adaptörü ile eksiksizlik doğrulaması eksik.",
+      "definition_of_done": "Her tarih aralığı/gazete sayısı ve ilgili belge için başarı, erişilemeyen gün ve ekler izlenmiş; tam yıllık kapsam doğrulanmadan coverage PASS yok.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G32",
+      "feature_id": "F03",
+      "priority": "P0",
+      "status": "CODE_IN_PROGRESS",
+      "title": "Her yeni resmî PDF için otomatik yerel OCR + arama indeksi",
+      "solution": "Güncelle→SHA-doğrulanmış PDF→sayfa native/Tesseract OCR→gerçek bbox→yıl arşivi araması ve özgün 180 DPI önizleme kodlandı; Baidu toplu fallback, büyük belgeye devam ederek tarama, performans, yeniden başlama ve Windows kurulum eksik.",
+      "definition_of_done": "İlgili tüm yeni resmî PDF sayfalarında OCR/native/başarısız/HOLD durumu ve gerçek sayfa kanıtı mevcut; indeks tamamlanmayan sayfalar ayrı görünür.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G33",
+      "feature_id": "F06",
+      "priority": "P0",
+      "status": "OPEN",
+      "title": "Her cevap/gerekçe için tek tıkla gerçek PDF madde, paragraf ve hücre",
+      "solution": "Yıllık aramada kaynak PDF/sayfa gösterimi eklendi; destek analizi Neden/SSS/RAG cümlesi→original SHA+sayfa+gerçek bbox otomatik yönlendirme/işaretleme ve tüm kanal/rapor bağlantısını tamamla. OCR-adayı turuncu, iki görsel onaylı kaynak sarı.",
+      "definition_of_done": "Her gösterilen somut mevzuat gerekçesinde doğru PDF sayfası ve ilgili gerçek konum doğrudan açılır; yalnız HTML yayımlanan resmî belgeler HTML asli kanıt olarak belirtilir; bulunamazsa HOLD.",
+      "responsible_role": "ENGINEERING"
+    },
+    {
+      "gap_id": "G34",
+      "feature_id": "F08",
+      "priority": "P0",
+      "status": "OPEN",
+      "title": "Yeni OCR belgelerinden yıllık değişiklik zincirine güvenli kural güncelleme",
+      "solution": "Yeni arşivlenen belgeyi etkilenen hüküm/ek/yıl değişiklik önerisine dönüştür, insan incelemesi ve bağımsız yürürlük kanıtı olmadan 2025/2026/2027/yeni yıl tahmini tutarlarını değiştirme.",
+      "definition_of_done": "Her yıl ve destek şartı için yürürlük/ilga/değişiklik/önceki hüküm bağları kaynak konumlu; otomatik OCR kesin kural veya ödeme açamaz.",
+      "responsible_role": "LEGAL_CONTENT"
     }
   ]
 }
