@@ -1,161 +1,129 @@
-"""Sayfa 3: Mevzuat Asistanı (Sıfır LLM Doğrulanmış Soru-Cevap & SSS Rehberi)."""
-
+"""Belge Analizi & RAG Asistanı: source-first retrieval, no decisions."""
 from __future__ import annotations
 
 import gradio as gr
 import pandas as pd
 
+from frontend_pc.api_client import ApiClient
 from frontend_pc.services.faq_service import (
     ask_assistant,
-    get_faq_banner_text,
     get_faq_categories,
     get_faq_table,
 )
 
 
-def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
-    """Mevzuat Asistanı sekmesini inşa eder ve bileşen sözlüğünü döner."""
-    with gr.TabItem("💬 Mevzuat Asistanı", id="tab_legal_assistant"):
-        gr.Markdown("""
-        ### 🌾 2026 Tarımsal Destek Mevzuat ve Hak Ediş Asistanı (Sıfır LLM - Doğrulanmış Kararlar)
-        Sorunuzu doğrudan doğal dille yazın. Sistem yürürlükteki 2026 Resmî Gazete destekleme mevzuatı,
-        5488 sayılı Tarım Kanunu, ÇKS yönetmeliği ve mevcut veritabanından kaynaklı ön bilgi sunar; güncel mevzuatla bağımsız teyit edilmelidir.
-        """)
-        with gr.Accordion("Tekil değerlendirme kanıtı — Neden? ile aynı ID", open=False):
-            gr.Markdown(
-                "Bu seçici yalnız aynı oturumda hesaplanan **tekil kural şartlarını** "
-                "gösterir. SSS arama sonucunu tahminen bir mevzuat maddesine "
-                "bağlamaz. Birebir kaynak konumu yoksa HOLD; yürürlük ve ödeme "
-                "kanıtlanmış sayılmaz."
-            )
-            faq_claim_selector = gr.Dropdown(
-                choices=[], value=None,
-                label="Mevcut değerlendirmeden tam claim_id seç",
-                interactive=True,
-            )
-            faq_claim_display = gr.HTML(
-                "<p>Değerlendirme yapıp kesin gerekçeyi seçin. "
-                "Genel SSS yanıtı burada resmî kanıta dönüşmez.</p>"
-            )
+def _corpus_status() -> str:
+    data = ApiClient().get_document_analysis_status()
+    if data.get("status") == "UNAVAILABLE":
+        return "Belge analiz servisine erişilemiyor. Backend çalışmıyor olabilir."
+    return (
+        "**İndekslenen özgün kaynak:** "
+        f"{data.get('source_count', 0)} · "
+        "**Aranabilir pasaj:** "
+        f"{data.get('passage_count', 0)} · "
+        "**OCR bekleyen PDF sayfaları:** "
+        f"{data.get('pdf_pages_without_ocr', 0)} · "
+        "**Arama:** "
+        f"{data.get('search_mode', 'BELİRSİZ')}. "
+        "Kaynak dosyası olmayan belgeler uydurma içerikle tamamlanmaz."
+    )
 
-        chatbot = gr.Chatbot(height=420, label="Mevzuat & Soru-Cevap Sohbeti")
+
+def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
+    """Minimal RAG-only document question/answer interface."""
+    with gr.TabItem("Belge Analizi & RAG", id="tab_legal_assistant"):
+        gr.Markdown(
+            "### Belge Analizi — Kaynaklı Soru-Cevap\n"
+            "Soru yazın. Sistem yalnızca indekslenmiş **gerçek PDF/HTML belge "
+            "parçaları ve varsa OCR metni** içinde arar. Yanıtta ilgili "
+            "belgenin adını, sayfasını veya maddesini ve kaynak bağlantısını "
+            "görürsünüz. Belgede bulunmayan şeyi biliyormuş gibi cevaplamaz."
+        )
+        with gr.Row():
+            status_display = gr.Markdown(value=_corpus_status())
+            refresh_status = gr.Button("Belge durumunu yenile", size="sm")
+        refresh_status.click(_corpus_status, outputs=[status_display])
+
+        chatbot = gr.Chatbot(height=500, label="Belgelerimden Soru-Cevap")
         with gr.Row():
             chat_input = gr.Textbox(
-                placeholder="Örn: 'Destekleme parasına haciz konulur mu?', 'Kiralık arazide ÇKS olur mu?', '2026 Buğday desteği ne kadar?'",
+                placeholder="Örn: 'Bu belgede ÇKS şartı nerede anlatılmış?'",
+                label="Belgeye sor",
                 scale=8,
-                show_label=False,
             )
-            chat_submit = gr.Button("Sor 🚀", scale=2, variant="primary")
-            chat_clear = gr.Button("🗑️ Temizle", scale=1, variant="secondary")
+            chat_submit = gr.Button("Belgede ara", scale=2, variant="primary")
+            chat_clear = gr.Button("Temizle", scale=1, variant="secondary")
+        for sender in (chat_submit, chat_input):
+            callback = sender.click if sender is chat_submit else sender.submit
+            callback(
+                ask_assistant,
+                inputs=[chat_input, chatbot],
+                outputs=[chat_input, chatbot],
+            )
+        chat_clear.click(lambda: ("", []), outputs=[chat_input, chatbot])
 
-        gr.Markdown("**💡 En Sık Sorulan Çiftçi Soruları (Tek Tıkla Sor):**")
         with gr.Row():
-            q1 = gr.Button("🌾 2026 Buğday & Arpa Destek Tutarları", size="sm")
-            q2 = gr.Button("📑 ÇKS Kaydı Nasıl Yapılır & Evraklar", size="sm")
-            q3 = gr.Button("👩‍🌾 Kadın ve Genç Çiftçi İlave Desteği", size="sm")
-        with gr.Row():
-            q4 = gr.Button("🚫 Destekleme Parasına Haciz Konur mu?", size="sm")
-            q5 = gr.Button("📝 Kiralık Arazide ÇKS ve Destek Alınır mı?", size="sm")
-            q6 = gr.Button("🤝 Hisseli Tapuda İmza Vermeyen Hissedar", size="sm")
-        with gr.Row():
-            q7 = gr.Button("💧 Yeraltı Su Kısıtı Olan Havzalar Desteği", size="sm")
-            q8 = gr.Button("🌿 Organik Tarım & Biyolojik Mücadele", size="sm")
-            q9 = gr.Button("🔄 2026 Yeni Destek Modelinde Ne Değişti?", size="sm")
-        with gr.Row():
-            q10 = gr.Button("🌱 Sertifikalı Tohum & Fidan Şartları", size="sm")
-            q11 = gr.Button("⚖️ Askı İcmali Nedir & 5 Günlük İtiraz", size="sm")
-            q12 = gr.Button("💳 Destekler Ne Zaman & Nereye Yatar?", size="sm")
-        with gr.Row():
-            q13 = gr.Button("🐛 Kahverengi Kokarca & Zirai Mücadele", size="sm")
-            q14 = gr.Button("🛡️ TARSİM Sigortası & Don İhbar Süresi", size="sm")
-            q15 = gr.Button("☀️ Güneş Enerjisi (GES) & Sulama Hibesi", size="sm")
+            q1 = gr.Button("2024/39 Madde 4'ü bul", size="sm")
+            q2 = gr.Button("2025/42 hangi hükümleri değiştirmiş?", size="sm")
+            q3 = gr.Button("EK-20 tablosunu hangi belge içeriyor?", size="sm")
+        samples = (
+            (q1, "2024/39 belgesinde MADDE 4 ne diyor?"),
+            (q2, "2025/42 tebliğinde 2024/39 için hangi değişikliklerden söz ediliyor?"),
+            (q3, "2025/42 EK-20 tablosu hangi kaynakta ve hangi sayfada geçiyor?"),
+        )
+        for button, question in samples:
+            button.click(
+                lambda history, prompt=question: ask_assistant(prompt, history),
+                inputs=[chatbot],
+                outputs=[chat_input, chatbot],
+            )
 
-        with gr.Accordion("📚 2026 Resmî Çiftçi Sıkça Sorulan Sorular (SSS) Kütüphanesi & Rehberi", open=True):
-            gr.Markdown("Aşağıdaki resmi SSS tablosundan merak ettiğiniz konuyu seçip doğrudan asistana sorabilir veya arama yapabilirsiniz:")
-            faq_banner_md = gr.Markdown(get_faq_banner_text())
-            with gr.Row():
-                faq_cat_dropdown = gr.Dropdown(
-                    choices=get_faq_categories(),
-                    value="Tümü",
-                    label="Kategoriye Göre Filtrele",
-                    scale=4,
-                )
-                faq_search_input = gr.Textbox(
-                    placeholder="Anahtar kelimeyle ara (haciz, kira, kokarca, tarsim, hibe, organik)...",
-                    label="SSS Kütüphanesinde Ara",
-                    scale=6,
-                )
-                btn_filter_faq = gr.Button("🔍 Filtrele / Ara", scale=2, variant="secondary")
-
+        with gr.Accordion("SSS kataloğu (belge kanıtı değildir)", open=False):
+            gr.Markdown(
+                "Sık sorulan sorular arama önerisidir; kesin kaynak alıntısı "
+                "değildir. Bir satıra tıkladığınızda belge RAG motorunda arama yapılır."
+            )
+            faq_cat_dropdown = gr.Dropdown(
+                choices=get_faq_categories(),
+                value="Tümü",
+                label="Kategori",
+            )
+            faq_search_input = gr.Textbox(label="SSS içinde ara")
             faq_df = gr.DataFrame(value=get_faq_table(), interactive=False)
 
-            def update_faq_view(cat: str, search_txt: str) -> tuple[pd.DataFrame, str]:
-                table = get_faq_table(cat, search_txt)
-                banner = get_faq_banner_text()
-                return table, banner
+            def filter_faq(cat: str, query: str) -> pd.DataFrame:
+                return get_faq_table(cat, query)
 
             faq_cat_dropdown.change(
-                update_faq_view,
-                inputs=[faq_cat_dropdown, faq_search_input],
-                outputs=[faq_df, faq_banner_md],
-            )
-            btn_filter_faq.click(
-                update_faq_view,
-                inputs=[faq_cat_dropdown, faq_search_input],
-                outputs=[faq_df, faq_banner_md],
+                filter_faq, inputs=[faq_cat_dropdown, faq_search_input],
+                outputs=[faq_df],
             )
             faq_search_input.submit(
-                update_faq_view,
-                inputs=[faq_cat_dropdown, faq_search_input],
-                outputs=[faq_df, faq_banner_md],
+                filter_faq, inputs=[faq_cat_dropdown, faq_search_input],
+                outputs=[faq_df],
             )
 
-            def on_faq_click(evt: gr.SelectData, df: pd.DataFrame, history: list[dict[str, str]]):
-                if evt is not None and hasattr(evt, "index"):
-                    row_idx = evt.index[0]
-                    if row_idx < len(df):
-                        q_val = str(df.iloc[row_idx]["Soru"])
-                        return ask_assistant(q_val, history)
+            def choose_faq(
+                evt: gr.SelectData,
+                df: pd.DataFrame,
+                history: list[dict[str, str]],
+            ) -> tuple[str, list[dict[str, str]]]:
+                row = evt.index[0] if evt is not None and evt.index else -1
+                if 0 <= row < len(df):
+                    return ask_assistant(str(df.iloc[row]["Soru"]), history)
                 return "", history
 
             faq_df.select(
-                on_faq_click,
+                choose_faq,
                 inputs=[faq_df, chatbot],
                 outputs=[chat_input, chatbot],
             )
 
-        chat_submit.click(
-            ask_assistant,
-            inputs=[chat_input, chatbot],
-            outputs=[chat_input, chatbot],
-        )
-        chat_input.submit(
-            ask_assistant,
-            inputs=[chat_input, chatbot],
-            outputs=[chat_input, chatbot],
-        )
-        chat_clear.click(lambda: ("", []), outputs=[chat_input, chatbot])
-
-        def make_quick_ask(prompt: str):
-            def _h(history: list[dict[str, str]] | None = None):
-                return ask_assistant(prompt, history or [])
-            return _h
-
-        q1.click(make_quick_ask("2026 yılında buğday ve arpa desteği ne kadar?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q2.click(make_quick_ask("ÇKS kaydı nasıl yapılır ve başvuru için hangi evraklar gerekir?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q3.click(make_quick_ask("Kadın çiftçilere ve genç çiftçilere ilave destek var mı?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q4.click(make_quick_ask("Tarımsal destekleme ödemelerine banka borcundan veya icradan haciz konulabilir mi?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q5.click(make_quick_ask("Kiralık arazide ÇKS kaydı ve tarımsal destek alınabilir mi?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q6.click(make_quick_ask("Hisseli tapulu arazide diğer hissedarlar imza vermezse ÇKS nasıl yapılır?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q7.click(make_quick_ask("Yeraltı su kısıtı olan havzalar desteği nedir ve hangi ürünlere verilir?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q8.click(make_quick_ask("Organik tarım ve biyolojik mücadele desteği kimlere verilir?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q9.click(make_quick_ask("2026 Yeni Destekleme Modeli'nde eski sisteme göre ne değişti?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q10.click(make_quick_ask("Sertifikalı tohum ve sertifikalı fidan destekleme şartları nelerdir?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q11.click(make_quick_ask("Askı icmali nedir, kaç gün askıda kalır ve itiraz süresi ne kadardır?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q12.click(make_quick_ask("Tarımsal destekleme ödemeleri ne zaman ve hangi bankaya yatar?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q13.click(make_quick_ask("Kahverengi kokarca zararlısıyla nasıl mücadele edilir ve ilaçlama desteği var mı?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q14.click(make_quick_ask("TARSİM tarım sigortasında don ve kuraklık hasarı ihbar süresi kaç gündür?"), inputs=[chatbot], outputs=[chat_input, chatbot])
-        q15.click(make_quick_ask("Tarımsal sulamada güneş enerjisi (GES) ve modern damla sulama için hibe desteği var mı?"), inputs=[chatbot], outputs=[chat_input, chatbot])
+        # Keep the prior evaluation's optional claim inspector compatible
+        # with frontend_pc.app; hide it from the focused RAG user journey.
+        with gr.Accordion("İleri düzey kaynak kimliği", open=False, visible=False):
+            faq_claim_selector = gr.Dropdown(choices=[], value=None)
+            faq_claim_display = gr.HTML()
 
     return {
         "chatbot": chatbot,
