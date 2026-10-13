@@ -43,7 +43,6 @@ from tarim_destek_rag.explainer.template_explainer import (
 from tarim_destek_rag.logging.logger import logger
 from tarim_destek_rag.models.source import SourceDefinition
 from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
-from tarim_destek_rag.retrieval.assistant import assistant_engine
 from tarim_destek_rag.retrieval.hybrid import hybrid_retriever
 from tarim_destek_rag.retrieval.knowledge_base import (
     FARMER_FAQ_LIST,
@@ -88,11 +87,13 @@ async def lifespan(app: FastAPI):
     with SessionLocal() as session:
         seed_2026_support_data(session)
 
-    try:
-        seed_vector_store_data()
-    except Exception as e:
-        logger.warning("Vektör mağazası tohumlanırken uyarı: %s", e)
-
+    if os.getenv("TARIM_RAG_SERVER_MODE", "documents") == "legacy":
+        try:
+            seed_vector_store_data()
+        except Exception as e:
+            logger.warning("Eski vektör deposu uyarı: %s", e)
+    # Document RAG uses only local verified originals and installed
+    # embedding models; never silently downloads a model at startup.
     yield
     logger.info("TarımDestekRAG FastAPI servisi kapatılıyor.")
 
@@ -437,22 +438,18 @@ def ask_original_documents(
 
 @app.post("/ask", response_model=AskQuestionResponse, tags=["Chatbot / Semantik Arama"])
 def ask_question(payload: AskQuestionRequest) -> AskQuestionResponse:
-    """Kullanıcı sorusuna hibrit arama ve deterministik mevzuat senteziyle yanıt döner."""
-    try:
-        summary_text, matched_chunks, source_titles = assistant_engine.answer_question(
-            payload.question, top_k=payload.top_k
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Semantik arama hatası: {e}",
-        ) from e
+    """Compatibility route: one original-document source for ALL RAG questions."""
+    from tarim_destek_rag.retrieval.document_rag import get_document_rag
 
+    result = get_document_rag().answer(payload.question, top_k=payload.top_k)
+    citations = result["citations"]
     return AskQuestionResponse(
         question=payload.question,
-        summary_answer_tr=summary_text,
-        matched_chunks=matched_chunks,
-        source_titles=source_titles,
+        summary_answer_tr=result["answer"],
+        matched_chunks=citations,
+        source_titles=list(dict.fromkeys(
+            str(item["title"]) for item in citations
+        )),
     )
 
 

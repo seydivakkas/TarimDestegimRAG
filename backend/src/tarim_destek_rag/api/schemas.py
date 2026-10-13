@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 from tarim_destek_rag.calculator.calculator import CalculationResult
 from tarim_destek_rag.explainer.template_explainer import ExplanationResult
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, Parcel
-from tarim_destek_rag.retrieval.models import DocumentChunk
 from tarim_destek_rag.rules.base import RuleResult
 
 
@@ -56,7 +55,7 @@ class AskQuestionResponse(BaseModel):
 
     question: str
     summary_answer_tr: str
-    matched_chunks: list[DocumentChunk]
+    matched_chunks: list[dict[str, Any]]
     source_titles: list[str]
 
 
