@@ -152,6 +152,164 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
 
         btn_scan_year.click(on_scan_year, inputs=[legal_year], outputs=[scan_status])
 
+
+        with gr.Accordion(
+            "Yıllık Mevzuatı Güncelle / PDF OCR / Kaynak Sayfasında Ara",
+            open=True,
+        ):
+            gr.Markdown(
+                "Bu işlev yeni yılları destekleyen bir DRAFT araştırma hattıdır. "
+                "Yalnız izin verilen resmî portal bağlantılarında tarım destek "
+                "mevzuatı araştırır, orijinal PDF dosyalarını SHA ile korur, "
+                "yerel OCR/native metin taslağı indeksler. "
+                "Bütün Resmî Gazete arşivinin eksiksiz taranmasını, hükümlerin "
+                "yürürlüğünü ve ödeme onayını garanti etmez."
+            )
+            btn_annual_refresh = gr.Button(
+                "Mevzuatı Güncelle + Gerçek PDF'leri OCR ile İndeksle",
+                variant="primary", interactive=local_admin,
+            )
+            annual_update_status = gr.Markdown(
+                "Henüz güncelleme yok. Yönetici izni ve resmî kaynak gerekir."
+            )
+            with gr.Row():
+                annual_search_text = gr.Textbox(
+                    label="İndekslenen özgün PDF'lerde araştır",
+                    placeholder="Örnek: biyolojik mücadele desteği", scale=7,
+                )
+                btn_annual_search = gr.Button(
+                    "Belgede Bul", interactive=local_admin, scale=3,
+                )
+            annual_search_summary = gr.Markdown(
+                "Arama sonuçları gerçek PDF/SHA/sayfa numarası içerir."
+            )
+            annual_search_hits = gr.Dropdown(
+                choices=[], value=None, interactive=True,
+                label="İlgili özgün PDF sayfası (OCR taslağı, HOLD)",
+            )
+            annual_page_state = gr.State({})
+            annual_page_status = gr.Markdown(
+                "Seçilen sayfa gerçek PDF'den render edilir; "
+                "turuncu arama kutuları hukukî kanıt değildir."
+            )
+            annual_page_preview = gr.Image(
+                label="Orijinal PDF sayfası — 180 DPI",
+                type="pil", interactive=False,
+            )
+
+            def update_and_index_year(year):
+                if not local_admin:
+                    return "HOLD: Yetkili yerel yönetici oturumu gerekli."
+                try:
+                    value = int(year)
+                except (TypeError, ValueError, OverflowError):
+                    return "HOLD: Üretim yılı geçersiz."
+                result = api_client.refresh_yearly_official_pdf_evidence(value)
+                if result.get("status") != "DISCOVERY_AND_OCR_DRAFT_HOLD":
+                    return "HOLD: Tarama/indeksleme başarısız — " + str(
+                        result.get("status") or result.get("message"))
+                found = result.get("discovery") or {}
+                research = result.get("research") or {}
+                return (
+                    f"{value} için DRAFT indeksleme: "
+                    f"{found.get('scanned_document_count', 0)} belge keşfedildi; "
+                    f"{research.get('indexed_pdf_count', 0)} PDF indekslendi. "
+                    f"Kaynak hatası: {len(found.get('errors', []))}, "
+                    f"indeks hatası: {len(research.get('errors', []))}. "
+                    "Tam yıl mevzuat kapsamı/üretim yılı geçerliliği/ödeme: HOLD."
+                )
+
+            def search_annual_year(year, query):
+                if not local_admin or not isinstance(query, str) or len(query.strip()) < 2:
+                    return "HOLD: Yıl, metin ve yönetici yetkisi gerekli.", gr.update(
+                        choices=[], value=None), {}
+                try:
+                    result = api_client.research_yearly_official_pdf(
+                        production_year=int(year), query=query.strip())
+                except (TypeError, ValueError, OverflowError):
+                    return "HOLD: Geçersiz yıl.", gr.update(
+                        choices=[], value=None), {}
+                hits = result.get("hits") or []
+                mapped = {}
+                choices = []
+                for hit in hits:
+                    key = hit.get("page_key")
+                    if not isinstance(key, str) or key in mapped:
+                        continue
+                    mapped[key] = hit
+                    choices.append((
+                        f"{hit.get('source_title') or 'Resmî PDF'} — "
+                        f"sayfa {hit.get('page_number')} — "
+                        f"SHA {hit.get('original_sha256', '')[:12]}", key,
+                    ))
+                return (
+                    f"{len(choices)} özgün PDF sayfası adayı. "
+                    "OCR metin eşleşmesi onaysızdır; yanlış yıl/ödeme HOLD.",
+                    gr.update(choices=choices, value=None), mapped,
+                )
+
+            def view_annual_page(key, query, hit_map):
+                import re
+                from urllib.parse import urlsplit
+                from PIL import Image
+                if (not local_admin or not isinstance(hit_map, dict)
+                        or key not in hit_map):
+                    return "HOLD: Geçerli özgün sayfa seçilmedi.", None
+                hit = hit_map[key]
+                official = hit.get("source_url", "")
+                parsed = urlsplit(official)
+                if (parsed.scheme != "https"
+                        or parsed.hostname not in (
+                            "resmigazete.gov.tr", "www.resmigazete.gov.tr",
+                            "tarimorman.gov.tr", "www.tarimorman.gov.tr")
+                        or not re.fullmatch(r"[a-f0-9]{64}:[1-9][0-9]{0,3}", key)):
+                    return "HOLD: Kaynak URL veya SHA geçersiz.", None
+                raw = api_client.get_yearly_original_pdf_page(
+                    page_key=key, query=query or "")
+                if not raw:
+                    return "HOLD: Orijinal PDF sayfasına erişilemedi.", None
+                try:
+                    with Image.open(BytesIO(raw)) as source:
+                        source.load()
+                        picture = source.convert("RGB")
+                except (OSError, ValueError):
+                    return "HOLD: Sayfa görüntüsü okunamadı.", None
+                return (
+                    f"Orijinal PDF sayfası {hit.get('page_number')} — "
+                    f"SHA-256: {escape(str(hit.get('original_sha256', '')))}. "
+                    f"[Resmî belgeyi ilgili sayfada aç]({escape(official, quote=True)}). "
+                    "Turuncu eşleşme adayıdır; yürürlük/ödeme HOLD.",
+                    picture,
+                )
+
+            btn_annual_refresh.click(
+                update_and_index_year, inputs=[legal_year],
+                outputs=[annual_update_status],
+            )
+            btn_annual_search.click(
+                search_annual_year,
+                inputs=[legal_year, annual_search_text],
+                outputs=[annual_search_summary, annual_search_hits, annual_page_state],
+            )
+            annual_search_text.submit(
+                search_annual_year,
+                inputs=[legal_year, annual_search_text],
+                outputs=[annual_search_summary, annual_search_hits, annual_page_state],
+            )
+            annual_search_hits.change(
+                view_annual_page,
+                inputs=[annual_search_hits, annual_search_text, annual_page_state],
+                outputs=[annual_page_status, annual_page_preview],
+            )
+            legal_year.change(
+                lambda: (
+                    "Yıl değişti; yeniden arama ve güncelleme gerekir.",
+                    gr.update(choices=[], value=None), {},
+                ),
+                inputs=[],
+                outputs=[annual_search_summary, annual_search_hits, annual_page_state],
+            )
+
         gr.Markdown("#### PDF Cümlesinin Gerçek Sayfasını Göster (Onaysız Kanıt)")
         with gr.Row():
             evidence_mode = gr.Radio(
