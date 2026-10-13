@@ -42,3 +42,9 @@ Yıllık güncellemenin tamamlanmasının ardından backend mevcut kaynak-öncel
 RAG yenilemesi başarısız olursa güncelleme cevabında LOCAL_RAG_REFRESH_HOLD görünür; yeni tarama dosyaları kendiliğinden eski/verili hukukî kuralları veya ödeme onaylarını değiştirmez. OCR taslağı orijinal metin veya üretim yılı için kesin kanıt değildir.
 
 Tam kaynak doğrulaması gerçekleşmeden bütün ilgili PDF parçalarının araştırılabildiği, her hüküm için gerçek alt-paragraf/hücre koordinatının bulunduğu veya bütün tarihsel yıl mevzuatının kapsandığı iddia edilemez.
+
+## RAG yanıtından gerçek sayfaya ulaşma
+
+Belge Analizi & RAG motorundaki yeni keşfedilmiş yıllık PDF alıntısının kaynak kimliği RG_DISCOVERED_ ile başlar. Kaynak doğrulaması geçmişse ekranda özgün Resmî Gazete PDF bağlantısı gerçek #page=N numarasıyla gösterilir. Aynı alıntı için Gerçek sayfa ekran görüntüsü bağlantısı artık yerel /documents/annual-original-page/{sha}/page/{page} adresini kullanır; bu görüntü arşivdeki orijinal PDF piksellerinden anlık oluşturulur ve yalnız yerel uygulama oturumunda erişilir.
+
+Kaynakta OCR ile bulunan ifade tekil madde/fıkra/tutar/hücreyi hukukî açıdan doğrulamış sayılmaz; tam koordinat ve bağımsız değerlendirme hâlâ eksiktir. Tarihsel kapsam eksik ve büyük PDF'ler için devam edebilme işi açık kalır.
