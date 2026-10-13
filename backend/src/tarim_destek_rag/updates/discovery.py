@@ -23,9 +23,12 @@ from bs4 import BeautifulSoup
 
 MAX_BYTES = 10 * 1024 * 1024
 SUPPORTED_CONTENT_TYPES = ("application/pdf", "text/html", "application/xhtml+xml")
+# Restrict relevance to displayed official titles. Every Gazette URL includes
+# "resm" and generic "karar" would match unrelated legislation.
 LEGAL_LINK_TERMS = (
-    "destek", "tebli", "mevzuat", "tarım", "tarim", "üretim",
-    "uretim", "havza", "çks", "cks", "resm", "karar",
+    "tarım", "tarim", "bitkisel", "desteklem", "destekle",
+    "çks", "cks", "havza", "tohum", "fidan", "zirai",
+    "organik üretim", "organik tarım",
 )
 
 
@@ -112,7 +115,7 @@ def _discover_links(
             continue
         # Match by legal vocabulary, not by a path hard-coded for year 2026;
         # document effective_year is NOT guessed from the filename.
-        haystack = (title + " " + target).casefold()
+        haystack = title.casefold()
         relevant = any(word in haystack for word in LEGAL_LINK_TERMS)
         if not relevant or target in seen or target == portal.index_url:
             continue
@@ -121,6 +124,31 @@ def _discover_links(
         if len(result) >= portal.max_documents:
             break
     return result
+
+
+def _linked_official_annexes(
+    page_url: str, body: bytes, hosts: tuple[str, ...],
+) -> list[tuple[str, str]]:
+    """Discover ACTUALLY LINKED attachment PDFs, never constructed URLs."""
+    parsed = urlsplit(page_url)
+    if not parsed.path.lower().endswith((".htm", ".html")):
+        return []
+    stem = parsed.path.rsplit(".", 1)[0]
+    found: list[tuple[str, str]] = []
+    for link in BeautifulSoup(body, "html.parser").select("a[href]"):
+        target = urljoin(page_url, link.get("href") or "").split("#", 1)[0]
+        path = urlsplit(target).path
+        if not path.lower().endswith(".pdf") or not path.startswith(stem + "-"):
+            continue
+        try:
+            _official_url(target, hosts)
+        except UnsafeOfficialSource:
+            continue
+        if target not in {u for u, _ in found}:
+            found.append((target, "Resmî belgede bağlantısı bulunan ek PDF"))
+        if len(found) == 12:
+            break
+    return found
 
 
 def _content_name(content_type: str) -> str:
@@ -164,9 +192,19 @@ def scan_official_sources(
         except Exception as exc:
             failures.append({"source": portal.source_id, "error": str(exc)})
             continue
-        for url, title in links:
+        # Add only actual matching annex anchors found in fetched official HTML.
+        i = 0
+        while i < len(links) and i < 50:
+            url, title = links[i]
+            i += 1
             try:
                 data, content_type = fetch(url, portal.allowed_hosts)
+                if content_type in ("text/html", "application/xhtml+xml"):
+                    for annex_url, annex_title in _linked_official_annexes(
+                        url, data, portal.allowed_hosts
+                    ):
+                        if annex_url not in {x for x, _ in links}:
+                            links.append((annex_url, annex_title))
                 if content_type not in SUPPORTED_CONTENT_TYPES or not data:
                     raise ValueError("Unsupported or empty document")
                 digest = hashlib.sha256(data).hexdigest()
