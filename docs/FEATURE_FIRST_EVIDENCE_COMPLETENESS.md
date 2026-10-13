@@ -258,3 +258,9 @@ F14 son kabul en sona bırakılmıştır.
 - Ayrıntılı yürütme kaydı: [ANNUAL_OFFICIAL_GAZETTE_UPDATE_AND_PDF_EVIDENCE.md](ANNUAL_OFFICIAL_GAZETTE_UPDATE_AND_PDF_EVIDENCE.md).
 
 **Değişmeyen sınır:** Gerçek orijinal arşiv, 48 EK-20 hücresi, iki bağımsız insan onayı ve mevzuat değişikliklerinin yıldan yıla hukukî etkisi bitmedi. F14 geniş regression, gerçek Windows/GPU ve bağımsız hukukî onay en sonda. PR #41 DRAFT, main değiştirilmez.
+
+### Yıllık OCR sonrası ortak Belge Analizi & RAG güncellemesi
+
+- Yeni discovered-official PDF'ler SHA, URL ve arşiv envanteri tekrar doğrulanarak Belge Analizi & RAG araştırma kümesine de katılır. OCR-native pasajlar gerçek PDF sayfası/URL taşır ve hukukî onaysızdır.
+- Yıllık güncelleme isteği RAG indeksini açıkça yeniler; sonuç LOCAL_RAG_REFRESHED_DRAFT veya LOCAL_RAG_REFRESH_HOLD olarak arayüzde raporlanır. RAG kaynaklı yanıtlar yeni arşiv verisini kullanabilir.
+- Keşif/indeksleme kural motorunda yürürlük/ödeme PASS oluşturmaz. PDF sayfa görüntüsü ve arama eşleşmesinin görülmesi de bağımsız hüküm-geçerliliği kanıtı değildir.
