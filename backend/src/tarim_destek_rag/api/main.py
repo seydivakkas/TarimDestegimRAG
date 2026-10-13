@@ -695,7 +695,8 @@ def scan_future_legal_changes(
 @app.post("/admin/legal-updates/refresh-evidence",
           tags=["Yıllık Resmî PDF Güncelleme ve Kanıt İndeksi"])
 def refresh_annual_evidence(
-    year: int,
+    year: int, published_from: str | None = None,
+    published_to: str | None = None,
     _admin: None = Depends(require_admin_key),
 ) -> dict[str, Any]:
     """User-triggered official discovery → verified PDF bytes → page OCR draft.
@@ -706,20 +707,29 @@ def refresh_annual_evidence(
     """
     from tarim_destek_rag.updates.discovery import read_portals, scan_official_sources
     from tarim_destek_rag.updates.annual_pdf_pipeline import update_yearly_pdf_index
+    from tarim_destek_rag.updates.gazette_date_pages import publication_window
 
     if not 2020 <= year <= 2100:
         raise HTTPException(status_code=422, detail="Geçersiz üretim yılı")
+    try:
+        date_portals, date_coverage = publication_window(
+            published_from, published_to,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
     discovery = scan_official_sources(
         production_year=year,
-        portals=read_portals(Path("configs/official_update_portals.json")),
+        portals=read_portals(Path("configs/official_update_portals.json")) + date_portals,
         output=root,
     )
     research = update_yearly_pdf_index(
         production_year=year, discovery_batch=discovery, root=root,
     )
     return {
-        "schema_version": 1, "year_scanned": year,
+        "schema_version": 1,
+        "production_year_selected_for_research": year,
+        "publication_window": date_coverage,
         "discovery": {
             "mode": discovery["discovery_mode"],
             "new_or_changed": discovery["new_or_changed"],
