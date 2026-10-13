@@ -108,6 +108,10 @@ def render(data: dict) -> str:
         "5. Ürün: G22/G23 Windows/lisans, G24/G25 güncelleme, "
         "G26/G27 ödeme ayrımı → G28–G30 son F14.",
         "",
+        "6. Yıl bağımsızlığı: G31 tam Resmî Gazete dönem kapsamı, "
+        "G32 otomatik tüm ilgili PDF OCR, G33 her iddiadan PDF gerçek "
+        "konuma geçiş, G34 yeni yılın değişiklik/kural güvenli kapısı.",
+        "",
         "Durum kodları: OPEN (özellik açığı), CODE_IN_PROGRESS (kodlanıyor), "
         "BLOCKED_EXTERNAL (gerçek kaynak, insan veya donanım), "
         "DEFERRED_F14 (son kabulde), CLOSED_IMPLEMENTED "
