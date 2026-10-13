@@ -130,13 +130,21 @@ def ask_assistant_filtered(
                         and len(document_sha) == 64
                         and all(ch in "0123456789abcdef" for ch in document_sha)
                     ):
-                        screenshot_url = (
-                            url if is_local_page
-                            else (
+                        source_id = str(item.get("source_id") or "")
+                        if is_local_page:
+                            screenshot_url = url
+                        elif source_id == (
+                            "RG_DISCOVERED_" + document_sha[:16].upper()
+                        ):
+                            screenshot_url = (
+                                f"{api.base_url.rstrip('/')}"
+                                f"/documents/annual-original-page/{document_sha}/page/{page}"
+                            )
+                        else:
+                            screenshot_url = (
                                 f"{api.base_url.rstrip('/')}"
                                 f"/documents/original-page/{document_sha}/page/{page}"
                             )
-                        )
                         lines.append(
                             f"   · [Gerçek sayfa ekran görüntüsü]({screenshot_url})"
                         )
