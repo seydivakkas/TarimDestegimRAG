@@ -40,7 +40,7 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                 ],
                 datatype=["str"] * 7,
                 interactive=False,
-                label="30 maddelik GitHub iş takip envanteri",
+                label="34 maddelik GitHub iş takip envanteri",
             )
             btn_gap_refresh = gr.Button(
                 "GitHub'dan güncellenmiş yerel iş kayıtlarını yeniden yükle",
