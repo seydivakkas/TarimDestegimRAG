@@ -165,6 +165,22 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                 "Bütün Resmî Gazete arşivinin eksiksiz taranmasını, hükümlerin "
                 "yürürlüğünü ve ödeme onayını garanti etmez."
             )
+            with gr.Row():
+                published_from = gr.Textbox(
+                    label="Resmî Gazete yayın başlangıcı (YYYY-MM-DD)",
+                    placeholder="Boşsa son 7 gün",
+                    value="",
+                )
+                published_to = gr.Textbox(
+                    label="Resmî Gazete yayın bitişi (YYYY-MM-DD)",
+                    placeholder="Boşsa bugün",
+                    value="",
+                )
+            gr.Markdown(
+                "Yayın aralığı 1–14 günle sınırlı. 2025 gibi geçmiş yılları "
+                "geri taramak için tarih aralıklarını sırayla seçin; "
+                "bu alan **üretim yılından bağımsızdır**."
+            )
             btn_annual_refresh = gr.Button(
                 "Mevzuatı Güncelle + Gerçek PDF'leri OCR ile İndeksle",
                 variant="primary", interactive=local_admin,
@@ -197,21 +213,29 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                 type="pil", interactive=False,
             )
 
-            def update_and_index_year(year):
+            def update_and_index_year(year, publication_start, publication_end):
                 if not local_admin:
                     return "HOLD: Yetkili yerel yönetici oturumu gerekli."
                 try:
                     value = int(year)
                 except (TypeError, ValueError, OverflowError):
                     return "HOLD: Üretim yılı geçersiz."
-                result = api_client.refresh_yearly_official_pdf_evidence(value)
+                result = api_client.refresh_yearly_official_pdf_evidence(
+                    value,
+                    published_from=(publication_start or "").strip() or None,
+                    published_to=(publication_end or "").strip() or None,
+                )
                 if result.get("status") != "DISCOVERY_AND_OCR_DRAFT_HOLD":
                     return "HOLD: Tarama/indeksleme başarısız — " + str(
                         result.get("status") or result.get("message"))
                 found = result.get("discovery") or {}
                 research = result.get("research") or {}
+                window = result.get("publication_window") or {}
                 return (
-                    f"{value} için DRAFT indeksleme: "
+                    f"Üretim yılı sorgu bağlamı: {value} · "
+                    f"Resmî Gazete yayın taraması: "
+                    f"{window.get('publication_from', '?')}–"
+                    f"{window.get('publication_to', '?')}. DRAFT indeksleme: "
                     f"{found.get('scanned_document_count', 0)} belge keşfedildi; "
                     f"{research.get('indexed_pdf_count', 0)} PDF indekslendi. "
                     f"Kaynak hatası: {len(found.get('errors', []))}, "
@@ -283,7 +307,8 @@ def render_admin_validation_tab(api_client: ApiClient) -> dict[str, gr.component
                 )
 
             btn_annual_refresh.click(
-                update_and_index_year, inputs=[legal_year],
+                update_and_index_year,
+                inputs=[legal_year, published_from, published_to],
                 outputs=[annual_update_status],
             )
             btn_annual_search.click(
