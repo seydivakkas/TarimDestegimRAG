@@ -318,6 +318,46 @@ def import_local_document(
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
+@app.get("/documents/original-page/{sha}/page/{page}", tags=["Belge Analizi / RAG"])
+def render_official_original_pdf_page(
+    sha: str, page: int,
+) -> Response:
+    """Create a real PNG screenshot directly from an authenticated source PDF."""
+    import re
+    import pymupdf
+
+    from tarim_destek_rag.retrieval.document_rag import _read_original
+
+    if (not re.fullmatch(r"[0-9a-f]{64}", sha)
+            or not 1 <= page <= 1000):
+        raise HTTPException(status_code=404, detail="Geçersiz belge veya sayfa")
+    manifest = Path(os.getenv(
+        "TARIM_RAG_ORIGINAL_SOURCE_MANIFEST",
+        "configs/p0_10_3_original_source_manifest.json",
+    ))
+    root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    try:
+        sources = json.loads(manifest.read_text(encoding="utf-8"))["sources"]
+        matched = [row for row in sources
+                   if row.get("original_sha256") == sha
+                   and row.get("format") == "pdf"]
+        if len(matched) != 1:
+            raise ValueError("Official source not uniquely pinned")
+        raw = _read_original(root, matched[0])
+        with pymupdf.open(stream=raw, filetype="pdf") as doc:
+            if page > len(doc):
+                raise ValueError("Page not present in official original")
+            png = doc[page - 1].get_pixmap(
+                dpi=160, alpha=False,
+            ).tobytes("png")
+        return Response(
+            content=png, media_type="image/png",
+            headers={"Cache-Control": "no-store"},
+        )
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
 @app.get("/documents/view/{sha}/page/{page}", tags=["Belge Analizi / RAG"])
 def view_uploaded_pdf_page(
     sha: str, page: int, request: Request,
@@ -373,19 +413,20 @@ def view_uploaded_text(
 
 
 @app.get("/documents/status", tags=["Belge Analizi / RAG"])
-def document_rag_status() -> dict[str, Any]:
-    """Status reports original pages, OCR gaps and local search mode."""
+def document_rag_status(request: Request) -> dict[str, Any]:
+    """Private status includes names of user-uploaded local documents."""
+    _require_local_document_access(request)
     from tarim_destek_rag.retrieval.document_rag import get_document_rag
 
     return get_document_rag().status()
 
 
 @app.post("/ask/documents", tags=["Belge Analizi / RAG"])
-def ask_original_documents(payload: DocumentAskRequest) -> dict[str, Any]:
-    """Evidence-first answer from original PDF/HTML/OCR passages only.
-
-    This path cannot return hard-coded tariff/FAQ or calculate farmer payout.
-    """
+def ask_original_documents(
+    payload: DocumentAskRequest, request: Request,
+) -> dict[str, Any]:
+    """Private source-first answer from original PDF/HTML/OCR passages."""
+    _require_local_document_access(request)
     from tarim_destek_rag.retrieval.document_rag import get_document_rag
 
     return get_document_rag().answer(
