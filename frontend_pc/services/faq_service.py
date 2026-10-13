@@ -125,6 +125,23 @@ def ask_assistant_filtered(
                         f"{index}. [{label} — {loc}]({url}) "
                         f"(okuma: {method}, kaynak SHA: `{document_sha[:16]}…`)"
                     )
+                    if (
+                        type(page) is int
+                        and len(document_sha) == 64
+                        and all(ch in "0123456789abcdef" for ch in document_sha)
+                    ):
+                        screenshot_url = (
+                            url if is_local_page
+                            else (
+                                f"{api.base_url.rstrip('/')}"
+                                f"/documents/original-page/{document_sha}/page/{page}"
+                            )
+                        )
+                        lines.append(
+                            f"   · [Gerçek sayfa ekran görüntüsü]({screenshot_url})"
+                        )
+                    if method in ("OCR_DRAFT", "OCR_UNREVIEWED"):
+                        lines.append("   · OCR ön okuması; rakam ve sözcükleri görüntüyle karşılaştırın.")
     else:
         lines.append(
             "\n**Not:** Kaynak bulunamadığında belge dışından açıklama "

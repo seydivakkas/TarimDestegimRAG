@@ -18,11 +18,13 @@ def _corpus_status() -> str:
     if data.get("status") == "UNAVAILABLE":
         return "Belge analiz servisine erişilemiyor. Backend çalışmıyor olabilir."
     return (
-        "**İndekslenen özgün kaynak:** "
+        "**Aranabilir belge:** "
         f"{data.get('source_count', 0)} · "
         "**Aranabilir pasaj:** "
         f"{data.get('passage_count', 0)} · "
-        "**OCR bekleyen PDF sayfaları:** "
+        "**Yapısal PDF tablo pasajı:** "
+        f"{data.get('native_table_passage_count', 0)} · "
+        "**OCR eksik sayfa:** "
         f"{data.get('pdf_pages_without_ocr', 0)} · "
         "**Arama:** "
         f"{data.get('search_mode', 'BELİRSİZ')}. "
