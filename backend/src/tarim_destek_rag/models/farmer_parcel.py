@@ -23,6 +23,12 @@ class FarmerProfile(BaseModel):
     cks_status: bool | None = Field(
         default=None, description="Çiftçi Kayıt Sistemi (ÇKS) aktiflik durumu"
     )
+    oks_status: bool | None = Field(
+        default=None, description="Örtüaltı Kayıt Sistemi (ÖKS) aktiflik durumu; bilinmiyorsa None"
+    )
+    kobuks_status: bool | None = Field(
+        default=None, description="Kapalı Ortamda Bitkisel Üretim Kayıt Sistemi (KOBÜKS) aktiflik durumu; bilinmiyorsa None"
+    )
     age_group: str | None = Field(default=None, description="Yaş grubu (genç çiftçi primi için)")
     gender: str | None = Field(default=None, description="Cinsiyet (kadın çiftçi primi için)")
 
