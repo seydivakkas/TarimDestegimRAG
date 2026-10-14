@@ -10,7 +10,7 @@ yoksa yanlış bağlantı oluşturmadan HOLD gösterilmesi.
 Bu turda **her gerekçe için araştırma ve kaynak-adayı önizlemesi** eklendi,
 ancak bütün gerekçelerin kesin hukukî kaynak bağlantıları oluşturulmadı.
 Çünkü mevcut curated kaynak matrisinde 5 özgün HTML pasajı, bunlara
-ait yalnızca **2 tekil 2026 şartı eşleştirmesi** var.
+ait yalnızca **1 sabit ÇKS check_id kaynak bağlamı (iki ayrı gösterimden taşındı)** var.
 Yeni native PDF kural eşleştirme kayıt defterinde **0** gerçek kayıt var.
 Kullanıcının kuralları ve yeni yıllarındaki şart sayısı çalışma sırasında
 hesaplanır; bu sayılar tüm kuralların ne kadarının doğrulandığını göstermez.
@@ -60,8 +60,7 @@ hesaplanır; bu sayılar tüm kuralların ne kadarının doğrulandığını gö
   "rule_id": "<GERÇEK_RULE_ID>",
   "support_id": "<GERÇEK_SUPPORT_ID>",
   "production_year": 2026,
-  "field": "passed_checks",
-  "exact_claim_text": "<DEĞERLENDİRMEDE_KELİMESİ_KELİMESİNE_ŞART>",
+  "check_id": "<KURAL_TARAFINDAN_ÜRETİLMİŞ_SABİT_CHECK_ID>",
   "source_id": "<MANIFEST_VEYA_DOĞRULANMIŞ_ARŞİV_KAYNAK_ID>",
   "source_sha256": "<ÖZGÜN_PDF_SHA256>",
   "source_url": "<DOĞRULANMIŞ_RESMÎ_HTTPS_PDF_URL>",
@@ -113,3 +112,14 @@ mevzuat bağlamı sözleşmesi gerekir.
 G33 ve G10 geliştirme aşamasında tutulur. PR #41 **DRAFT** kalır;
 özellikler → arayüz bütünleşmesi → en son F14 regresyon, Windows ve
 bağımsız hukukî doğrulama.
+
+
+## Merkezi motor ve sabit kontrol kimliği (2026-10-14)
+
+- `RuleCheckEvent` artık `check_id`, `field` ve **ayrı** `display_text` taşır. Temel Destek ÇKS kontrolü her üç sonucu aynı `BASIC_CKS_REGISTRATION` kimliğiyle üretir.
+- `claim_id` metin veya parsel miktarından hesaplanmaz: sürümlü `rule_id + support_id + check_id` bileşiminden türetilir. `evidence_id` üretim yılı ile özgün belge SHA/sürümüne bağlıdır; farklı yıllar kanıtı sessizce paylaşamaz.
+- Yalnız string üreten mevcut diğer kurallar `LEGACY_NO_SEMANTIC_CHECK_ID_HOLD` durumundadır; field/ordinal geçici kimliği hukukî dayanak için kullanılamaz.
+- `CentralEvidenceEngine` Neden/SSS/rapor ile mobil kanıt API'sinin ortak kaydıdır; kaynak doğrulama backend'de yapılır. Bir pilot için kaynağın gerçek PDF/HTML arşivinde bulunması ve yılın değişiklik zinciri halen ayrıca gereklidir.
+- Sarı özgün kaynak görünümü için bağımsız görsel onay gerekliliği korunur. Metin katmanında SHA ile bulunan ama bağımsız iki kişi tarafından incelenmemiş pasajlar turuncu aday olarak gösterilir.
+
+Ayrıntılı pilot: `docs/G35_G37_CENTRAL_EVIDENCE_CKS_PILOT.md`.
