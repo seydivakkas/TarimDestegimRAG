@@ -111,6 +111,7 @@ class WhyCitationsDialog extends StatelessWidget {
     final source = proof.source;
     final located = proof.hasVerifiableSourceLocation && source != null;
     final uri = proof.originalSourceUri;
+    final isPdf = located && source['format'] == 'pdf';
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
@@ -130,17 +131,30 @@ class WhyCitationsDialog extends StatelessWidget {
               SelectableText('SHA-256: ' + source['source_sha256'].toString()),
               const SizedBox(height: 7),
               Container(
-                color: const Color(0xFFFFED52),
+                // Yellow remains for verified exact HTML passage preview;
+                // PDF native-text geometry is only a source-location
+                // candidate, not dual-reviewed visual proof.
+                color: isPdf
+                    ? const Color(0xFFFFEDD5)
+                    : const Color(0xFFFFED52),
                 padding: const EdgeInsets.all(10),
                 child: SelectableText(
                   source['exact_quote'].toString(),
                   style: const TextStyle(color: Colors.black87),
                 ),
               ),
-              const Text(
-                'Birebir HTML pasajı özgün kaynakta konumlandırıldı. '
-                'Sarı metin uygulama önizlemesidir; yürürlük/ödeme HOLD.',
-              ),
+              if (isPdf)
+                Text(
+                  'Özgün PDF sayfa ' + source['pdf_page'].toString() +
+                  ' — native metin ve gerçek piksel koordinatı konumu '
+                  'sunucuda denetlendi. Turuncu metin önizlemesidir; '
+                  'çift incelemeci görsel onayı/yürürlük/ödeme HOLD.',
+                )
+              else
+                const Text(
+                  'Birebir HTML pasajı özgün kaynakta konumlandırıldı. '
+                  'Sarı metin uygulama önizlemesidir; yürürlük/ödeme HOLD.',
+                ),
               if (uri != null)
                 TextButton.icon(
                   onPressed: () async {
