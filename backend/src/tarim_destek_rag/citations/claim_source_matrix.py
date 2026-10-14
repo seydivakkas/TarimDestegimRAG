@@ -156,7 +156,7 @@ def highlighted_amendment_html_copy(
     node, hit = found[0]
     raw_text = str(node)
     marked = document.new_tag("mark", id="tarim-evidence-highlight")
-    marked["style"] = "background:#ffed52;outline:2px solid #bf9300;padding:2px"
+    marked["style"] = "background:#ffedd5;outline:2px solid #d97706;padding:2px"
     marked.string = raw_text[hit.start():hit.end()]
     node.replace_with(
         NavigableString(raw_text[:hit.start()]),
