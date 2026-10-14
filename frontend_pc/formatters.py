@@ -609,9 +609,24 @@ def generate_report_markdown(
                 f"{source['article']} · {source['target_provision']}"
             )
             report_lines.append(f"- **Birebir normatif pasaj:** {quote}")
-            report_lines.append(
-                f"- **Orijinal HTML adresi:** {source['original_url']}"
-            )
+            if source.get("format") == "pdf" and type(source.get("pdf_page")) is int:
+                page = source["pdf_page"]
+                report_lines.extend([
+                    f"- **Kaynak biçimi:** Özgün PDF (birebir native metin konumu)",
+                    f"- **Gerçek PDF sayfası:** {page}",
+                    f"- **Gerçek 180 DPI metin kutuları:** `{source.get('pixel_boxes_180dpi') or []}`",
+                    f"- **Özgün PDF'yi doğrudan ilgili sayfada aç:** "
+                    f"{source['original_url']}#page={page}",
+                    "- **Görsel statü:** Native metin adayı, bağımsız hücre onayı yok; "
+                    "PDF içinde turuncu konum gösterimi.",
+                ])
+            elif source.get("format") == "html":
+                report_lines.extend([
+                    "- **Kaynak biçimi:** Özgün HTML",
+                    f"- **Özgün HTML adresi:** {source['original_url']}",
+                ])
+            else:
+                report_lines.append("- **Kaynak biçimi:** HOLD — tanımsız.")
             report_lines.append(f"- **SHA-256:** `{source['source_sha256']}`")
             report_lines.append(
                 "- **Durum:** Kaynak pasajı bulundu. Yürürlük, olgular "
