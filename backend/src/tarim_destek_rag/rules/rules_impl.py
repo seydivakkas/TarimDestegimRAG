@@ -12,7 +12,7 @@ from tarim_destek_rag.database.repository import (
 )
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
-from tarim_destek_rag.rules.base import BaseRule, RuleResult
+from tarim_destek_rag.rules.base import BaseRule, RuleResult, RuleCheckEvent
 
 
 def _enforce_2026_water_crop_exclusion(
@@ -73,6 +73,7 @@ class BasicSupportRule(BaseRule):
 
         _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
 
+        check_events: list[RuleCheckEvent] = []
         trace.append("Temel destek değerlendirmesi başlatıldı.")
 
         # 1. Üretim Yılı Kontrolü
@@ -81,14 +82,28 @@ class BasicSupportRule(BaseRule):
         else:
             failed.append(f"Üretim yılı 2026 değil ({parcel.production_year}).")
 
-        # 2. ÇKS Durumu Kontrolü
+        # 2. ÇKS Durumu Kontrolü — SAME check_id in all 3 outcomes.
+        # Human wording may change without changing this semantic ID.
+        cks_check_id = "BASIC_CKS_REGISTRATION"
         if farmer.cks_status is None:
             missing.append("cks_status")
+            check_events.append(RuleCheckEvent(
+                check_id=cks_check_id, field="missing_fields",
+                display_text="cks_status",
+            ))
             trace.append("ÇKS kayıt bilgisi eksik (REVIEW).")
         elif farmer.cks_status is True:
             passed.append("Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif.")
+            check_events.append(RuleCheckEvent(
+                check_id=cks_check_id, field="passed_checks",
+                display_text=passed[-1],
+            ))
         else:
             failed.append("Çiftçi Kayıt Sistemi (ÇKS) kaydı bulunmuyor.")
+            check_events.append(RuleCheckEvent(
+                check_id=cks_check_id, field="failed_checks",
+                display_text=failed[-1],
+            ))
 
         # 3. Parsel Alanı
         if parcel.area_da > 0:
@@ -124,6 +139,7 @@ class BasicSupportRule(BaseRule):
             passed_checks=passed,
             failed_checks=failed,
             missing_fields=missing,
+            check_events=check_events,
             source_ids=([amount_record.source_version.source_id] if amount_record else []),
             trace=trace,
             metadata={
