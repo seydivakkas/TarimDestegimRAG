@@ -1,6 +1,8 @@
 """Belge Analizi & RAG Asistanı: source-first retrieval, no decisions."""
 from __future__ import annotations
 
+import re
+
 import gradio as gr
 import pandas as pd
 
@@ -39,6 +41,46 @@ def _document_choices() -> list[tuple[str, str]]:
         for d in docs
         if isinstance(d, dict) and isinstance(d.get("source_id"), str)
     ]
+
+
+_ORIGINAL_EVIDENCE_RE = re.compile(
+    r"/documents/evidence/([0-9a-f]{64})/chunk/([0-9a-f]{24})"
+)
+
+
+def _ask_with_proof_choices(
+    question: str, history: list[dict[str, str]] | None,
+    source_id: str | None = None,
+) -> tuple[str, list[dict[str, str]], gr.Dropdown, str]:
+    """Ask once, then reuse the exact citation links from the SAME answer."""
+    remaining, updated = ask_assistant_filtered(question, history, source_id)
+    last = updated[-1].get("content", "") if updated else ""
+    seen = set()
+    choices = []
+    for i, match in enumerate(_ORIGINAL_EVIDENCE_RE.finditer(last), 1):
+        sha, chunk = match.groups()
+        key = sha + ":" + chunk
+        if key in seen:
+            continue
+        seen.add(key)
+        choices.append((f"Alıntı {len(choices)+1} — SHA {sha[:12]}", key))
+        if len(choices) == 6:
+            break
+    return (
+        remaining, updated, gr.update(choices=choices, value=None),
+        "<p>Kaynak seçimi yenilendi. Aynı yanıtın birebir alıntısını "
+        "seçtiğinizde özgün sayfa aşağıda açılır. "
+        "Alıntı yoksa konum HOLD.</p>",
+    )
+
+
+def _show_in_app_evidence(selected: str | None) -> str:
+    if not selected or not re.fullmatch(r"[0-9a-f]{64}:[0-9a-f]{24}", selected):
+        return "<p>HOLD — Bir alıntı kimliği seçilmedi.</p>"
+    sha, chunk = selected.split(":")
+    return ApiClient().get_exact_rag_source_html(
+        document_sha=sha, chunk_id=chunk,
+    )
 
 
 def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
@@ -131,6 +173,31 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
             )
 
         chatbot = gr.Chatbot(height=500, label="Belgelerimden Soru-Cevap")
+        with gr.Accordion(
+            "Kanıtı özgün PDF/HTML üzerinde göster — aynı uygulamada",
+            open=True,
+        ):
+            gr.Markdown(
+                "Yanıttaki tekil kaynak alıntısını seçin. Orijinal dosya SHA'sı "
+                "yeniden doğrulanır; PDF'nin gerçek sayfası görünür. "
+                "Birebir kelime dizisi tek konumda bulunursa **turuncu "
+                "aday çerçevesi** çizilir, bulunamazsa sayfa HOLD kalır. "
+                "Bu işlem hukukî yıl veya ödeme onayı vermez."
+            )
+            rag_evidence_selector = gr.Dropdown(
+                choices=[], value=None, interactive=True,
+                label="Son RAG yanıtının kaynağını seç (SHA + alıntı ID)",
+            )
+            rag_evidence_display = gr.HTML(
+                "<p>Henüz kaynak seçilmedi. Önce bir belge sorusu sorun.</p>"
+            )
+            rag_evidence_selector.change(
+                _show_in_app_evidence,
+                inputs=[rag_evidence_selector],
+                outputs=[rag_evidence_display],
+            )
+
+
         with gr.Row():
             chat_input = gr.Textbox(
                 placeholder="Örn: 'Bu belgede ÇKS şartı nerede anlatılmış?'",
@@ -142,11 +209,19 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
         for sender in (chat_submit, chat_input):
             callback = sender.click if sender is chat_submit else sender.submit
             callback(
-                ask_assistant_filtered,
+                _ask_with_proof_choices,
                 inputs=[chat_input, chatbot, document_selector],
-                outputs=[chat_input, chatbot],
+                outputs=[
+                    chat_input, chatbot, rag_evidence_selector, rag_evidence_display,
+                ],
             )
-        chat_clear.click(lambda: ("", []), outputs=[chat_input, chatbot])
+        chat_clear.click(
+            lambda: (
+                "", [], gr.update(choices=[], value=None),
+                "<p>Kanıt seçimi temizlendi. HOLD.</p>",
+            ),
+            outputs=[chat_input, chatbot, rag_evidence_selector, rag_evidence_display],
+        )
 
         with gr.Row():
             q1 = gr.Button("2024/39 Madde 4'ü bul", size="sm")
@@ -159,11 +234,13 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
         )
         for button, question in samples:
             button.click(
-                lambda history, src, prompt=question: ask_assistant_filtered(
+                lambda history, src, prompt=question: _ask_with_proof_choices(
                     prompt, history, src,
                 ),
                 inputs=[chatbot, document_selector],
-                outputs=[chat_input, chatbot],
+                outputs=[
+                    chat_input, chatbot, rag_evidence_selector, rag_evidence_display,
+                ],
             )
 
         with gr.Accordion("SSS kataloğu (belge kanıtı değildir)", open=False):
@@ -195,16 +272,21 @@ def render_legal_assistant_tab() -> dict[str, gr.components.Component]:
                 evt: gr.SelectData,
                 df: pd.DataFrame,
                 history: list[dict[str, str]],
-            ) -> tuple[str, list[dict[str, str]]]:
+            ) -> tuple[str, list[dict[str, str]], gr.Dropdown, str]:
                 row = evt.index[0] if evt is not None and evt.index else -1
                 if 0 <= row < len(df):
-                    return ask_assistant(str(df.iloc[row]["Soru"]), history)
-                return "", history
+                    return _ask_with_proof_choices(str(df.iloc[row]["Soru"]), history)
+                return (
+                    "", history, gr.update(choices=[], value=None),
+                    "<p>HOLD — SSS kaynak eşleşmesi bulunamadı.</p>",
+                )
 
             faq_df.select(
                 choose_faq,
                 inputs=[faq_df, chatbot],
-                outputs=[chat_input, chatbot],
+                outputs=[
+                    chat_input, chatbot, rag_evidence_selector, rag_evidence_display,
+                ],
             )
 
         # Keep the prior evaluation's optional claim inspector compatible
