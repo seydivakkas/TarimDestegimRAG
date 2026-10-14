@@ -73,12 +73,20 @@ def validate_source_span(
             if pattern.search(str(node)):
                 if active_article != required_article:
                     raise ValueError("Quote found under different official article")
-                if source_id == "RG_COMMUNIQUE_2024_39" and (
-                    entry.get("span_id") != "BASE_2024_39_ART4_P1"
-                    or entry.get("target_provision") != "MADDE 4(1)"
-                    or not re.match(r"^\s*\(1\)\s", str(node))
-                ):
-                    raise ValueError("Base provision must be original MADDE 4(1)")
+                if source_id == "RG_COMMUNIQUE_2024_39":
+                    # Explicitly listed original paragraphs only; do NOT
+                    # interpret a matching word under the wrong article.
+                    valid_base = {
+                        "BASE_2024_39_ART4_P1": ("MADDE 4", "MADDE 4(1)"),
+                        "BASE_2024_39_ART5_P1": ("MADDE 5", "MADDE 5(1)"),
+                    }
+                    declaration = valid_base.get(entry.get("span_id"))
+                    if (declaration != (
+                        active_article, entry.get("target_provision")
+                    ) or not re.match(r"^\s*\(1\)\s", str(node))):
+                        raise ValueError(
+                            "Original paragraph (1) identity missing or wrong"
+                        )
                 located += 1
         if located != 1:
             raise ValueError("No unique exact clause within claimed official article")
