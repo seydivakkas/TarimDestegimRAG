@@ -63,6 +63,8 @@ def claim_contract(
         "evidence_id": None,
         "rule_id": None,
         "support_id": None,
+        "check_id": None,
+        "identity_status": "HOLD",
         "production_year": None,
         "claim_field": None,
         "claim_text": None,
@@ -84,6 +86,8 @@ def claim_contract(
     result.update({
         "rule_id": row["rule_id"],
         "support_id": row["support_id"],
+        "check_id": row.get("check_id"),
+        "identity_status": row.get("identity_status", "HOLD"),
         "production_year": row["year"],
         "claim_field": row["field"],
         "claim_text": row["text"],
@@ -238,6 +242,10 @@ def render_claim_contract_html(
         f'<p><strong>Gerekçe:</strong> {escape(rec["claim_text"])}</p>',
         f'<p><strong>Claim ID:</strong> <code>{escape(rec["claim_id"])}</code> · '
         f'<strong>Yıl:</strong> {escape(str(rec["production_year"]))}</p>',
+        f'<p><strong>Sabit check_id:</strong> '
+        f'<code>{escape(str(rec["check_id"] or "LEGACY_HOLD"))}</code> · '
+        f'<strong>Kimlik doğrulama:</strong> '
+        f'{escape(rec["identity_status"])}</p>',
     ]
     source = rec["source"]
     if source is None:
