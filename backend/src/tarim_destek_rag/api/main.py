@@ -265,6 +265,36 @@ def evaluate_all(
 
 
 
+@app.post(
+    "/api/v1/evidence/check/{rule_id}/{check_id}",
+    tags=["Tekil Kanıt Kontratı"],
+)
+def resolve_one_stable_evidence_check(
+    rule_id: str, check_id: str, payload: FullEvaluationRequest,
+    session: Session = Depends(get_db_session),
+) -> dict:
+    """PC/mobile/report/FAQ share ONE proof record for the emitted check.
+
+    Current evaluation is recomputed; no caller-controlled source URL,
+    year applicability approval or pixel bbox is accepted.
+    """
+    from tarim_destek_rag.citations.central_evidence_engine import (
+        central_evidence_engine,
+    )
+    evaluated = evaluate_all(payload, session)
+    contract = evaluated.model_dump(mode="json")
+    # The support ID must be resolved from the current rule output, not
+    # accepted as a forged client-side claim.
+    candidates = [row for row in contract.get("rules", [])
+                  if row.get("rule_id") == rule_id]
+    if len(candidates) != 1:
+        return central_evidence_engine.for_claim(contract, None)
+    return central_evidence_engine.for_check(
+        contract, rule_id=rule_id,
+        support_id=candidates[0]["support_id"], check_id=check_id,
+    )
+
+
 @app.post("/api/v1/evidence/evaluation", tags=["Tekil Kanıt Kontratı"])
 def evaluate_evidence_index(
     payload: FullEvaluationRequest, session: Session = Depends(get_db_session),
@@ -274,12 +304,13 @@ def evaluate_evidence_index(
     Uses the same evaluation request but never exports farmer identifiers or
     implicitly grants payment/legal activation. All unmatched claims HOLD.
     """
-    from tarim_destek_rag.citations.canonical_evidence_contract import (
-        evaluation_contract,
+    from tarim_destek_rag.citations.central_evidence_engine import (
+        central_evidence_engine,
     )
-
     evaluated = evaluate_all(payload, session)
-    return evaluation_contract(evaluated.model_dump(mode="json"))
+    return central_evidence_engine.for_evaluation(
+        evaluated.model_dump(mode="json")
+    )
 
 
 def _require_local_document_access(request: Request) -> None:
