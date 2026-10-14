@@ -4,7 +4,7 @@
 
 **Tek kaynak:** configs/feature_gap_register.json. Bu okunabilir sayfa aynı veriden oluşturulmuştur. Yeniden üretmek için scripts/render_feature_gap_register.py --write.
 
-**Toplam açık iş:** 34 • BLOCKED_EXTERNAL: 4 / OPEN: 19 / CODE_IN_PROGRESS: 8 / DEFERRED_F14: 3. Bunlar iş kalemidir; 48 EK-20 hücresi G05/G17'de ayrı izlenir.
+**Toplam açık iş:** 37 • BLOCKED_EXTERNAL: 5 / OPEN: 19 / CODE_IN_PROGRESS: 10 / DEFERRED_F14: 3. Bunlar iş kalemidir; 48 EK-20 hücresi G05/G17'de ayrı izlenir.
 
 ## F01–F14 özellik düzeyi
 
@@ -63,6 +63,9 @@
 | G32 | P0 | F03 | CODE_IN_PROGRESS | Her yeni resmî PDF için otomatik yerel OCR + arama indeksi | Güncelle→SHA-doğrulanmış PDF→sayfa native/Tesseract OCR→gerçek bbox→yıl arşivi araması ve özgün 180 DPI önizleme kodlandı; Baidu toplu fallback, büyük belgeye devam ederek tarama, performans, yeniden başlama ve Windows kurulum eksik. | İlgili tüm yeni resmî PDF sayfalarında OCR/native/başarısız/HOLD durumu ve gerçek sayfa kanıtı mevcut; indeks tamamlanmayan sayfalar ayrı görünür. |
 | G33 | P0 | F06 | CODE_IN_PROGRESS | Her cevap/gerekçe için tek tıkla gerçek PDF madde, paragraf ve hücre | Yıllık aramada kaynak PDF/sayfa gösterimi eklendi; destek analizi Neden/SSS/RAG cümlesi→original SHA+sayfa+gerçek bbox otomatik yönlendirme/işaretleme ve tüm kanal/rapor bağlantısını tamamla. OCR-adayı turuncu, iki görsel onaylı kaynak sarı. Bu turda RAG alıntı SHA+chunk kimliğinden kaynak baytlarını yeniden doğrulayan yerel PDF/HTML kanıt görüntüleyicisi, benzersiz native/OCR kelime koordinatı turuncu aday çerçevesi ve Gradio Belge Analizi sekmesinde gömülü gerçek sayfa önizlemesi eklendi. Destek Analizi Neden/rapor/mobil bütün iddialarının exact ROI eşlemesi ve F14 kabulü henüz eksik. Her tekil Destek Analizi gerekçesi için bounded RAG kaynak araştırması, orijinal PDF/HTML adayını aynı ekran içinde açma, stale yıl/claim değişiminde temizleme ve curated native PDF birebir metin/piksel konumunu ortak claim_id/evidence_id üzerinden PC/rapor/mobil sözleşmesine taşıma kodu eklendi. Gerçek curated PDF kayıtları hâlen 0, HTML'de 2 exact rule bağlamı var; bunlar gerçek arşiv dosyasına erişimle doğrulanır. Tüm yılların tüm kural şartlarının madde-fıkra/ROI eşlemesi bekliyor. | Her gösterilen somut mevzuat gerekçesinde doğru PDF sayfası ve ilgili gerçek konum doğrudan açılır; yalnız HTML yayımlanan resmî belgeler HTML asli kanıt olarak belirtilir; bulunamazsa HOLD. |
 | G34 | P0 | F08 | OPEN | Yeni OCR belgelerinden yıllık değişiklik zincirine güvenli kural güncelleme | Yeni arşivlenen belgeyi etkilenen hüküm/ek/yıl değişiklik önerisine dönüştür, insan incelemesi ve bağımsız yürürlük kanıtı olmadan 2025/2026/2027/yeni yıl tahmini tutarlarını değiştirme. | Her yıl ve destek şartı için yürürlük/ilga/değişiklik/önceki hüküm bağları kaynak konumlu; otomatik OCR kesin kural veya ödeme açamaz. |
+| G35 | P0 | F10 | CODE_IN_PROGRESS | Tüm kanallar için bir merkezi kanıt servisi | CentralEvidenceEngine ve aynı canonical record API üzerinden PC Neden, SSS, rapor ve Flutter DTO tüketimini tekleştir. RAG araştırma adayını kesin normatif bağdan ayır. Kaynak SHA/ROI doğrulaması sadece ortak backend'de kalacak. Tüm legacy ekran çağrıları ve entegrasyon kabulü açık. | PC/mobil/SSS/rapor aynı rule/check/evaluation için aynı check_id, evidence_id, SHA, özgün hüküm konumu ve HOLD sonucunu gösterir; kanallar bağımsız source PASS üretmez. |
+| G36 | P0 | F07 | CODE_IN_PROGRESS | Bütün deterministik kural kontrollerine metinden bağımsız check_id | RuleCheckEvent.check_id özelliğini kural çıktısına ekledik. 2026 Temel Destek ÇKS üç farklı sonuçta BASIC_CKS_REGISTRATION üretir. Diğer kurallarda eski dizi + field/ordinal geçici ID'si LEGACY_NO_SEMANTIC_CHECK_ID_HOLD kalır. Her kontrolün kaynağında stable check_id emit edilmesini ve kaynak matrisinde check_id bazlı migration'ı tamamla. | Tüm aktif destek kural kontrolleri check_id alanını doğrudan kural üretiminde emiter; metin, ürün/alan ve geçerli/eksik/başarısız sonucu değişince check_id değişmez, iki farklı mantıksal kontrol aynı ID'yi paylaşmaz. |
+| G37 | P0 | F08 | BLOCKED_EXTERNAL | 2026 Temel Destek ÇKS pilotunun tam kaynak/yıl/görsel bağımsız kabulü | 2024/39 MADDE 4(1) özgün HTML dosyasının SHA ve gerçek birebir pasajını fiilen aç; 2025/13, 2025/42 ve 11781 etkilerini ve 2026 yürürlük zincirini kaynaklarıyla tamamla; mevzuat konumu ve üretim yılı ayrı uzman incelemesinden geçsin. Sarı yalnız bağımsız görsel onaylı alanlarda; yoksa turuncu ve HOLD. | ÇKS check_id PASS/FAIL/MISSING tüm varyantlarda aynı; yıl 2026 için yürürlük/ilga/istisna belgeleri, özgün SHA/hüküm, PC/mobil/SSS/rapor yönlendirmeleri aynı kanıtı gösterir. Bağımsız kanıt olmadan nihai PASS yok. |
 
 ## Mühendislik sırası / bağımlılıklar
 
@@ -74,7 +77,9 @@
 
 6. Yıl bağımsızlığı: G31 tam Resmî Gazete dönem kapsamı, G32 otomatik tüm ilgili PDF OCR, G33 her iddiadan PDF gerçek konuma geçiş, G34 yeni yılın değişiklik/kural güvenli kapısı.
 
+7. Merkezi kanıt: G35 ortak kanıt motoru → G36 bütün kurallarda stable check_id → G37 2026 ÇKS pilotunda özgün/yıl/bağımsız kabul; sonra diğer yıllara genelleştirme.
+
 Durum kodları: OPEN (özellik açığı), CODE_IN_PROGRESS (kodlanıyor), BLOCKED_EXTERNAL (gerçek kaynak, insan veya donanım), DEFERRED_F14 (son kabulde), CLOSED_IMPLEMENTED (özellik kodu kapandı, F14 hukukî/teknik PASS değil).
 
-**PR politikası:** #41 DRAFT/unmerged, main değiştirilmez. Sarı görsel doğrulama, yürürlük ve ödeme onayı birbirinden ayrıdır.
+**PR politikası:** #41 DRAFT/unmerged, main değiştirilmez. Turuncu kaynak adayı, bağımsız imzalı sarı görsel kanıt, yürürlük ve ödeme onayı birbirinden ayrıdır.
 
