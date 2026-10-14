@@ -112,9 +112,9 @@ def render(data: dict) -> str:
         "G32 otomatik tüm ilgili PDF OCR, G33 her iddiadan PDF gerçek "
         "konuma geçiş, G34 yeni yılın değişiklik/kural güvenli kapısı.",
         "",
-        "7. Merkezi kanıt: G35 ortak kanıt motoru → G36 bütün kurallarda "
-        "stable check_id → G37 2026 ÇKS pilotunda özgün/yıl/bağımsız kabul; "
-        "sonra diğer yıllara genelleştirme.",
+        "7. Merkezi kanıt: G35 ortak kanıt motoru → G37 2026 ÇKS "
+        "özgün/yıl/bağımsız kabul → G36 tüm kurallarda stable check_id "
+        "genelleştirmesi.",
         "",
         "Durum kodları: OPEN (özellik açığı), CODE_IN_PROGRESS (kodlanıyor), "
         "BLOCKED_EXTERNAL (gerçek kaynak, insan veya donanım), "
