@@ -266,3 +266,12 @@ F14 son kabul en sona bırakılmıştır.
 - Keşif/indeksleme kural motorunda yürürlük/ödeme PASS oluşturmaz. PDF sayfa görüntüsü ve arama eşleşmesinin görülmesi de bağımsız hüküm-geçerliliği kanıtı değildir.
 
 - Yıllık RAG alıntıları için dinamik kaynak kimliğine bağlı, SHA'yi her çağrıda yeniden doğrulayan yerel gerçek PDF sayfa görüntüsü URL'si eklendi. Resmî PDF dışarıda #page=N konumunda da açılabilir; kaynakta tam paragraf ROI ve bağımsız hukukî onay hâlâ G33/G10 altında açıktır.
+
+### G33 — Tekil RAG alıntısından uygulama içinde özgün PDF/HTML konumuna gitme (2026-10-14)
+
+- Yeni citations/rag_exact_location.py: her cevap alıntısı için (SHA-256 + 24 haneli chunk_id) kimliği kullanılır; dosya sunumdan önce özgün arşiv envanteri, manifest veya kullanıcı yükleme SHA'sı üzerinden yeniden doğrulanır.
+- PDF kaynağında gerçek sayfa 180 DPI orijinal piksellerden yeniden çizilir. Yerel native PDF text-word bbox veya yeniden çalıştırılmış Tesseract OCR sözcük bbox dizisindeki birebir, **tekil** konum bulunursa turuncu gerçek kelime adayları işaretlenir. Bulunamazsa PAGE_ONLY_HOLD ile özgün sayfa işaretsiz sunulur. Döndürülmüş sayfalarda koordinat dönüşümü tahmin edilmeyerek HOLD korunur.
+- HTML resmi asıl kaynaksa birebir görünen pasaj yalnız benzersiz eşleşme varsa turuncu pasaj olarak yerel panelde gösterilir; PDF'si bulunmayan HTML asıl metinden sentetik PDF üretilmez.
+- FastAPI local-only GET /documents/evidence/{sha}/chunk/{chunk_id} salt-okunur kanıt görüntüleyicisi eklendi. Belge Analizi & RAG yanıtlarında her alıntı bu sayfaya tek tık bağlantısı taşır; aynı RAG sekmesine gömülü panelde son cevabın kaynak alıntısı seçilerek asıl sayfa gösterilir.
+- Sonucun statüsü hiçbir koşulda hukukî yıl/ödeme PASS değildir. OCR metni, seçili pasaj ve orijinal sayfa görünmesi bağımsız kontrol yerine geçmez.
+- **Açık kalan:** bütün destek kural şartları ve mobil/rapor/Neden gerekçelerinin PDF sayfası/ROI'deki birebir kaynak konumuna ve bağlayıcı mevzuat dönemiyle otomatik eşlenmesi (G10/G12/G20/G33), EK-20 48 hücre + iki gerçek insan imzası ve F14 teknik/Windows/hukukî kabul. G33 bu nedenle CODE_IN_PROGRESS, kapatılmadı.
