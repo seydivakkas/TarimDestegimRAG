@@ -134,9 +134,7 @@ class WhyCitationsDialog extends StatelessWidget {
                 // Yellow remains for verified exact HTML passage preview;
                 // PDF native-text geometry is only a source-location
                 // candidate, not dual-reviewed visual proof.
-                color: isPdf
-                    ? const Color(0xFFFFEDD5)
-                    : const Color(0xFFFFED52),
+                color: const Color(0xFFFFEDD5),
                 padding: const EdgeInsets.all(10),
                 child: SelectableText(
                   source['exact_quote'].toString(),
@@ -153,7 +151,7 @@ class WhyCitationsDialog extends StatelessWidget {
               else
                 const Text(
                   'Birebir HTML pasajı özgün kaynakta konumlandırıldı. '
-                  'Sarı metin uygulama önizlemesidir; yürürlük/ödeme HOLD.',
+                  'Turuncu metin kaynak konumu önizlemesidir; yürürlük/ödeme HOLD.',
                 ),
               if (uri != null)
                 TextButton.icon(
