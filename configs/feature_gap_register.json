@@ -178,9 +178,9 @@
       "gap_id": "G10",
       "feature_id": "F06",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "CODE_IN_PROGRESS",
       "title": "Gerekçeden gerçek PDF sayfasına otomatik geçiş",
-      "solution": "Claim→source_id/page/bbox kabul kontratı; var olan dropdown/image viewer otomatik güncelle; sahte PDF sayfası engeli.",
+      "solution": "Claim→source_id/page/bbox kabul kontratı; var olan dropdown/image viewer otomatik güncelle; sahte PDF sayfası engeli. Tekil destek gerekçesi için curated native PDF SHA+sayfa+gerçek konum eşleşmesi ve otomatik Neden görüntüleme altyapısı eklendi. Şimdilik PDF bağları boş; gerçek kaynak ve bütün kural şartlarının doğrulanması bekliyor.",
       "definition_of_done": "Bir claim için tek doğrulanmış PDF konumu varsa oraya gider, yoksa HOLD.",
       "responsible_role": "ENGINEERING"
     },
@@ -188,9 +188,9 @@
       "gap_id": "G11",
       "feature_id": "F06",
       "priority": "P1",
-      "status": "OPEN",
+      "status": "CODE_IN_PROGRESS",
       "title": "PDF/HTML tek kanıt geçerlilik ekranı",
-      "solution": "HTML exact passage, PDF text, tablo ROI ve bağımsız sarı/amber statülerini tek gezginde birleştir.",
+      "solution": "HTML exact passage, PDF text, tablo ROI ve bağımsız sarı/amber statülerini tek gezginde birleştir. Neden ekranında kaynağı bilinen HTML/PDF ile onaysız PDF/HTML RAG adayının durumlarını ayıran tekil kaynak inceleme paneli eklendi. EK-20 görsel insan onayı, tüm kanallar ve bağımsız hukukî kapsam henüz bütünleşmedi.",
       "definition_of_done": "Yellow yalnız doğrulanmış kanıt türünü gösterir; hukukî/geçerli yıl ayrı.",
       "responsible_role": "ENGINEERING"
     },
@@ -410,7 +410,7 @@
       "priority": "P0",
       "status": "CODE_IN_PROGRESS",
       "title": "Her cevap/gerekçe için tek tıkla gerçek PDF madde, paragraf ve hücre",
-      "solution": "Yıllık aramada kaynak PDF/sayfa gösterimi eklendi; destek analizi Neden/SSS/RAG cümlesi→original SHA+sayfa+gerçek bbox otomatik yönlendirme/işaretleme ve tüm kanal/rapor bağlantısını tamamla. OCR-adayı turuncu, iki görsel onaylı kaynak sarı. Bu turda RAG alıntı SHA+chunk kimliğinden kaynak baytlarını yeniden doğrulayan yerel PDF/HTML kanıt görüntüleyicisi, benzersiz native/OCR kelime koordinatı turuncu aday çerçevesi ve Gradio Belge Analizi sekmesinde gömülü gerçek sayfa önizlemesi eklendi. Destek Analizi Neden/rapor/mobil bütün iddialarının exact ROI eşlemesi ve F14 kabulü henüz eksik.",
+      "solution": "Yıllık aramada kaynak PDF/sayfa gösterimi eklendi; destek analizi Neden/SSS/RAG cümlesi→original SHA+sayfa+gerçek bbox otomatik yönlendirme/işaretleme ve tüm kanal/rapor bağlantısını tamamla. OCR-adayı turuncu, iki görsel onaylı kaynak sarı. Bu turda RAG alıntı SHA+chunk kimliğinden kaynak baytlarını yeniden doğrulayan yerel PDF/HTML kanıt görüntüleyicisi, benzersiz native/OCR kelime koordinatı turuncu aday çerçevesi ve Gradio Belge Analizi sekmesinde gömülü gerçek sayfa önizlemesi eklendi. Destek Analizi Neden/rapor/mobil bütün iddialarının exact ROI eşlemesi ve F14 kabulü henüz eksik. Her tekil Destek Analizi gerekçesi için bounded RAG kaynak araştırması, orijinal PDF/HTML adayını aynı ekran içinde açma, stale yıl/claim değişiminde temizleme ve curated native PDF birebir metin/piksel konumunu ortak claim_id/evidence_id üzerinden PC/rapor/mobil sözleşmesine taşıma kodu eklendi. Gerçek curated PDF kayıtları hâlen 0, HTML'de 2 exact rule bağlamı var; bunlar gerçek arşiv dosyasına erişimle doğrulanır. Tüm yılların tüm kural şartlarının madde-fıkra/ROI eşlemesi bekliyor.",
       "definition_of_done": "Her gösterilen somut mevzuat gerekçesinde doğru PDF sayfası ve ilgili gerçek konum doğrudan açılır; yalnız HTML yayımlanan resmî belgeler HTML asli kanıt olarak belirtilir; bulunamazsa HOLD.",
       "responsible_role": "ENGINEERING"
     },
