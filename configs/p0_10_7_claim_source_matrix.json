@@ -17,19 +17,11 @@
         2027
       ],
       "amendment_review_required": [
-        "2025/13",
-        "2025/42",
-        "11781"
+        "2025/13 MADDE 1; no direct change to MADDE 4(1), 2026 Basic Support scope review",
+        "2025/42 MADDE 3 directly changes Basic Support MADDE 5(1)",
+        "11781 presidential decision effectiveness and exceptions still need source review"
       ],
-      "claim_bindings": [
-        {
-          "rule_id": "RULE_BASIC_SUPPORT_2026",
-          "support_id": "BASIC_SUPPORT_2026",
-          "check_id": "BASIC_CKS_REGISTRATION",
-          "production_year": 2026,
-          "note": "Normative source identity only; outcome wording and status independent. Year-applicability HOLD."
-        }
-      ]
+      "claim_bindings": []
     },
     {
       "span_id": "AMEND_2025_42_ART2_BASE_ART4_P3",
@@ -87,6 +79,64 @@
         2026
       ],
       "amendment_effect": "REPLACES_2024_39_ANNEX_EK20",
+      "claim_bindings": []
+    },
+    {
+      "span_id": "BASE_2024_39_ART5_P1",
+      "source_id": "RG_COMMUNIQUE_2024_39",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2024/12/20241231M5-8.htm",
+      "source_sha256": "efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530",
+      "article": "MADDE 5",
+      "target_provision": "MADDE 5(1)",
+      "exact_quote": "İlgili üretim yılında, planlama kapsamındaki ürünleri Karar ekindeki listede yer alan havzalarda üreten çiftçilere ÇKS’ye kayıtlı tarım arazisi dikkate alınarak Kararda Tablo 1’de belirtilen kategorilere göre hesaplanan tutar üzerinden destek ödemesi yapılır.",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "amendment_review_required": [
+        "2025/13 MADDE 1 adds second-crop soybean rule to MADDE 5(3)",
+        "2025/42 MADDE 3 replaces ÇKS’ye with ÇKS/ÖKS/KOBÜKS’e effective 2026-01-01",
+        "11781 affects underlying 8859 decision, official 2026 effect review outstanding"
+      ],
+      "claim_bindings": [
+        {
+          "rule_id": "RULE_BASIC_SUPPORT_2026",
+          "support_id": "BASIC_SUPPORT_2026",
+          "check_id": "BASIC_CKS_REGISTRATION",
+          "production_year": 2026,
+          "note": "Base article wording is PRE-AMENDMENT. Must read 2025/42 MADDE 3 for 2026. Source location only, independent validity HOLD."
+        }
+      ]
+    },
+    {
+      "span_id": "AMEND_2025_42_ART3_BASE_ART5_P1",
+      "source_id": "RG_AMENDMENT_2025_42",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "source_sha256": "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269",
+      "article": "MADDE 3",
+      "target_provision": "2024/39 MADDE 5(1)",
+      "exact_quote": "Aynı Tebliğin 5 inci maddesinin birinci fıkrasında yer alan “ÇKS’ye” ibaresi “ÇKS/ÖKS/KOBÜKS’e” şeklinde değiştirilmiş",
+      "production_years": [
+        2026,
+        2027
+      ],
+      "amendment_effect": "REPLACES_2024_39_ARTICLE_5_P1_REGISTRATION_WORDING",
+      "claim_bindings": []
+    },
+    {
+      "span_id": "AMEND_2025_42_ART16_EFFECTIVE_2026",
+      "source_id": "RG_AMENDMENT_2025_42",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "source_sha256": "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269",
+      "article": "MADDE 16",
+      "target_provision": "MADDE 16",
+      "exact_quote": "Bu Tebliğ 1/1/2026 tarihinde yürürlüğe girer.",
+      "production_years": [
+        2026,
+        2027
+      ],
+      "amendment_effect": "EFFECTIVE_ON_2026_01_01",
       "claim_bindings": []
     }
   ],
