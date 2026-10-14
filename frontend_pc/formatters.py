@@ -605,6 +605,26 @@ def generate_report_markdown(
             report_lines.append(
                 f"- **Kaynak-konum kanıt ID:** `{matched['evidence_id']}`"
             )
+        pilot_chain = matched.get("pilot_source_chain")
+        if isinstance(pilot_chain, dict):
+            report_lines.append(
+                "- **2026 Temel Destek kayıt değişiklik zinciri:** "
+                "2024/39 MADDE 4(1), MADDE 5(1); "
+                "2025/42 MADDE 3 (ÇKS/ÖKS/KOBÜKS), "
+                "MADDE 16 (1 Ocak 2026) — bağımsız hukukî onay HOLD."
+            )
+            for item in pilot_chain.get("sources", []):
+                if not isinstance(item, dict):
+                    continue
+                sid = str(item.get("span_id") or "UNKNOWN")
+                status = ("Özgün SHA ve madde konumu doğrulandı"
+                          if item.get("verified_original") is True
+                          else "Kaynak özgün bayt/konum doğrulaması HOLD")
+                report_lines.append(f"  - {sid}: {status}")
+            report_lines.append(
+                "- **2025/13 ve 11781 etkisi:** Madde kapsamı/üretim yılı "
+                "bağımsız hukukî incelemesi tamamlanmadı: HOLD."
+            )
         report_lines.append(
             "- **Mevzuat değişiklik / üretim yılı:** HOLD — " 
             "yıllara göre değişiklik zinciri bağımsız kapanmadı."
