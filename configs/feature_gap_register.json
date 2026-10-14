@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "last_reviewed": "2026-10-13",
+  "last_reviewed": "2026-10-14",
   "branch": "feature/p1-unified-evidence-workbench",
   "pr": 41,
   "assessment": "Feature implementation code and known external blockers only; not a validated test pass.",
@@ -408,9 +408,9 @@
       "gap_id": "G33",
       "feature_id": "F06",
       "priority": "P0",
-      "status": "OPEN",
+      "status": "CODE_IN_PROGRESS",
       "title": "Her cevap/gerekçe için tek tıkla gerçek PDF madde, paragraf ve hücre",
-      "solution": "Yıllık aramada kaynak PDF/sayfa gösterimi eklendi; destek analizi Neden/SSS/RAG cümlesi→original SHA+sayfa+gerçek bbox otomatik yönlendirme/işaretleme ve tüm kanal/rapor bağlantısını tamamla. OCR-adayı turuncu, iki görsel onaylı kaynak sarı.",
+      "solution": "Yıllık aramada kaynak PDF/sayfa gösterimi eklendi; destek analizi Neden/SSS/RAG cümlesi→original SHA+sayfa+gerçek bbox otomatik yönlendirme/işaretleme ve tüm kanal/rapor bağlantısını tamamla. OCR-adayı turuncu, iki görsel onaylı kaynak sarı. Bu turda RAG alıntı SHA+chunk kimliğinden kaynak baytlarını yeniden doğrulayan yerel PDF/HTML kanıt görüntüleyicisi, benzersiz native/OCR kelime koordinatı turuncu aday çerçevesi ve Gradio Belge Analizi sekmesinde gömülü gerçek sayfa önizlemesi eklendi. Destek Analizi Neden/rapor/mobil bütün iddialarının exact ROI eşlemesi ve F14 kabulü henüz eksik.",
       "definition_of_done": "Her gösterilen somut mevzuat gerekçesinde doğru PDF sayfası ve ilgili gerçek konum doğrudan açılır; yalnız HTML yayımlanan resmî belgeler HTML asli kanıt olarak belirtilir; bulunamazsa HOLD.",
       "responsible_role": "ENGINEERING"
     },
