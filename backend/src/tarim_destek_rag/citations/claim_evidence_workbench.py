@@ -154,7 +154,7 @@ def render_claim_evidence(
         f'{escape(record["target_provision"])}</p>'
         '<p><strong>SHA doğrulanmış özgün HTML pasajı:</strong></p>'
         '<div style="line-height:1.9;padding:14px;border:1px solid #e2e8f0">'
-        f'<mark style="background:#ffed52;padding:3px">{escape(quote)}</mark>'
+        f'<mark style="background:#ffedd5;padding:3px">{escape(quote)}</mark>'
         '</div>'
         f'<p><a href="{url}" rel="noopener noreferrer" target="_blank">'
         'Özgün Resmî Gazete HTML belgesini aç ↗</a></p>'
