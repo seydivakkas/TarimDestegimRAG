@@ -184,48 +184,50 @@ def audit_claim_matrix(
     year = (evaluation.get("parcel") or {}).get("production_year")
     if type(year) is not int:
         year = None
+    # The emitted semantic check_id is the canonical identity, not the
+    # current wording or passed/failed/missing observation field.
+    from tarim_destek_rag.citations.check_identity import extracted_checks
+
     matches = []
-    for rule in evaluation.get("rules", []):
-        if not isinstance(rule, dict):
-            continue
-        rule_id, support_id = rule.get("rule_id"), rule.get("support_id")
-        for field in ("passed_checks", "failed_checks", "missing_fields"):
-            for text in rule.get(field, []) or []:
-                candidates = [
-                    row for row in rows
-                    for binding in row.get("claim_bindings", [])
-                    if binding.get("rule_id") == rule_id
-                    and binding.get("support_id") == support_id
-                    and binding.get("field") == field
-                    and binding.get("exact_claim_text") == text
-                    and binding.get("production_year") == year
-                    and type(year) is int and year in row.get("production_years", [])
-                ]
-                key = hashlib.sha256(json.dumps(
-                    [rule_id, support_id, year, field, text], ensure_ascii=False,
-                    separators=(",", ":"),
-                ).encode("utf-8")).hexdigest()[:24]
-                source = candidates[0] if len(candidates) == 1 else None
-                proof = location[source["span_id"]] if source else None
-                proven = bool(proof and proof["source_location_status"] ==
-                              "ORIGINAL_HTML_SPAN_LOCATED")
-                matches.append({
-                    "claim_id": key,
-                    "rule_id": rule_id,
-                    "support_id": support_id,
-                    "claim_type": field,
-                    "claim_text": text,
-                    "candidate_span_id": source["span_id"] if source else None,
-                    "source_location_status": (
-                        "ORIGINAL_HTML_SPAN_LOCATED_NORMATIVE_ONLY"
-                        if proven else "CLAIM_TO_SOURCE_SPAN_NOT_VERIFIED"
-                    ),
-                    "fact_verified": False,
-                    "temporal_legal_verified": False,
-                    "claim_verified": False,
-                    "acceptance": "HOLD",
-                    "highlighted_pdf_url": None,
-                })
+    for check in extracted_checks(evaluation):
+        key = check["id"]
+        check_id = check["check_id"]
+        candidates = [
+            row for row in rows
+            for binding in row.get("claim_bindings", [])
+            if (check["identity_status"] == "RULE_EMITTED_STABLE_CHECK_ID"
+                and isinstance(binding, dict)
+                and binding.get("rule_id") == check["rule_id"]
+                and binding.get("support_id") == check["support_id"]
+                and binding.get("check_id") == check_id
+                and binding.get("production_year") == year
+                and type(year) is int
+                and year in row.get("production_years", []))
+        ]
+        # Duplicate normative candidates must not resolve; HOLD.
+        source = candidates[0] if len(candidates) == 1 else None
+        proof = location[source["span_id"]] if source else None
+        proven = bool(proof and proof["source_location_status"] ==
+                      "ORIGINAL_HTML_SPAN_LOCATED")
+        matches.append({
+            "claim_id": key,
+            "check_id": check_id,
+            "identity_status": check["identity_status"],
+            "rule_id": check["rule_id"],
+            "support_id": check["support_id"],
+            "claim_type": check["field"],
+            "claim_text": check["text"],
+            "candidate_span_id": source["span_id"] if source else None,
+            "source_location_status": (
+                "ORIGINAL_HTML_SPAN_LOCATED_NORMATIVE_ONLY"
+                if proven else "CLAIM_TO_SOURCE_SPAN_NOT_VERIFIED"
+            ),
+            "fact_verified": False,
+            "temporal_legal_verified": False,
+            "claim_verified": False,
+            "acceptance": "HOLD",
+            "highlighted_pdf_url": None,
+        })
     ek = matrix.get("ek20") or {}
     ek_status = "HOLD"
     if (
