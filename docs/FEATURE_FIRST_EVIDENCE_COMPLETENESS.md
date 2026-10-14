@@ -285,3 +285,15 @@ F14 son kabul en sona bırakılmıştır.
 - Masaüstü raporu PDF için gerçek sayfa ve kaynak koordinatlarını, mobil ortak kanıt modeli ise PDF/HTML ayrımını ve gerçek PDF sayfasına yönlendirmeyi destekleyecek şekilde kodlandı. Son Windows/Flutter kabulü F14.
 - Kanıt-konum kapsamı ekranı HTML ve native PDF konumlandırılmış şartları ayrı sayar, arama adaylarını doğrulanmış saymaz.
 - Detaylı kullanıcı akışı ve eksikler: docs/G33_SUPPORT_CLAIM_TO_ORIGINAL_SOURCE.md. G10/G11/G33 CODE_IN_PROGRESS; EK-20 48 hücre, iki gerçek insan incelemesi, tüm üretim yılları için hukuki dönem kontrolü ve tüm gerekçeler için kaynak kaydı açık.
+
+## G35–G37 — Merkezi kanıt motoru ve sabit kimlikli ÇKS pilotu (14 Ekim 2026)
+
+- `rules/base.py`: RuleResult artık semantik `RuleCheckEvent(check_id,field,display_text)` yayımlar. `rules_impl.BasicSupportRule` 2026 ÇKS kontrolü için aktif/pasif/eksik durumlarında tek `BASIC_CKS_REGISTRATION` kimliğini doğrudan üretir.
+- `citations/check_identity.py`: `claim_id` artık metnin, ürünün veya alanın hash'i değildir; sürümlü (rule_id,support_id,check_id) sözleşmesidir. `identity_status` ayrı döner. Henüz `check_events` üretmeyen kuralların field/ordinal geçici ID'si hukukî kaynağa bağlanamaz: `LEGACY_NO_SEMANTIC_CHECK_ID_HOLD`.
+- `configs/p0_10_7_claim_source_matrix.json`: 2024/39 MADDE 4(1) için 2026 ÇKS'nin olumlu ve olumsuz cümlelerinin iki metin-bağımlı binding'i, tek sabit `check_id` kaydıyla değiştirildi. Buradan otomatik hukukî yıl PASS üretilmez. Native PDF tam bağları da artık check_id ile kurulur.
+- `citations/central_evidence_engine.py`: PC Neden, SSS, rapor ve mobil kanıt endpoint'i aynı canonical kayıt çözücüsünü kullanır. `POST /api/v1/evidence/evaluation` tek kaynak indeksi, `POST /api/v1/evidence/check/{rule_id}/{check_id}` tek güncel kontrol kanıt kaydı döndürür.
+- Kanıt sözleşmesi `check_id`, `identity_status` ve değişebilir `claim_text` alanlarını ayrı taşır. `check_id` değişmediğinde `claim_id` sabit kalır; `evidence_id` ayrıca üretim yılı ve özgün SHA/sayfa/pasaj sürümüne bağlıdır.
+- PC Destek Analizi'ne `Pilot — 2026 Temel Destek / ÇKS` paneli eklendi; mobil veri modeli ve rapor da aynı check_id/statü alanlarını okuyabilir. Belgede gerçek konum doğrulanmazsa bu ekranlarda source HOLD.
+- Turuncu, özgün kaynakta yerinin bulunduğu fakat bağımsız görsel onayı olmayan pasajın renk kodudur; sarı yalnız bağımsız imzalı bölgelere ayrıldı. Sarı dahi yürürlük ve ödeme onayı değildir.
+- Gerçek dosya/bağımsız hukukî inceleme eksikliği nedeniyle 2026 pilotunun bütünlüğü G37 altında açık, tüm diğer kontrollerin check_id adaptasyonu G36 altında açık ve merkezi dağıtım entegrasyonunun tamamı G35 altında açık kalır.
+- Ayrıntı: docs/G35_G37_CENTRAL_EVIDENCE_CKS_PILOT.md. Güncel eksik takip listesi 37 iş kalemidir; F14 kapsamlı test/Windows/bağımsız hukukî kabul en son.
