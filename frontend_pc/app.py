@@ -201,12 +201,12 @@ def build_legacy_ui() -> gr.Blocks:
         # A common, explicit per-claim source navigator. Never bind proof by
         # guessed article name, overall support ID, or keyword similarity.
         from tarim_destek_rag.citations.claim_evidence_workbench import claim_choices
-        from tarim_destek_rag.citations.canonical_evidence_contract import (
-            render_claim_contract_html,
-            render_claim_coverage_html,
+        from tarim_destek_rag.citations.central_evidence_engine import (
+            central_evidence_engine,
         )
 
-        render_claim_evidence = render_claim_contract_html
+        render_claim_evidence = central_evidence_engine.render_claim
+        render_claim_coverage_html = central_evidence_engine.render_coverage
 
         def update_claim_selector(response):
             return gr.update(choices=claim_choices(response), value=None)
@@ -309,7 +309,7 @@ def build_legacy_ui() -> gr.Blocks:
             outputs=[p3["faq_claim_selector"]],
         )
         p3["faq_claim_selector"].change(
-            render_claim_contract_html,
+            central_evidence_engine.render_claim,
             inputs=[eval_state, p3["faq_claim_selector"]],
             outputs=[p3["faq_claim_display"]],
         )
