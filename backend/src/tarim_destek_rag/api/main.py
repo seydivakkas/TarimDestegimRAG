@@ -444,6 +444,40 @@ def view_discovered_annual_source_page(
     )
 
 
+@app.get("/documents/evidence/{sha}/chunk/{chunk_id}",
+         tags=["Belge Analizi / RAG"], response_class=HTMLResponse)
+def view_rag_original_quote_location(
+    sha: str, chunk_id: str, request: Request,
+) -> HTMLResponse:
+    """One-click local original source/page/exact token navigator.
+
+    The dynamic URL contains no path or filename and has no guessed bbox.
+    Local source SHA is rechecked at every invocation.
+    """
+    _require_local_document_access(request)
+    from tarim_destek_rag.citations.rag_exact_location import (
+        render_rag_citation_proof,
+    )
+    try:
+        html = render_rag_citation_proof(sha, chunk_id)
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError,
+            ImportError, AttributeError) as exc:
+        raise HTTPException(
+            status_code=404, detail="Özgün SHA-bağlı alıntı veya sayfa konumu HOLD"
+        ) from exc
+    return HTMLResponse(
+        content=html, headers={
+            "Cache-Control": "no-store",
+            "X-Evidence-Status": "ORIGINAL_LOCATION_ONLY_LEGAL_HOLD",
+            "Content-Security-Policy": (
+                "default-src 'none'; img-src data:; style-src 'unsafe-inline'; "
+                "base-uri 'none'; form-action 'none'"
+            ),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @app.get("/documents/status", tags=["Belge Analizi / RAG"])
 def document_rag_status(request: Request) -> dict[str, Any]:
     """Private status includes names of user-uploaded local documents."""
