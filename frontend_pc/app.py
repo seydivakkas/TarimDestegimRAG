@@ -170,6 +170,8 @@ def build_legacy_ui() -> gr.Blocks:
             p1["in_seed_cert"],
             p1["in_sapling_cert"],
             p1["in_orchard"],
+            p1["in_oks"],
+            p1["in_kobuks"],
         ]
 
         calc_outputs = [
@@ -195,6 +197,8 @@ def build_legacy_ui() -> gr.Blocks:
                 seed_cert=args[8],
                 sapling_cert=args[9],
                 closed_orchard=args[10],
+                oks_status=args[11],
+                kobuks_status=args[12],
                 client=api_client,
             )
 
@@ -397,6 +401,7 @@ def build_legacy_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "✅ Evet (ÇKS Kaydım Aktif)", "Genç Çiftçi (< 41 Yaş)", "Erkek",
                 "BUĞDAY", 25.0, "Kuru Tarım", "✅ Evet (Faturalı / Sertifikalı)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -405,6 +410,7 @@ def build_legacy_ui() -> gr.Blocks:
             lambda: (
                 "SAMSUN", "ÇARŞAMBA", "✅ Evet (ÇKS Kaydım Aktif)", "Standart (41+ Yaş)", "Kadın Çiftçi",
                 "FINDIK", 15.0, "Kuru Tarım", "❌ Hayır (Sertifikasız Tohum)", "✅ Evet (Faturalı / Sertifikalı)", "Evet (Kapama Bahçe)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -413,6 +419,7 @@ def build_legacy_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "✅ Evet (ÇKS Kaydım Aktif)", "Standart (41+ Yaş)", "Erkek",
                 "ARPA", 30.0, "Kuru Tarım", "✅ Evet (Faturalı / Sertifikalı)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -421,6 +428,7 @@ def build_legacy_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "✅ Evet (ÇKS Kaydım Aktif)", "Genç Çiftçi (< 41 Yaş)", "Erkek",
                 "MERCİMEK", 20.0, "Kuru Tarım", "❌ Hayır (Sertifikasız Tohum)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -429,6 +437,7 @@ def build_legacy_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "❌ Hayır (ÇKS Kaydım Yok)", "Standart (41+ Yaş)", "Erkek",
                 "BUĞDAY", 10.0, "Kuru Tarım", "❌ Hayır (Sertifikasız Tohum)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -437,6 +446,7 @@ def build_legacy_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "❓ Bilmiyorum / Emin Değilim", "Standart (41+ Yaş)", "Erkek",
                 "BUĞDAY", 20.0, "Kuru Tarım", "❓ Bilmiyorum / Emin Değilim", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -455,6 +465,8 @@ def build_legacy_ui() -> gr.Blocks:
                 seed_cert=args[8],
                 sapling_cert=args[9],
                 closed_orchard=args[10],
+                oks_status=args[11],
+                kobuks_status=args[12],
                 client=api_client,
                 cached_resp=state_val,
             )
