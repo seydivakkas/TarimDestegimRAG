@@ -109,17 +109,20 @@ def exact_pdf_binding(
             return None
         keys = [
             (r.get("rule_id"),r.get("support_id"),r.get("production_year"),
-             r.get("field"),r.get("exact_claim_text"))
+             r.get("check_id"))
             for r in entries if isinstance(r, dict)
         ]
         if len(entries) != len(keys) or len(keys) != len(set(keys)):
             return None
+        if (claim.get("identity_status") != "RULE_EMITTED_STABLE_CHECK_ID"
+                or not isinstance(claim.get("check_id"), str)):
+            return None
         matching = [r for r in entries if (
             r.get("rule_id"), r.get("support_id"),r.get("production_year"),
-            r.get("field"),r.get("exact_claim_text")
+            r.get("check_id")
         ) == (
             claim["rule_id"],claim["support_id"],claim["year"],
-            claim["field"],claim["text"],
+            claim["check_id"],
         )]
         if len(matching) != 1:
             return None
