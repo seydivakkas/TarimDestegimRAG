@@ -198,18 +198,19 @@ def _html_view(raw: bytes, passage: Any) -> tuple[str, str, str]:
         element.decompose()
     visible = " ".join(doc.get_text(" ", strip=True).split())
     full = " ".join(passage.text.split())
-    if not full or visible.casefold().count(full.casefold()) != 1:
+    matches = list(re.finditer(re.escape(full), visible, flags=re.IGNORECASE)) if full else []
+    if len(matches) != 1:
         return ("<p>Özgün HTML metin düğümü birebir eşleşemedi. "
                 "Kullanıcının seçtiği kaynak orijinali SHA ile doğrulandı, "
                 "ancak paragraf konumu HOLD.</p>", "DOCUMENT_ONLY_HOLD",
                 "HTML_ORIGINAL_TEXT")
-    at = visible.casefold().find(full.casefold())
-    lo,hi = max(0,at-220),min(len(visible),at+len(full)+220)
+    at, endpoint = matches[0].span()
+    lo,hi = max(0,at-220),min(len(visible),endpoint+220)
     excerpt = (
         escape(visible[lo:at]) +
         '<span style="border:2px solid #d97706;background:#ffedd5">' +
-        escape(visible[at:at+len(full)]) + "</span>" +
-        escape(visible[at+len(full):hi])
+        escape(visible[at:endpoint]) + "</span>" +
+        escape(visible[endpoint:hi])
     )
     return ('<h3>Özgün HTML içinde eşleşen pasaj (turuncu aday)</h3>'
             '<blockquote style="border-left:4px solid #d97706;padding:12px">'
