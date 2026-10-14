@@ -144,7 +144,14 @@ def _pdf_view(raw: bytes, passage: Any) -> tuple[str, str, str]:
         page = doc[number - 1]
         pix = page.get_pixmap(dpi=180, alpha=False)
         original = Image.open(io.BytesIO(pix.tobytes("png"))).convert("RGB")
-        words, text_method = _source_words(page, text_method=passage.extraction_method)
+        # PyMuPDF text-word boxes and the rendered pixmap can use distinct
+        # reference frames on rotated pages; no guessed affine transforms.
+        if page.rotation:
+            words, text_method = [], "ROTATED_PAGE_COORDINATES_HOLD"
+        else:
+            words, text_method = _source_words(
+                page, text_method=passage.extraction_method
+            )
         positions, state = _unique_range(words, passage.text)
         img = original.copy()
         drawer = ImageDraw.Draw(img)
