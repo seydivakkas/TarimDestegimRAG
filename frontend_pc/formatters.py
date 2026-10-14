@@ -579,7 +579,7 @@ def generate_report_markdown(
 
     # One source of truth: same exact per-claim identity in exported report & UI.
     from tarim_destek_rag.citations.claim_evidence_workbench import claim_choices
-    from tarim_destek_rag.citations.canonical_evidence_contract import claim_contract
+    from tarim_destek_rag.citations.central_evidence_engine import central_evidence_engine
 
     report_lines.extend([
         "---",
@@ -590,11 +590,17 @@ def generate_report_markdown(
         "",
     ])
     for label, claim_id in claim_choices(resp):
-        matched = claim_contract(resp, claim_id)
+        matched = central_evidence_engine.for_claim(resp, claim_id)
         source = matched.get("source")
         quote = source.get("exact_quote") if isinstance(source, dict) else None
         report_lines.append(f"#### {label}")
         report_lines.append(f"- **Kanıt kimliği:** `{claim_id}`")
+        report_lines.append(
+            f"- **Sabit kontrol kimliği:** `{matched.get('check_id') or 'LEGACY_HOLD'}`"
+        )
+        report_lines.append(
+            f"- **Kimlik olgunluğu:** {matched.get('identity_status', 'HOLD')}"
+        )
         if matched.get("evidence_id"):
             report_lines.append(
                 f"- **Kaynak-konum kanıt ID:** `{matched['evidence_id']}`"
