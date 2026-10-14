@@ -95,6 +95,26 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                     "yanlış sayfa veya hücre üretilmez: HOLD.</p>"
                 )
 
+            with gr.Accordion(
+                "Pilot — 2026 Temel Destek / ÇKS: Sabit Kimlikten Özgün Hükme",
+                open=True,
+            ):
+                gr.Markdown(
+                    "Pilot, ÇKS kontrolünü `BASIC_CKS_REGISTRATION` kimliğiyle "
+                    "izler. Olumlu, olumsuz veya eksik bilgi ifadesi değişse de "
+                    "aynı kural kontrolüdür. Kaynak SHA ve özgün madde ancak "
+                    "gerçek yerel arşiv doğrulanırsa gösterilir. Sarı pasaj, "
+                    "sadece özgün HTML konumunun işaretlenmiş önizlemesi; "
+                    "mevzuatın 2026 için yürürlüğü veya ödeme onayı değildir."
+                )
+                btn_cks_pilot = gr.Button(
+                    "2026 ÇKS kanıt zincirini kontrol et",
+                    variant="secondary",
+                )
+                cks_pilot_display = gr.HTML(
+                    "<p>Önce 2026 için Temel Destek değerlendirmesi yapın.</p>"
+                )
+
             with gr.Accordion("Tüm gerekçeler için kanıt-konum kapsamı (HOLD)", open=False):
                 gr.Markdown(
                     "Bu liste yalnız bu değerlendirmede hangi şartın özgün "
@@ -465,6 +485,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "claim_selector": claim_selector,
         "btn_claim_show": btn_claim_show,
         "claim_display": claim_display,
+        "btn_cks_pilot": btn_cks_pilot,
+        "cks_pilot_display": cks_pilot_display,
         "btn_claim_source_search": btn_claim_source_search,
         "claim_candidate_status": claim_candidate_status,
         "claim_candidate_selector": claim_candidate_selector,
