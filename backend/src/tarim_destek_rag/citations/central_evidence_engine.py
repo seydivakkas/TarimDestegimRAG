@@ -68,6 +68,37 @@ class CentralEvidenceEngine:
     ) -> str:
         return render_claim_coverage_html(evaluation)
 
+    def render_2026_cks_pilot(
+        self, evaluation: dict[str, Any] | None,
+    ) -> str:
+        """Auditable single pilot: same check ID for PASS/FAIL/MISSING.
+
+        A matching original HTML node may display a yellow textual
+        highlight, but legal effective-year and payment never go PASS.
+        """
+        from html import escape
+        row = self.pilot_2026_cks(evaluation)
+        if row.get("check_id") != "BASIC_CKS_REGISTRATION":
+            return (
+                "<section><strong>ÇKS pilotu: HOLD</strong>"
+                "<p>2026 Temel Destek kuralının sabit ÇKS kontrolü "
+                "henüz bu değerlendirmede bulunamadı. "
+                "Kaynak veya oran uydurulmaz.</p></section>"
+            )
+        head = (
+            '<section style="padding:12px;border:1px solid #cbd5e1">'
+            '<h3>2026 Temel Destek — ÇKS uçtan uca kaynak pilotu</h3>'
+            '<p><strong>check_id:</strong> BASIC_CKS_REGISTRATION · '
+            f'<strong>claim_id:</strong> {escape(str(row["claim_id"]))}</p>'
+            f'<p><strong>Güncel durum metni:</strong> '
+            f'{escape(str(row.get("claim_text") or ""))}</p>'
+            '<p><strong>Mevzuat yılı:</strong> 2026 için geçerlilik '
+            'bağımsız tamamlanmadı: HOLD. '
+            '<strong>Hak ediş:</strong> HOLD. '
+            '<strong>Ödeme:</strong> HOLD.</p>'
+        )
+        return head + self.render_claim(evaluation, row["claim_id"]) + "</section>"
+
     def pilot_2026_cks(
         self, evaluation: dict[str, Any] | None,
     ) -> dict[str, Any]:
