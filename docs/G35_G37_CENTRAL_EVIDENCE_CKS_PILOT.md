@@ -63,3 +63,14 @@ RuleCheckEvent(check_id, field, display_text)
 - G33: bütün destek gerekçeleri doğrudan gerçek kaynak konumuna gidene ve eksik kalanlar açıkça HOLD raporlanana kadar açık.
 
 Özellik geliştirme ve arayüz bütünleşmesi bitince F14'te toplu test, Windows/Flutter gerçek kabul ve bağımsız hukukî doğrulama yapılır. PR #41 DRAFT, main değiştirilmez.
+## G37 düzeltmesi: 2025/42 MADDE 3, ÇKS-only kararı geçersiz kılıyor
+
+14 Ekim 2026 resmî Bakanlık metin incelemesinde 2025/42 MADDE 3'ün 2024/39 MADDE 5(1)'deki **“ÇKS’ye”** ifadesini **“ÇKS/ÖKS/KOBÜKS’e”** çevirdiği ve MADDE 16'nın **1 Ocak 2026** yürürlüğünü düzenlediği bulundu. 2024/39 MADDE 4(1) genel Bakanlık kayıt şartıdır; MADDE 5(1) temel destek arazi şartıdır. Dolayısıyla ÇKS kaydı yokken ÖKS/KOBÜKS bilinmiyorsa otomatik ret YANLIŞ olabilir.
+
+`BASIC_CKS_REGISTRATION` sabit kontrol kimliği değiştirilmedi. `FarmerProfile` üç ayrı tri-state kayıt alanı taşır; Temel Destek artık bilinmeyen alternatifi otomatik ret saymaz ve resmî **2026 parsel kayıt doğrulaması bulunmadıkça REVIEW** korur. Masaüstü UI, altı örnek senaryo ve rapor ayrı kayıt alanlarını kullanır.
+
+Kaynaktaki asıl normatif bağ **MADDE 5(1)** olarak düzeltildi; ayrıca **MADDE 4(1)**, **2025/42 MADDE 3** ve **MADDE 16** için dört ayrı SHA-pinned original-span kaydı tutuluyor. `cks_2026_source_chain.py` her birini gerçek arşiv baytına göre inceler ve doğrulanamayan özgün kaynak konumunu HOLD bırakır. Merkezi DTO `pilot_source_chain` alanını mobil ve rapora verir. 2025/13 ve 11781 ayrı etki/istisna araştırma yükümlülükleridir.
+
+**Bu turda resmî HTML/PDF baytlarını fiilen SHA doğrulamasıyla çekme mümkün olmadı.** Yürürlük zinciri ve parsel kaydı için bağımsız inceleme eksik olduğundan G37 BLOCKED_EXTERNAL; F14 ve main politikası değişmedi.
+
+Ayrıntı: [G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md](G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md).
