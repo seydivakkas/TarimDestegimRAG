@@ -123,7 +123,7 @@ def claim_contract(
             "visual_cell_status": "NATIVE_TEXT_LOCATION_UNREVIEWED",
         }
         token = hashlib.sha256(json.dumps(
-            [claim_id, source["document_id"], sha, page, original_quote],
+            [claim_id, row["year"], source["document_id"], sha, page, original_quote],
             ensure_ascii=False, separators=(",", ":"),
         ).encode("utf-8")).hexdigest()[:32]
         result.update({
@@ -161,7 +161,7 @@ def claim_contract(
     }
     token = hashlib.sha256(
         json.dumps(
-            [claim_id, source["document_id"], sha, source["span_id"]],
+            [claim_id, row["year"], source["document_id"], sha, source["span_id"]],
             ensure_ascii=False, separators=(",", ":"),
         ).encode("utf-8")
     ).hexdigest()[:32]
