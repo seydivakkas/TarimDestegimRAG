@@ -207,6 +207,18 @@ def build_legacy_ui() -> gr.Blocks:
 
         render_claim_evidence = central_evidence_engine.render_claim
         render_claim_coverage_html = central_evidence_engine.render_coverage
+        p2["btn_cks_pilot"].click(
+            central_evidence_engine.render_2026_cks_pilot,
+            inputs=[eval_state],
+            outputs=[p2["cks_pilot_display"]],
+        )
+        eval_state.change(
+            lambda: "<p>Değerlendirme değişti; ÇKS kanıt zincirini yeniden "
+                    "inceleyin. HOLD.</p>",
+            inputs=[],
+            outputs=[p2["cks_pilot_display"]],
+        )
+
 
         def update_claim_selector(response):
             return gr.update(choices=claim_choices(response), value=None)
