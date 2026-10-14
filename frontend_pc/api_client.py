@@ -226,6 +226,35 @@ class ApiClient:
             return {"status": "ERROR", "message": f"Resmî kaynak taraması başarısız: {exc}"}
 
 
+    def get_exact_rag_source_html(
+        self, *, document_sha: str, chunk_id: str,
+    ) -> str:
+        """Read a single SHA+chunk-pinned proof page from LOCAL backend."""
+        import re
+        if (not re.fullmatch(r"[a-f0-9]{64}", document_sha or "")
+                or not re.fullmatch(r"[a-f0-9]{24}", chunk_id or "")):
+            return "<p>HOLD — Alıntı kimliği geçersiz.</p>"
+        try:
+            resp = self._request(
+                "GET",
+                f"/documents/evidence/{document_sha}/chunk/{chunk_id}",
+                timeout=120,
+            )
+            if resp.status_code != 200:
+                return "<p>HOLD — Özgün kaynak veya konumu doğrulanamadı.</p>"
+            if not resp.headers.get("content-type", "").startswith("text/html"):
+                return "<p>HOLD — Beklenmeyen belge türü.</p>"
+            page = resp.text
+            if len(page) > 25_000_000:
+                return "<p>HOLD — Kanıt görüntüsü güvenli boyut sınırını aşıyor.</p>"
+            # The backend generated the escaped original text and actual
+            # original-page image; select only its HTML body for Gradio.
+            match = re.search(r"<body>(.*)</body>", page, re.DOTALL)
+            return (match.group(1) if match
+                    else "<p>HOLD — Kanıt paneli oluşturulamadı.</p>")
+        except Exception:
+            return "<p>HOLD — Kaynak inceleme servisine erişilemiyor.</p>"
+
     def refresh_yearly_official_pdf_evidence(
         self, production_year: int, *, published_from: str | None = None,
         published_to: str | None = None,
