@@ -125,6 +125,22 @@ def ask_assistant_filtered(
                         f"{index}. [{label} — {loc}]({url}) "
                         f"(okuma: {method}, kaynak SHA: `{document_sha[:16]}…`)"
                     )
+                    # Every citation can open the LOCAL app's proof reader:
+                    # SHA + exact chunk identity, never query-based coordinates.
+                    import re
+                    chunk_id = item.get("chunk_id")
+                    if (
+                        re.fullmatch(r"[a-f0-9]{64}", document_sha)
+                        and isinstance(chunk_id, str)
+                        and re.fullmatch(r"[a-f0-9]{24}", chunk_id)
+                    ):
+                        proof_url = (
+                            f"{api.base_url.rstrip('/')}"
+                            f"/documents/evidence/{document_sha}/chunk/{chunk_id}"
+                        )
+                        lines.append(
+                            f"   · [Kanıtı uygulamada aç — gerçek konum/HOLD]({proof_url})"
+                        )
                     if (
                         type(page) is int
                         and len(document_sha) == 64
