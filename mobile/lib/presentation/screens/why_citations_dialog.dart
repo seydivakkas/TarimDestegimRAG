@@ -111,7 +111,7 @@ class WhyCitationsDialog extends StatelessWidget {
     final source = proof.source;
     final located = proof.hasVerifiableSourceLocation && source != null;
     final uri = proof.originalSourceUri;
-    final isPdf = located && source['format'] == 'pdf';
+    final isPdf = located && source != null && source['format'] == 'pdf';
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: Padding(
