@@ -104,6 +104,13 @@ class BasicSupportRule(BaseRule):
                 check_id=cks_check_id, field="passed_checks",
                 display_text=passed[-1],
             ))
+            # A person's registry declaration does not verify that THIS
+            # production-year PARCEL is legally registered. Preserve REVIEW.
+            missing.append("verified_2026_registered_parcel")
+            trace.append(
+                "Beyan edilen Bakanlık kaydı, bu parselin 2026 için "
+                "resmî kayıt kanıtı değildir; hak ediş incelemesi gerekiyor."
+            )
         elif all(state is False for state in registry.values()):
             failed.append(
                 "Beyan edilen ÇKS, ÖKS ve KOBÜKS kayıtlarının tamamı pasif; "
