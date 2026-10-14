@@ -112,13 +112,18 @@ def render(data: dict) -> str:
         "G32 otomatik tüm ilgili PDF OCR, G33 her iddiadan PDF gerçek "
         "konuma geçiş, G34 yeni yılın değişiklik/kural güvenli kapısı.",
         "",
+        "7. Merkezi kanıt: G35 ortak kanıt motoru → G36 bütün kurallarda "
+        "stable check_id → G37 2026 ÇKS pilotunda özgün/yıl/bağımsız kabul; "
+        "sonra diğer yıllara genelleştirme.",
+        "",
         "Durum kodları: OPEN (özellik açığı), CODE_IN_PROGRESS (kodlanıyor), "
         "BLOCKED_EXTERNAL (gerçek kaynak, insan veya donanım), "
         "DEFERRED_F14 (son kabulde), CLOSED_IMPLEMENTED "
         "(özellik kodu kapandı, F14 hukukî/teknik PASS değil).",
         "",
         "**PR politikası:** #41 DRAFT/unmerged, main değiştirilmez. "
-        "Sarı görsel doğrulama, yürürlük ve ödeme onayı birbirinden ayrıdır.",
+        "Turuncu kaynak adayı, bağımsız imzalı sarı görsel kanıt, "
+        "yürürlük ve ödeme onayı birbirinden ayrıdır.",
         "",
     ])
     return "\n".join(lines)
