@@ -73,7 +73,7 @@ class CentralEvidenceEngine:
     ) -> str:
         """Auditable single pilot: same check ID for PASS/FAIL/MISSING.
 
-        A matching original HTML node may display a yellow textual
+        A matching original HTML node may display an orange textual
         highlight, but legal effective-year and payment never go PASS.
         """
         from html import escape
