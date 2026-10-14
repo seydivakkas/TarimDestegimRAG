@@ -22,7 +22,20 @@ class CentralEvidenceEngine:
     def for_claim(
         self, evaluation: dict[str, Any] | None, claim_id: str | None,
     ) -> dict[str, Any]:
-        return claim_contract(evaluation, claim_id)
+        record = claim_contract(evaluation, claim_id)
+        if (
+            record.get("check_id") == "BASIC_CKS_REGISTRATION"
+            and record.get("rule_id") == "RULE_BASIC_SUPPORT_2026"
+            and record.get("production_year") == 2026
+        ):
+            from tarim_destek_rag.citations.cks_2026_source_chain import (
+                source_chain_2026_cks,
+            )
+            record["pilot_source_chain"] = source_chain_2026_cks()
+            record["temporal_legal_status"] = "HOLD"
+            record["payment_status"] = "HOLD"
+            record["final_acceptance"] = "HOLD"
+        return record
 
     def for_check(
         self, evaluation: dict[str, Any] | None, *,
@@ -47,16 +60,24 @@ class CentralEvidenceEngine:
     def for_evaluation(
         self, evaluation: dict[str, Any] | None,
     ) -> dict[str, Any]:
-        return evaluation_contract(evaluation)
+        index = evaluation_contract(evaluation)
+        index["claims"] = [
+            self.for_claim(evaluation, row.get("claim_id"))
+            for row in index["claims"]
+        ]
+        return index
 
     def for_faq(
         self, faq: dict[str, Any] | None, *,
         evaluation: dict[str, Any] | None = None,
         exact_claim_id: str | None = None,
     ) -> dict[str, Any]:
-        return faq_contract(
+        data = faq_contract(
             faq, evaluation=evaluation, exact_claim_id=exact_claim_id,
         )
+        if data.get("claim") and exact_claim_id is not None:
+            data["claim"] = self.for_claim(evaluation, exact_claim_id)
+        return data
 
     def render_claim(
         self, evaluation: dict[str, Any] | None, claim_id: str | None,
@@ -97,7 +118,13 @@ class CentralEvidenceEngine:
             '<strong>Hak ediş:</strong> HOLD. '
             '<strong>Ödeme:</strong> HOLD.</p>'
         )
-        return head + self.render_claim(evaluation, row["claim_id"]) + "</section>"
+        from tarim_destek_rag.citations.cks_2026_source_chain import (
+            render_cks_source_chain,
+        )
+        return (
+            head + self.render_claim(evaluation, row["claim_id"])
+            + render_cks_source_chain() + "</section>"
+        )
 
     def pilot_2026_cks(
         self, evaluation: dict[str, Any] | None,
