@@ -123,6 +123,9 @@ class WhyCitationsDialog extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
             SelectableText('claim_id: ' + (proof.claimId ?? 'HOLD')),
+            SelectableText('check_id: ' + (proof.checkId ?? 'LEGACY_HOLD')),
+            if (proof.identityStatus != 'RULE_EMITTED_STABLE_CHECK_ID')
+              const Text('Kimlik geçişi tamamlanmadı: HOLD'),
             if (located) ...[
               SelectableText('evidence_id: ' + (proof.evidenceId ?? 'HOLD')),
               Text(source['document_id'].toString() + ' • ' +
