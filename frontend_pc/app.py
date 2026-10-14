@@ -226,6 +226,71 @@ def build_legacy_ui() -> gr.Blocks:
             inputs=[eval_state, p2["claim_selector"]],
             outputs=[p2["claim_display"]],
         )
+        # Scoped source research is distinct from a verified normative link.
+        # A RAG hit is a human review CANDIDATE only; never claim/legal PASS.
+        from tarim_destek_rag.citations.claim_source_discovery import (
+            candidate_choices,
+            candidate_original_html,
+        )
+
+        def on_claim_source_research(evaluation, claim_id):
+            status, choices, allowed = candidate_choices(evaluation, claim_id)
+            return (
+                status,
+                gr.update(choices=choices, value=None),
+                allowed,
+                "<p>Kaynak seçimi yenilendi. Belgeyi incelemek için "
+                "özgün kaynak adayını seçin. Hukukî dayanak hâlâ HOLD.</p>",
+            )
+
+        p2["btn_claim_source_search"].click(
+            on_claim_source_research,
+            inputs=[eval_state, p2["claim_selector"]],
+            outputs=[
+                p2["claim_candidate_status"],
+                p2["claim_candidate_selector"],
+                p2["claim_candidate_state"],
+                p2["claim_candidate_display"],
+            ],
+        )
+        p2["claim_candidate_selector"].change(
+            candidate_original_html,
+            inputs=[
+                eval_state, p2["claim_selector"],
+                p2["claim_candidate_selector"], p2["claim_candidate_state"],
+            ],
+            outputs=[p2["claim_candidate_display"]],
+        )
+
+        def clear_unverified_claim_sources():
+            return (
+                "Seçim/değerlendirme değişti; kaynak adayları "
+                "bu gerekçeyle tekrar araştırılmalı. HOLD.",
+                gr.update(choices=[], value=None),
+                {"claim_id": None, "candidates": []},
+                "<p>HOLD — Önce yeni gerekçe için araştırma başlatın.</p>",
+            )
+
+        p2["claim_selector"].change(
+            clear_unverified_claim_sources,
+            inputs=[],
+            outputs=[
+                p2["claim_candidate_status"],
+                p2["claim_candidate_selector"],
+                p2["claim_candidate_state"],
+                p2["claim_candidate_display"],
+            ],
+        )
+        eval_state.change(
+            clear_unverified_claim_sources,
+            inputs=[],
+            outputs=[
+                p2["claim_candidate_status"],
+                p2["claim_candidate_selector"],
+                p2["claim_candidate_state"],
+                p2["claim_candidate_display"],
+            ],
+        )
         p2["btn_claim_coverage"].click(
             render_claim_coverage_html,
             inputs=[eval_state],
