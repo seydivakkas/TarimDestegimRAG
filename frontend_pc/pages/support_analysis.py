@@ -103,8 +103,8 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                     "Pilot, ÇKS kontrolünü `BASIC_CKS_REGISTRATION` kimliğiyle "
                     "izler. Olumlu, olumsuz veya eksik bilgi ifadesi değişse de "
                     "aynı kural kontrolüdür. Kaynak SHA ve özgün madde ancak "
-                    "gerçek yerel arşiv doğrulanırsa gösterilir. Sarı pasaj, "
-                    "sadece özgün HTML konumunun işaretlenmiş önizlemesi; "
+                    "gerçek yerel arşiv doğrulanırsa gösterilir. Turuncu pasaj, "
+                    "yalnız özgün HTML metninin konum önizlemesidir; "
                     "mevzuatın 2026 için yürürlüğü veya ödeme onayı değildir."
                 )
                 btn_cks_pilot = gr.Button(
