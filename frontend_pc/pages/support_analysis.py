@@ -61,6 +61,40 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
                 value="<p>Hesaplama sonucundaki tekil gerekçeler "
                 "burada seçilebilir. Kaynağı olmayanlar HOLD kalır.</p>"
             )
+            with gr.Accordion(
+                "Seçilen gerekçeyi özgün PDF/HTML arşivinde araştır — aday/HOLD",
+                open=True,
+            ):
+                gr.Markdown(
+                    "Her gerekçe, metni ve mevcut indekslenmiş gerçek belge "
+                    "pasajları üzerinden ayrıca araştırılabilir. "
+                    "**ÖNEMLİ:** Bu arama sonucu bir kanunun o şartı "
+                    "düzenlediğini veya seçilen yılda yürürlükte olduğunu "
+                    "ispatlamaz. Kesin birebir madde bağları yalnız üstteki "
+                    "doğrulanmış kanıt panelinde gösterilir. "
+                    "Kaynak adayı için orijinal PDF sayfası veya HTML "
+                    "paragrafı turuncu renkle incelenir; sarı onay verilmez."
+                )
+                btn_claim_source_search = gr.Button(
+                    "Bu tekil gerekçe için özgün belgelerde kaynak araştır",
+                    variant="secondary",
+                )
+                claim_candidate_status = gr.Markdown(
+                    "Kaynak adayı araması yapılmadı. "
+                    "Önce gerekçeyi seçin, sonra aramayı başlatın."
+                )
+                claim_candidate_selector = gr.Dropdown(
+                    choices=[], value=None, interactive=True,
+                    label="Gerçek PDF/HTML kaynak adayları — onaysız",
+                )
+                claim_candidate_state = gr.State({
+                    "claim_id": None, "candidates": [],
+                })
+                claim_candidate_display = gr.HTML(
+                    "<p>Kaynak adayı seçilmedi. Özgün PDF bulunamıyorsa "
+                    "yanlış sayfa veya hücre üretilmez: HOLD.</p>"
+                )
+
             with gr.Accordion("Tüm gerekçeler için kanıt-konum kapsamı (HOLD)", open=False):
                 gr.Markdown(
                     "Bu liste yalnız bu değerlendirmede hangi şartın özgün "
@@ -431,6 +465,11 @@ def render_support_analysis_tab() -> dict[str, gr.components.Component]:
         "claim_selector": claim_selector,
         "btn_claim_show": btn_claim_show,
         "claim_display": claim_display,
+        "btn_claim_source_search": btn_claim_source_search,
+        "claim_candidate_status": claim_candidate_status,
+        "claim_candidate_selector": claim_candidate_selector,
+        "claim_candidate_state": claim_candidate_state,
+        "claim_candidate_display": claim_candidate_display,
         "btn_claim_coverage": btn_claim_coverage,
         "claim_coverage_display": claim_coverage_display,
         "article_selector": article_selector,
