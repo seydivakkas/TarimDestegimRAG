@@ -18,6 +18,7 @@ class CanonicalClaimEvidence {
   final String finalAcceptance;
   final Map<String, dynamic>? source;
   final Map<String, dynamic> amendmentChain;
+  final Map<String, dynamic> pilotSourceChain;
 
   const CanonicalClaimEvidence({
     this.claimId,
@@ -31,6 +32,7 @@ class CanonicalClaimEvidence {
     this.claimField,
     this.source,
     this.amendmentChain = const {},
+    this.pilotSourceChain = const {},
     required this.sourceLocationStatus,
     required this.temporalLegalStatus,
     required this.paymentStatus,
@@ -106,6 +108,9 @@ class CanonicalClaimEvidence {
       source: exactSource,
       amendmentChain: json['amendment_chain'] is Map<String, dynamic>
           ? Map<String, dynamic>.unmodifiable(json['amendment_chain'])
+          : const {},
+      pilotSourceChain: json['pilot_source_chain'] is Map<String, dynamic>
+          ? Map<String, dynamic>.unmodifiable(json['pilot_source_chain'])
           : const {},
       sourceLocationStatus: exactSource != null
           ? (pdfLocated ? 'ORIGINAL_PDF_NATIVE_QUOTE_LOCATED_ONLY'
