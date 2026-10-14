@@ -101,7 +101,7 @@ def locate_exact_html_node(source: dict[str, Any]) -> dict[str, Any]:
         marked = (
             escape(snippet)
             + '<mark id="tarim-exact-original-node" '
-            + 'style="background:#ffed52;padding:2px;outline:1px solid #a16207">'
+            + 'style="background:#ffedd5;padding:2px;outline:1px solid #d97706">'
             + escape(original[hit.start():hit.end()])
             + "</mark>"
             + escape(after)
