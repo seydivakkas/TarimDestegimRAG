@@ -275,3 +275,13 @@ F14 son kabul en sona bırakılmıştır.
 - FastAPI local-only GET /documents/evidence/{sha}/chunk/{chunk_id} salt-okunur kanıt görüntüleyicisi eklendi. Belge Analizi & RAG yanıtlarında her alıntı bu sayfaya tek tık bağlantısı taşır; aynı RAG sekmesine gömülü panelde son cevabın kaynak alıntısı seçilerek asıl sayfa gösterilir.
 - Sonucun statüsü hiçbir koşulda hukukî yıl/ödeme PASS değildir. OCR metni, seçili pasaj ve orijinal sayfa görünmesi bağımsız kontrol yerine geçmez.
 - **Açık kalan:** bütün destek kural şartları ve mobil/rapor/Neden gerekçelerinin PDF sayfası/ROI'deki birebir kaynak konumuna ve bağlayıcı mevzuat dönemiyle otomatik eşlenmesi (G10/G12/G20/G33), EK-20 48 hücre + iki gerçek insan imzası ve F14 teknik/Windows/hukukî kabul. G33 bu nedenle CODE_IN_PROGRESS, kapatılmadı.
+
+## G10/G11/G33 — Destek Analizi gerekçesinden özgün PDF/HTML konumuna (2026-10-14)
+
+- Destek Analizi > Neden? ekranında her tekil destek gerekçesi için kaynak araştırması ve uygulama içi özgün PDF/HTML aday görüntüleyicisi eklendi. Şart/üretim yılı değişiminde eski adaylar sıfırlanır; benzer RAG sonucu hiçbir zaman otomatik mevzuat dayanağı sayılmaz.
+- Birebir kaynak bağları için claims/rule ID, support ID, production_year, field, exact_claim_text birlikte denetlenir. Var olan SHA-bağlı özgün HTML madde pasajları korunur; yeni native PDF exact-quote kaydı da gerçek kaynak SHA, sayfa ve özgün 180 DPI piksel konumunu yeniden doğrulayarak aynı claim_id/evidence_id sözleşmesine girebilir.
+- Native PDF kesin eşleştirme altyapısı: backend/src/tarim_destek_rag/citations/claim_pdf_exact_binding.py ve configs/claim_pdf_exact_bindings.json. OCR veya RAG adayları bu kayıt defterine otomatik yazılmaz. Kaynak PDF'de özgün metin benzersiz değilse ya da gerçek koordinat bulunamazsa HOLD.
+- Mevcut eşleştirme envanteri: 5 özgün HTML pasaj kaydı içinde 2 tekil 2026 kural şartı bağlamı; native PDF kesin bağ sayısı 0. Gerçek arşiv mevcut değilse HTML bağlarının dahi görüntülenmesi HOLD olabilir. Bütün şartlar kaynağa bağlandı iddiası yok.
+- Masaüstü raporu PDF için gerçek sayfa ve kaynak koordinatlarını, mobil ortak kanıt modeli ise PDF/HTML ayrımını ve gerçek PDF sayfasına yönlendirmeyi destekleyecek şekilde kodlandı. Son Windows/Flutter kabulü F14.
+- Kanıt-konum kapsamı ekranı HTML ve native PDF konumlandırılmış şartları ayrı sayar, arama adaylarını doğrulanmış saymaz.
+- Detaylı kullanıcı akışı ve eksikler: docs/G33_SUPPORT_CLAIM_TO_ORIGINAL_SOURCE.md. G10/G11/G33 CODE_IN_PROGRESS; EK-20 48 hücre, iki gerçek insan incelemesi, tüm üretim yılları için hukuki dönem kontrolü ve tüm gerekçeler için kaynak kaydı açık.
