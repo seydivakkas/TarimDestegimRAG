@@ -92,6 +92,45 @@ def claim_contract(
     if located.get("source_location_status") != (
         "ORIGINAL_HTML_SPAN_LOCATED_NORMATIVE_ONLY"
     ):
+        # A human-curated EXACT claim/year-to-native-PDF binding is the only
+        # alternative. Never promote RAG/OCR similarity to normative proof.
+        from tarim_destek_rag.citations.claim_pdf_exact_binding import (
+            exact_pdf_binding,
+        )
+
+        pinned_pdf = exact_pdf_binding(evaluation, row)
+        if pinned_pdf is None:
+            return result
+        sha = pinned_pdf["source_sha256"]
+        original_quote = pinned_pdf["source_passage"]
+        page = pinned_pdf["pdf_page"]
+        source = {
+            "document_id": pinned_pdf["source_id"],
+            "source_sha256": sha,
+            "original_url": pinned_pdf["source_url"],
+            "format": "pdf",
+            "article": pinned_pdf["target_provision"],
+            "target_provision": pinned_pdf["target_provision"],
+            "span_id": None,
+            "exact_quote": original_quote,
+            "pdf_page": page,
+            "pixel_bbox": None,
+            "pixel_boxes_180dpi": pinned_pdf["pixel_boxes_180dpi"],
+            "visual_cell_status": "NATIVE_TEXT_LOCATION_UNREVIEWED",
+        }
+        token = hashlib.sha256(json.dumps(
+            [claim_id, source["document_id"], sha, page, original_quote],
+            ensure_ascii=False, separators=(",", ":"),
+        ).encode("utf-8")).hexdigest()[:32]
+        result.update({
+            "evidence_id": "TRAG-EV1-" + token,
+            "source": source,
+            "source_location_status": "ORIGINAL_PDF_NATIVE_QUOTE_LOCATED_ONLY",
+            "amendment_chain": {
+                "status": "NOT_PROVEN_COMPLETE", "review_required": [],
+            },
+            "navigation_available": True,
+        })
         return result
     required = (
         "source_id", "source_sha256", "source_url", "article",
@@ -207,21 +246,27 @@ def render_claim_contract_html(
             'birebir madde/fıkra/paragraf konumu yoktur. Bağlantı üretilmez.</p>'
         )
     else:
-        from tarim_destek_rag.citations.original_html_navigator import (
-            render_original_html_position,
-        )
-
         parts.extend([
             f'<p><strong>Tekil kanıt ID:</strong> <code>{escape(rec["evidence_id"])}</code></p>',
             f'<p><strong>Özgün kaynak:</strong> {escape(source["document_id"])} · '
-            f'{escape(source["article"])} · {escape(source["target_provision"])}</p>',
+            f'{escape(source["target_provision"])}</p>',
             f'<p><strong>SHA-256:</strong> <code>{escape(source["source_sha256"])}</code></p>',
-            '<p><strong>Birebir özgün HTML pasajı (konum doğrulandı):</strong></p>',
-            render_original_html_position(source),
-            f'<p><a href="{escape(source["original_url"], quote=True)}" '
-            'target="_blank" rel="noopener noreferrer">'
-            'Resmî özgün HTML belgesini aç (genel bağlantı) ↗</a></p>',
         ])
+        if source["format"] == "html":
+            from tarim_destek_rag.citations.original_html_navigator import (
+                render_original_html_position,
+            )
+            parts.extend([
+                '<p><strong>Birebir özgün HTML pasajı:</strong></p>',
+                render_original_html_position(source),
+            ])
+        elif source["format"] == "pdf":
+            from tarim_destek_rag.citations.claim_pdf_exact_binding import (
+                render_pdf_claim_original,
+            )
+            parts.append(render_pdf_claim_original(source))
+        else:
+            parts.append("<p>HOLD — Bilinmeyen özgün kaynak formatı.</p>")
     parts.append(
         '<p><strong>Yıl/değişiklik zinciri:</strong> HOLD — '
         'bütün değişikliklerin etkisi bağımsız doğrulanmadı. '
