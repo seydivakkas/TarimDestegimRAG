@@ -126,6 +126,27 @@ class WhyCitationsDialog extends StatelessWidget {
             SelectableText('check_id: ' + (proof.checkId ?? 'LEGACY_HOLD')),
             if (proof.identityStatus != 'RULE_EMITTED_STABLE_CHECK_ID')
               const Text('Kimlik geçişi tamamlanmadı: HOLD'),
+            if (proof.pilotSourceChain.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text(
+                '2026 Temel Destek kayıt şartı: 2024/39 MADDE 4(1), '
+                '5(1) ve 2025/42 MADDE 3, MADDE 16',
+              ),
+              const Text(
+                'Mevzuatın tam yıl/yürürlük değerlendirmesi, '
+                'parselin resmî kaydı ve ödeme: HOLD.',
+              ),
+              ...((proof.pilotSourceChain['sources'] is List)
+                  ? (proof.pilotSourceChain['sources'] as List)
+                      .whereType<Map<String, dynamic>>()
+                      .map((item) => Text(
+                        (item['span_id']?.toString() ?? 'SOURCE_HOLD') + ': ' +
+                        (item['verified_original'] == true
+                            ? 'Özgün SHA-konum bulundu'
+                            : 'Özgün konum HOLD'),
+                      ))
+                  : <Widget>[]),
+            ],
             if (located) ...[
               SelectableText('evidence_id: ' + (proof.evidenceId ?? 'HOLD')),
               Text(source['document_id'].toString() + ' • ' +
@@ -134,9 +155,8 @@ class WhyCitationsDialog extends StatelessWidget {
               SelectableText('SHA-256: ' + source['source_sha256'].toString()),
               const SizedBox(height: 7),
               Container(
-                // Yellow remains for verified exact HTML passage preview;
-                // PDF native-text geometry is only a source-location
-                // candidate, not dual-reviewed visual proof.
+                // Orange = original text candidate. Yellow is reserved for
+                // separately signed visual source reviews; neither is legal PASS.
                 color: const Color(0xFFFFEDD5),
                 padding: const EdgeInsets.all(10),
                 child: SelectableText(
