@@ -289,6 +289,14 @@ def render_claim_coverage_html(evaluation: dict[str, Any] | None) -> str:
     audit = evaluation_contract(evaluation)
     total = audit["unique_claim_count"]
     verified = audit["source_located_count"]
+    html_located = sum(
+        row["source_location_status"] == "ORIGINAL_HTML_SPAN_LOCATED_NORMATIVE_ONLY"
+        for row in audit["claims"]
+    )
+    pdf_located = sum(
+        row["source_location_status"] == "ORIGINAL_PDF_NATIVE_QUOTE_LOCATED_ONLY"
+        for row in audit["claims"]
+    )
     unmapped = [row for row in audit["claims"]
                 if not row.get("navigation_available")]
     from html import escape as safe
@@ -296,7 +304,8 @@ def render_claim_coverage_html(evaluation: dict[str, Any] | None) -> str:
         '<section style="padding:12px;border:1px solid #cbd5e1;background:white">'
         "<strong>Tekil gerekçe → özgün kaynak konumu kapsamı</strong>"
         f"<p>Toplam tekil gerekçe: <b>{total}</b> · "
-        f"Özgün HTML'de konumu doğrulanabilen: <b>{verified}</b> · "
+        f"Özgün kaynak metin konumu: <b>{verified}</b> "
+        f"(HTML: {html_located}, native PDF: {pdf_located}) · "
         f"Eşleşmeyen/arşivi eksik/konumu doğrulanamayan: "
         f"<b>{len(unmapped)}</b></p>"
         "<p><strong>Hukukî yıl ve ödeme kabulü: HOLD.</strong> "
