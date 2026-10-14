@@ -35,42 +35,10 @@ def _year(evaluation: dict[str, Any]) -> int | None:
     return year if type(year) is int else None
 
 
-def _claim_key(rule_id: str, support_id: str, year: int | None,
-               field: str, text: str) -> str:
-    return hashlib.sha256(
-        json.dumps([rule_id, support_id, year, field, text],
-                   ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    ).hexdigest()[:24]
-
-
 def _claims(evaluation: dict[str, Any] | None) -> list[dict[str, Any]]:
-    if not isinstance(evaluation, dict):
-        return []
-    year = _year(evaluation)
-    rows: list[dict[str, Any]] = []
-    for rule in evaluation.get("rules", []):
-        if not isinstance(rule, dict):
-            continue
-        rule_id, support_id = rule.get("rule_id"), rule.get("support_id")
-        if not isinstance(rule_id, str) or not isinstance(support_id, str):
-            continue
-        for field, label in FIELDS:
-            checks = rule.get(field) or []
-            if not isinstance(checks, list):
-                continue
-            for text in checks:
-                if not isinstance(text, str):
-                    continue
-                rows.append({
-                    "id": _claim_key(rule_id, support_id, year, field, text),
-                    "year": year,
-                    "rule_id": rule_id,
-                    "support_id": support_id,
-                    "field": field,
-                    "kind": label,
-                    "text": text,
-                })
-    return rows
+    """One shared rule-emitted identity for PC, report, FAQ and mobile."""
+    from tarim_destek_rag.citations.check_identity import extracted_checks
+    return extracted_checks(evaluation)
 
 
 def claim_choices(evaluation: dict[str, Any] | None) -> list[tuple[str, str]]:
