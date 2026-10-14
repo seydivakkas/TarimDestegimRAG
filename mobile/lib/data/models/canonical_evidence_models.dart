@@ -53,16 +53,28 @@ class CanonicalClaimEvidence {
     final rawSource = json['source'];
     final validClaim = claimId is String && _claimPattern.hasMatch(claimId);
     final validId = proofId is String && _proofPattern.hasMatch(proofId);
-    final located =
+    final htmlLocated =
         json['source_location_status'] == 'ORIGINAL_HTML_SPAN_LOCATED_NORMATIVE_ONLY';
+    final pdfLocated =
+        json['source_location_status'] == 'ORIGINAL_PDF_NATIVE_QUOTE_LOCATED_ONLY';
     Map<String, dynamic>? exactSource;
-    if (validClaim && validId && located &&
+    final validFormatPosition = rawSource is Map<String, dynamic> && (
+        (htmlLocated &&
+         rawSource['format'] == 'html' &&
+         rawSource['span_id'] is String &&
+         (rawSource['span_id'] as String).isNotEmpty)
+        ||
+        (pdfLocated &&
+         rawSource['format'] == 'pdf' &&
+         rawSource['pdf_page'] is int &&
+         (rawSource['pdf_page'] as int) > 0 &&
+         rawSource['pixel_boxes_180dpi'] is List &&
+         (rawSource['pixel_boxes_180dpi'] as List).isNotEmpty)
+    );
+    if (validClaim && validId && validFormatPosition &&
         rawSource is Map<String, dynamic> &&
-        rawSource['format'] == 'html' &&
         rawSource['source_sha256'] is String &&
         _shaPattern.hasMatch(rawSource['source_sha256']) &&
-        rawSource['span_id'] is String &&
-        (rawSource['span_id'] as String).isNotEmpty &&
         rawSource['exact_quote'] is String &&
         (rawSource['exact_quote'] as String).isNotEmpty) {
       final url = Uri.tryParse(rawSource['original_url']?.toString() ?? '');
@@ -85,7 +97,9 @@ class CanonicalClaimEvidence {
           ? Map<String, dynamic>.unmodifiable(json['amendment_chain'])
           : const {},
       sourceLocationStatus: exactSource != null
-          ? 'ORIGINAL_HTML_SPAN_LOCATED_NORMATIVE_ONLY' : 'HOLD',
+          ? (pdfLocated ? 'ORIGINAL_PDF_NATIVE_QUOTE_LOCATED_ONLY'
+                        : 'ORIGINAL_HTML_SPAN_LOCATED_NORMATIVE_ONLY')
+          : 'HOLD',
       temporalLegalStatus: 'HOLD',
       paymentStatus: 'HOLD',
       finalAcceptance: 'HOLD',
@@ -93,8 +107,17 @@ class CanonicalClaimEvidence {
   }
 
   bool get hasVerifiableSourceLocation => source != null;
-  Uri? get originalSourceUri => hasVerifiableSourceLocation
-      ? Uri.tryParse(source!['original_url'] as String) : null;
+  Uri? get originalSourceUri {
+    if (!hasVerifiableSourceLocation) return null;
+    final base = Uri.tryParse(source!['original_url'] as String);
+    if (base == null) return null;
+    if (source!['format'] == 'pdf') {
+      final page = source!['pdf_page'];
+      if (page is! int || page < 1) return null;
+      return base.replace(fragment: 'page=$page');
+    }
+    return base;
+  }
   bool get paymentApproved => false; // separate signed legal gate, not supplied
 }
 
