@@ -53,6 +53,30 @@ def render_farmer_parcels_tab() -> dict[str, gr.components.Component]:
                     ],
                     value="✅ Evet (ÇKS Kaydım Aktif)",
                 )
+                gr.Markdown(
+                    "**2026 Temel Destek:** 2025/42 MADDE 3 ile ÇKS/ÖKS/KOBÜKS "
+                    "kayıt seçenekleri tanımlandı. Buradaki beyan resmî kayıt "
+                    "kontrolü veya ödeme onayı değildir. Bilinmeyen alanlar "
+                    "HOLD bırakılır."
+                )
+                in_oks = gr.Radio(
+                    label="Örtüaltı Kayıt Sistemi (ÖKS) Durumu",
+                    choices=[
+                        "✅ Evet (Kaydım Aktif)",
+                        "❌ Hayır (Kaydım Yok)",
+                        "❓ Bilmiyorum / Emin Değilim",
+                    ],
+                    value="❓ Bilmiyorum / Emin Değilim",
+                )
+                in_kobuks = gr.Radio(
+                    label="Kapalı Ortamda Bitkisel Üretim Kayıt Sistemi (KOBÜKS) Durumu",
+                    choices=[
+                        "✅ Evet (Kaydım Aktif)",
+                        "❌ Hayır (Kaydım Yok)",
+                        "❓ Bilmiyorum / Emin Değilim",
+                    ],
+                    value="❓ Bilmiyorum / Emin Değilim",
+                )
                 in_age = gr.Radio(
                     label="Yaş Durumu",
                     choices=["Genç Çiftçi (< 41 Yaş)", "Standart (41+ Yaş)"],
@@ -120,7 +144,7 @@ def render_farmer_parcels_tab() -> dict[str, gr.components.Component]:
             preset_2 = gr.Button("🌰 2. Samsun Fındık (Fidan, Bahçe)", size="sm", variant="secondary")
             preset_3 = gr.Button("🌾 3. Konya Arpa (Standart)", size="sm", variant="secondary")
             preset_4 = gr.Button("💧 4. Konya Mercimek (Su Kısıtı)", size="sm", variant="secondary")
-            preset_5 = gr.Button("❌ 5. ÇKS Kaydı Yok (Ret)", size="sm", variant="secondary")
+            preset_5 = gr.Button("❓ 5. ÇKS Kaydı Yok (ÖKS/KOBÜKS kontrolü)", size="sm", variant="secondary")
             preset_6 = gr.Button("❓ 6. Bilmiyorum / Eksik Bilgi", size="sm", variant="secondary")
 
         btn_calculate = gr.Button(
@@ -138,6 +162,8 @@ def render_farmer_parcels_tab() -> dict[str, gr.components.Component]:
         "in_province": in_province,
         "in_district": in_district,
         "in_cks": in_cks,
+        "in_oks": in_oks,
+        "in_kobuks": in_kobuks,
         "in_age": in_age,
         "in_gender": in_gender,
         "in_crop": in_crop,
