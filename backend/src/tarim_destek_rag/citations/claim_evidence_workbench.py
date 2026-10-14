@@ -45,7 +45,8 @@ def claim_choices(evaluation: dict[str, Any] | None) -> list[tuple[str, str]]:
     """All displayed checks selectable, including every UNMAPPED reason."""
     rows = _claims(evaluation)
     return [
-        (f"{i+1}. [{row['kind']}] {row['support_id']}: {row['text'][:125]}",
+        (f"{i+1}. [{row['kind']}] {row['support_id']} "
+         f"[{row.get('check_id') or 'LEGACY_HOLD'}]: {row['text'][:125]}",
          row["id"])
         for i, row in enumerate(rows)
     ]
