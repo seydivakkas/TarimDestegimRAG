@@ -43,3 +43,40 @@ Resmî kaynak bağlantıları:
 - PC/Flutter kaynak bağlantılarının gerçek cihaz kabulünü ve uçtan uca regresyonları en son F14'te yapmak.
 
 Bu dış kaynak/hukukî girdiler gelmeden **G37 BLOCKED_EXTERNAL** ve bütün etkinlik/ödeme sonuçları **HOLD**. G36'nın tüm kurallara check_id genelleştirmesi, bu ilk pilot kabulünden sonra açılacak mühendislik genişleme hattıdır. PR #41 DRAFT/unmerged; main değiştirilmez.
+
+## 15 Ekim 2026 — 2025/13 ve 11781'e ait hüküm-yıl araştırması
+
+Kaynak analizinin sonucu **tek bir güncel yıl → bütün maddeler geçerli** yaklaşımının yanlış olduğu yönündedir:
+
+| Kaynak ve hüküm | 2026 Temel Destek etkisi | Yürürlük dönemi | Kanıt seviyesi |
+|---|---|---|---|
+| 2025/13 MADDE 1 → 2024/39 MADDE 5(3) | İkinci ürün soya için ilave Temel Destek istisnası; kayıt ifadesini değiştirmez | 2025/13 MADDE 4 uyarınca 01.01.2025'ten geçerli | Resmî HTML/Bakanlık PDF'de metin incelendi; özgün SHA arşivi henüz yok, HOLD |
+| 11781 MADDE 1(a) → 8859 MADDE 2(4)(a) | 2026 367 TL/da, 2027 442 TL/da **destek katsayı DEĞERİ**; doğrudan ödeme hakkı/dekar ödeme tutarı değildir | 11781 MADDE 6(a): 01.01.2026'dan geçerli, yayımında yürürlük | Resmî PDF orijinali/SHA bağımsız doğrulanmadı, HOLD |
+| 11781 MADDE 1(ç) | Organik arıcılık baz katsayı değişikliği; ÇKS kaydının ana hükmü değil | MADDE 6(a): 01.01.2026'dan geçerli | HOLD |
+| 11781 MADDE 4 → 8859 MADDE 6(4),(9) | Fındık ilçeleri ve yanlış ürün beyanı yaptırımı; Temel Destek uygunluğu açısından ayrıca önemlidir | MADDE 6(b): 01.01.2025'ten geçerli, yayımında yürürlük | HOLD, gerçek parsel incelemesi yok |
+| 11781 MADDE 1'in diğer hükümleri, MADDE 2, MADDE 3, MADDE 5 | Çoğunlukla 2027 uygulamaları, finansman, ekler ve katsayılar | MADDE 6(c): 01.01.2027 | HOLD, 2026'ya otomatik uygulanmaz |
+
+**Asıl resmî kanıtlar:**
+
+- [2025/13 — 5 Ağustos 2025 Resmî Gazete, MADDE 1–5](https://www.resmigazete.gov.tr/eskiler/2025/08/20250805-4.htm)
+- [BÜGEM tarafından yayımlanan 2025/13 orijinal RG sayfa görünümünün PDF kopyası](https://www.tarimorman.gov.tr/BUGEM/Belgeler/Tar%C4%B1m%20Havzalar%C4%B1/2025-2027%20Destekleme%20Tebli%C4%9Fi%20De%C4%9Fi%C5%9Fikli%C4%9Fi.pdf) — sayfa görüntüsü manuel karşılaştırıldı, özgün HTML'nin byte SHA'sı olarak kullanılmaz.
+- [11781 — 8 Eylül 2026, 33364, resmî PDF](https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf) — PDF baytları bu oturumda açılıp SHA doğrulanamadı; madde etkileri bağımsız transkripsiyonlardan araştırma adayıdır.
+
+Bu maddeler için makinece okunabilir araştırma kayıtları: [g37_2026_legal_impact_register.json](../configs/g37_2026_legal_impact_register.json). Yeni kayıtların tümü `OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD`, bağımsız hukukî/onay FALSE. Kural/ödeme motorunda tutar veya PASS aktivasyonu yapılmaz.
+
+### Windows / yerel özgün bayt edinimi (hazır, bu oturumda çalıştırılamadı)
+
+Proje kökünde (Python standart kütüphanesi, ücretli API gerektirmez):
+
+```powershell
+python scripts/acquire_g37_official_sources.py --sources 2024_39 2025_42 2025_13 11781
+```
+
+- `2024_39`, `2025_42`: kaynak manifestindeki **tam özgün SHA-256 + byte length + URL** eşleşirse `data/legal_update_archive/originals/<sha>.html` dosyasına yazılır. Uymazsa `DOWNLOAD_OR_SHA_HOLD`, kaynak değiştirilemez.
+- `2025_13`, `11781`: manifestte daha önceden bağımsız onaylı SHA bulunmadığı için indirilmiş gerçek baytlar **yalnız `data/legal_update_archive/quarantine/`** içinde ayrı sha adında saklanır; `UNPINNED_OFFICIAL_URL_BYTES_QUARANTINED_HOLD`. Bu dosyalar otomatik mevzuat kuralı veya onaylı kaynak sayılmaz.
+- Orijinal HTML iki farklı dosyadır; kullanıcıya gösterilen dört ayrı hukuki pasaj bunlardan kaynaklanır. Aynı kaynaktaki birden fazla madde ayrı `span_id` taşır.
+- Orijinaller indirildikten sonra ÇKS pilotunda her dört paragraf gerçek kaynaktan tekrar eşleştirilir. Herhangi biri yanlış/alınıp değişmiş/madde altında tekil değilse `HOLD`. Sarı imzasız görsel vurgu ve ödeme etkinleştirme YOK.
+
+### Açık kabul engelleri
+
+Bu oturumda resmî dosyaların ham HTTP baytları sandbox'tan indirilemedi (DNS/bağlantı). **Mevcut SHA değerleri daha önce kayıtlı manifest değerleridir; bu oturumda yeni doğrulama yapıldığı anlamına gelmez.** Gerçek bağımsız parsel kayıt verisi ve hukukî hakem incelemesi de yoktur. G37 kapanmaz. Daha sonra G36 rollout, en son F14.
