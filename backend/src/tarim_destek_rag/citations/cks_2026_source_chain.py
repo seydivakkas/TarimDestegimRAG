@@ -22,6 +22,48 @@ _PILOT_SPANS = (
 )
 
 
+def _research_impact_rows() -> list[dict[str, Any]]:
+    """Read historical impact RESEARCH, not normatively approved legal rules."""
+    file = Path("configs/g37_2026_legal_impact_register.json")
+    try:
+        if not file.is_file() or file.stat().st_size > 250_000:
+            return []
+        data = json.loads(file.read_text(encoding="utf-8"))
+        items = data.get("changes", [])
+        if data.get("schema_version") != 1 or not isinstance(items, list):
+            return []
+        found: list[dict[str, Any]] = []
+        seen: set[str] = set()
+        for x in items:
+            if not isinstance(x, dict):
+                return []
+            row_id = x.get("id")
+            if (not isinstance(row_id, str) or len(row_id) > 70
+                    or row_id in seen):
+                return []
+            seen.add(row_id)
+            status = x.get("status")
+            if status != "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD":
+                # No external proposal can grant accepted-year legal status.
+                return []
+            found.append({
+                "id": row_id,
+                "reference": str(x.get("law") or "")[:32],
+                "article": str(x.get("article") or "")[:80],
+                "target": str(x.get("target") or "")[:120],
+                "operation": str(x.get("operation") or "")[:100],
+                "effective_rule": str(x.get("effective_rule") or "")[:250],
+                "production_years_researched": x.get("production_years", []),
+                "source_url": str(x.get("source_url") or "")[:240],
+                "original_sha256": x.get("source_sha256"),
+                "status": "SOURCE_RESEARCH_ONLY_LEGAL_HOLD",
+                "independently_approved": False,
+            })
+        return found
+    except (OSError, ValueError, TypeError, KeyError):
+        return []
+
+
 def source_chain_2026_cks() -> dict[str, Any]:
     """Recheck pinned original SHA/article/text for every pilot component."""
     from tarim_destek_rag.citations.claim_source_matrix import validate_source_span
@@ -59,6 +101,7 @@ def source_chain_2026_cks() -> dict[str, Any]:
         ],
         "complete_source_chain": False,
         "independently_approved": False,
+        "research_impact_changes": _research_impact_rows(),
     }
     try:
         matrix_path, manifest_path, archive = _paths()
@@ -135,9 +178,17 @@ def render_cks_source_chain() -> str:
             '<mark style="background:#ffedd5">' + q + "</mark></blockquote>"
         )
     parts.append(
-        "<p><strong>2025/13:</strong> Temel Destek MADDE 5(3) soya ikinci ürün "
-        "hükmü ayrıca etkilenmiş; kayıt ifadesi doğrudan değiştirilmemiş."
-        " <strong>11781:</strong> temel Cumhurbaşkanı Kararı için değişiklik "
-        "incelemesi ve 2026 etkisi ayrıca bekliyor.</p>"
+        "<h4>2025/13 ve 11781 — ayrı yürürlük ve konu etkileri</h4>"
+        "<p><strong>HOLD:</strong> Bu araştırma kayıtları özgün PDF/HTML'nin "
+        "SHA ve bağımsız hukukî kabulü yerine geçmez.</p>"
     )
+    for change in state.get("research_impact_changes", []):
+        parts.append(
+            '<p><code>' + escape(change["id"]) + '</code> · '
+            '<strong>' + escape(change["reference"]) + ' '
+            + escape(change["article"]) + '</strong> · '
+            + escape(change["target"]) + '<br>'
+            + escape(change["effective_rule"]) +
+            ' · <strong>LEGAL HOLD</strong></p>'
+        )
     return "".join(parts) + "</section>"
