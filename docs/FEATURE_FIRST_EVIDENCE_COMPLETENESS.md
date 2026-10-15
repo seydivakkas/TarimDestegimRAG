@@ -306,7 +306,7 @@ F14 son kabul en sona bırakılmıştır.
 
 Kaynaktaki asıl normatif bağ **MADDE 5(1)** olarak düzeltildi; ayrıca **MADDE 4(1)**, **2025/42 MADDE 3** ve **MADDE 16** için dört ayrı SHA-pinned original-span kaydı tutuluyor. `cks_2026_source_chain.py` her birini gerçek arşiv baytına göre inceler ve doğrulanamayan özgün kaynak konumunu HOLD bırakır. Merkezi DTO `pilot_source_chain` alanını mobil ve rapora verir. 2025/13 ve 11781 ayrı etki/istisna araştırma yükümlülükleridir.
 
-**Bu turda resmî HTML/PDF baytlarını fiilen SHA doğrulamasıyla çekme mümkün olmadı.** Yürürlük zinciri ve parsel kaydı için bağımsız inceleme eksik olduğundan G37 BLOCKED_EXTERNAL; F14 ve main politikası değişmedi.
+**Güncelleme:** Resmî sunucuya doğrudan bağlantı kurulamadı, ancak önceden GitHub Actions'ta saklanmış gerçek 2024/39 ve 2025/42 HTML orijinalleri arşivden geri alınarak SHA ve dört doğru hüküm konumu fiilen doğrulandı; 2025/13 ve 11781 ayrı HOLD. Yürürlük zinciri ve parsel kaydı için bağımsız inceleme eksik olduğundan G37 BLOCKED_EXTERNAL; F14 ve main politikası değişmedi.
 
 Ayrıntı: [G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md](G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md).
 
@@ -316,3 +316,15 @@ Ayrıntı: [G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md](G37_2026_CKS_ORIGINAL_AME
 - `cks_2026_source_chain.py` merkezi kanıt kaydında bu etki maddelerini `research_impact_changes` olarak gösterir. Kanıt durumu SOURCE_RESEARCH_ONLY_LEGAL_HOLD; kaynak SHA ve hukukî onay olmadan mevzuat kayıt düzenini, üretici hak edişini veya ödeme katsayısı tablosunu otomatik değiştirmez.
 - `scripts/acquire_g37_official_sources.py`: Pinned 2024/39 ve 2025/42 için SSL resmî HTTP özgün baytları SHA/byte-length kontrolüyle arşivleme; önceden pinlenmemiş 2025/13 ve 11781 için yalnız karantina. Çevrimiçi operasyon operatör ortamında çalıştırılmalı; henüz burada fiilen indirme yapılamadı.
 - G37 açık engelleri: kurumsal ağda özgün orijinal edinim/konumları; 11781 tam metin/ek hükümleri; 2025/13 yıllık istisna; resmî parsel kaydı ve bağımsız hukuki kabul. G36 genelleme bundan sonra.
+
+## 15 Ekim 2026 — KAYNAK ARŞİVİ GERİ KAZANILDI: 2 SHA-doğrulanmış HTML, 4 gerçek pasaj
+
+**Önceki 'bu oturumda özgün baytlar indirilemedi' notları, doğrudan resmigazete.gov.tr HTTP bağlantısının DNS sorununu anlatıyordu. Sonrasında önceki GitHub Actions arşivi keşfedilerek kaynaklar gerçekten geri alındı ve yeniden doğrulandı. Bu bölüm, önceki erişim engelinin son durumunu düzeltir.**
+
+- GitHub Actions run `37906860240`, artifact `11604488899` / `p0-10-3-original-official-bytes` (9 Ekim 2026 kaynak toplama çalışması) geri alındı. İkinci çalışmada aynı artifact adıyla `37906865615` kaydı da mevcut.
+- İçindeki `RG_COMMUNIQUE_2024_39` özgün HTML: **236810 bayt**, SHA-256 `efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530`; GitHub manifest ile tam eşleşti.
+- İçindeki `RG_AMENDMENT_2025_42` özgün HTML: **45886 bayt**, SHA-256 `74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269`; GitHub manifest ile tam eşleşti.
+- Gerçek özgün HTML düğümleri, alıntı içindeki satır sonlarına tolerans gösteren birebir regex ve belge içinde aktif MADDE takibiyle doğrulandı: `BASE_2024_39_ART4_P1`/MADDE 4, `BASE_2024_39_ART5_P1`/MADDE 5, `AMEND_2025_42_ART3_BASE_ART5_P1`/MADDE 3 ve `AMEND_2025_42_ART16_EFFECTIVE_2026`/MADDE 16. **Dördü de doğru madde altında tam tekil konumda bulundu.**
+- Kanıt: `configs/g37_2026_original_sha_location_audit.json` (kriptografik bayt kimliği + tekil metin konumu incelemesi). Bu, bağımsız hukukî imza veya 2026 geçerlilik hükmü PASS değildir.
+- Gerçek baytları kullanıcının Windows kopyasına taşımak için iki HTML + inceleme raporu içeren `g37_pinned_original_html_evidence.zip` paketi oluşturuldu; proje kökünde `python scripts/import_g37_verified_archive.py C:\PATH\g37_pinned_original_html_evidence.zip` çağrısı yerel `data/legal_update_archive/originals` arşivini, URL/manifest SHA/uzunluk kontrolünden geçirerek doldurur. Kullanıcının bilgisayarında komut henüz çalıştırılmadı.
+- **Açık kalan G37:** 2025/13 özgün HTML ve 11781 PDF'nin SHA bağımsız arşiv kabulü, 11781'in tam tarihsel etkileri, gerçek çiftçi/parsel resmî kayıt kanıtı ve bağımsız hukukî inceleme. G37 `BLOCKED_EXTERNAL`; F14 kapsamlı kabul son aşamada.
