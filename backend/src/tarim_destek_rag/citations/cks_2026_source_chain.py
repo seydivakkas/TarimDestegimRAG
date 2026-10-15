@@ -182,13 +182,31 @@ def render_cks_source_chain() -> str:
         "<p><strong>HOLD:</strong> Bu araştırma kayıtları özgün PDF/HTML'nin "
         "SHA ve bağımsız hukukî kabulü yerine geçmez.</p>"
     )
+    from urllib.parse import urlsplit
     for change in state.get("research_impact_changes", []):
+        url = change.get("source_url") or ""
+        parsed = urlsplit(url)
+        # The research candidate may be opened, but is never called
+        # verified original proof or an approved normative connection.
+        link = ""
+        if (
+            parsed.scheme == "https"
+            and parsed.hostname in {"resmigazete.gov.tr",
+                                    "www.resmigazete.gov.tr"}
+            and not parsed.username and not parsed.password
+            and parsed.port in (None, 443)
+        ):
+            link = (
+                ' · <a href="' + escape(url, quote=True)
+                + '" target="_blank" rel="noopener noreferrer">'
+                'Resmî kaynak adayını aç (SHA doğrulanmadı) ↗</a>'
+            )
         parts.append(
             '<p><code>' + escape(change["id"]) + '</code> · '
             '<strong>' + escape(change["reference"]) + ' '
             + escape(change["article"]) + '</strong> · '
             + escape(change["target"]) + '<br>'
             + escape(change["effective_rule"]) +
-            ' · <strong>LEGAL HOLD</strong></p>'
+            ' · <strong>LEGAL HOLD</strong>' + link + '</p>'
         )
     return "".join(parts) + "</section>"
