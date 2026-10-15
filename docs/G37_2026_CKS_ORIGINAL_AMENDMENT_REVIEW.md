@@ -12,16 +12,16 @@ Resmî kaynak bağlantıları:
 - [2025/13 — Tarım ve Orman Bakanlığı Trabzon metin duyurusu; MADDE 1, 2024/39 MADDE 5(3)'e ikinci ürün soya hükmü ekler](https://trabzon.tarimorman.gov.tr/Sayfalar/Detay.aspx?TermId=edd3ebad-7b98-490d-a10a-55785a9924e2&TermSetId=79f2f663-7aec-4bc1-b40a-56e75866bfb3&TermStoreId=368e785b-af33-487d-a98d-c11d5495130b&UrlSuffix=996%2F2025-2027-Yillarinda-Yapilacak-Bitkisel-Uretime-Yonelik-Desteklemeler-Ile-Diger-Bazi-Tarimsal-Desteklemelere-Odeme-Yapilmasina-Dair-Teblig)
 - [11781 sayılı 8 Eylül 2026 Karar değişikliği — Bakanlık haber kaydı](https://www.tarimorman.gov.tr/HHGM/Haber/262/); Bakanlığın işaret ettiği [özgün Resmî Gazete PDF](https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf)
 
-**Kaynak gözlemi ile kriptografik özgün dosya doğrulamasını karıştırmayın:** Bu turda resmî web metninden ilgili maddeler tespit edildi. GitHub'daki SHA değeri beklenti olarak kayıtlıdır, ancak internet erişimi kısıtı nedeniyle özgün HTML/PDF baytları fiilen indirilemedi; arşiv SHA doğrulaması yapılmış sayılmıyor. Gerçek kaynaktan benzersiz pasaj ve madde konumu doğrulanamazsa uygulama HOLD verir.
+**Kaynak notu:** Doğrudan resmî siteden indirme bu çalışma ortamında DNS yüzünden başarısızdı. Daha sonra 9 Ekim 2026 tarihli GitHub Actions özgün kaynak arşivi geri alınarak iki HTML'nin gerçek baytları SHA ve madde konumlarıyla 15 Ekim'de bağımsız yeniden denetlendi. 2025/13 ve 11781 özgün kaynak baytları hâlen ayrı HOLD. Gerçek kaynaktan benzersiz pasaj ve madde konumu doğrulanamazsa uygulama HOLD verir.
 
 ## Dört parçalı pilot kaynak haritası
 
 | Sıra | Kaynak kimliği | Madde | Etki | Özgün dosya kabulü |
 |---|---|---|---|---|
-| 1 | `BASE_2024_39_ART4_P1` | 2024/39 4(1) | Bakanlık kayıt sistemine ilgili üretim yılında kayıtlı olma genel şartı | SHA+metin yeniden doğrulanır; bu oturumda HOLD |
-| 2 | `BASE_2024_39_ART5_P1` | 2024/39 5(1) | Temel Destek'te kayıtlı arazi koşulunun eski metni | SHA+metin yeniden doğrulanır; bu oturumda HOLD |
-| 3 | `AMEND_2025_42_ART3_BASE_ART5_P1` | 2025/42 3 | “ÇKS’ye” → “ÇKS/ÖKS/KOBÜKS’e” değişikliği | SHA+metin yeniden doğrulanır; bu oturumda HOLD |
-| 4 | `AMEND_2025_42_ART16_EFFECTIVE_2026` | 2025/42 16 | 1 Ocak 2026 yürürlük ifadesi | SHA+metin yeniden doğrulanır; bu oturumda HOLD |
+| 1 | `BASE_2024_39_ART4_P1` | 2024/39 4(1) | Bakanlık kayıt sistemine ilgili üretim yılında kayıtlı olma genel şartı | 9 Ekim arşiv baytları 15 Ekim'de SHA+doğru madde+tekil alıntı olarak doğrulandı; hukuki/üretim yılı HOLD |
+| 2 | `BASE_2024_39_ART5_P1` | 2024/39 5(1) | Temel Destek'te kayıtlı arazi koşulunun eski metni | 9 Ekim arşiv baytları 15 Ekim'de SHA+doğru madde+tekil alıntı olarak doğrulandı; hukuki/üretim yılı HOLD |
+| 3 | `AMEND_2025_42_ART3_BASE_ART5_P1` | 2025/42 3 | “ÇKS’ye” → “ÇKS/ÖKS/KOBÜKS’e” değişikliği | 9 Ekim arşiv baytları 15 Ekim'de SHA+doğru madde+tekil alıntı olarak doğrulandı; hukuki/üretim yılı HOLD |
+| 4 | `AMEND_2025_42_ART16_EFFECTIVE_2026` | 2025/42 16 | 1 Ocak 2026 yürürlük ifadesi | 9 Ekim arşiv baytları 15 Ekim'de SHA+doğru madde+tekil alıntı olarak doğrulandı; hukuki/üretim yılı HOLD |
 
 2025/13, 2024/39'un **MADDE 5(3)** hükmünü etkiler; MADDE 5(1) kayıt ifadesini doğrudan değiştirdiği bu incelemede belirlenmedi. 11781 ise temel 8859 sayılı Kararda farklı üretim yıllarına ve maddelere ilişkin değişiklikler içerir; ÇKS pilotunun tüm hukuki etkileri bununla ve sonraki mevzuatla birlikte nihai incelenmeden yıl geçerliliğine PASS verilmez.
 
@@ -79,4 +79,16 @@ python scripts/acquire_g37_official_sources.py --sources 2024_39 2025_42 2025_13
 
 ### Açık kabul engelleri
 
-Bu oturumda resmî dosyaların ham HTTP baytları sandbox'tan indirilemedi (DNS/bağlantı). **Mevcut SHA değerleri daha önce kayıtlı manifest değerleridir; bu oturumda yeni doğrulama yapıldığı anlamına gelmez.** Gerçek bağımsız parsel kayıt verisi ve hukukî hakem incelemesi de yoktur. G37 kapanmaz. Daha sonra G36 rollout, en son F14.
+Doğrudan resmî HTTP bağlantısı bu oturumda DNS nedeniyle başarısızdı; fakat GitHub Actions'ın önceden topladığı özgün HTML baytları daha sonra aynı oturumda geri alınarak gerçek SHA ve madde konumu denetlendi. Bu doğrulama 2025/13 ve 11781 için geçerli değildir. Bağımsız parsel ve hukukî kabul hâlâ yoktur; G37 kapanmaz. Önce G37, sonra G36, en son F14.
+
+## 15 Ekim 2026 — KAYNAK ARŞİVİ GERİ KAZANILDI: 2 SHA-doğrulanmış HTML, 4 gerçek pasaj
+
+**Önceki 'bu oturumda özgün baytlar indirilemedi' notları, doğrudan resmigazete.gov.tr HTTP bağlantısının DNS sorununu anlatıyordu. Sonrasında önceki GitHub Actions arşivi keşfedilerek kaynaklar gerçekten geri alındı ve yeniden doğrulandı. Bu bölüm, önceki erişim engelinin son durumunu düzeltir.**
+
+- GitHub Actions run `37906860240`, artifact `11604488899` / `p0-10-3-original-official-bytes` (9 Ekim 2026 kaynak toplama çalışması) geri alındı. İkinci çalışmada aynı artifact adıyla `37906865615` kaydı da mevcut.
+- İçindeki `RG_COMMUNIQUE_2024_39` özgün HTML: **236810 bayt**, SHA-256 `efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530`; GitHub manifest ile tam eşleşti.
+- İçindeki `RG_AMENDMENT_2025_42` özgün HTML: **45886 bayt**, SHA-256 `74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269`; GitHub manifest ile tam eşleşti.
+- Gerçek özgün HTML düğümleri, alıntı içindeki satır sonlarına tolerans gösteren birebir regex ve belge içinde aktif MADDE takibiyle doğrulandı: `BASE_2024_39_ART4_P1`/MADDE 4, `BASE_2024_39_ART5_P1`/MADDE 5, `AMEND_2025_42_ART3_BASE_ART5_P1`/MADDE 3 ve `AMEND_2025_42_ART16_EFFECTIVE_2026`/MADDE 16. **Dördü de doğru madde altında tam tekil konumda bulundu.**
+- Kanıt: `configs/g37_2026_original_sha_location_audit.json` (kriptografik bayt kimliği + tekil metin konumu incelemesi). Bu, bağımsız hukukî imza veya 2026 geçerlilik hükmü PASS değildir.
+- Gerçek baytları kullanıcının Windows kopyasına taşımak için iki HTML + inceleme raporu içeren `g37_pinned_original_html_evidence.zip` paketi oluşturuldu; proje kökünde `python scripts/import_g37_verified_archive.py C:\PATH\g37_pinned_original_html_evidence.zip` çağrısı yerel `data/legal_update_archive/originals` arşivini, URL/manifest SHA/uzunluk kontrolünden geçirerek doldurur. Kullanıcının bilgisayarında komut henüz çalıştırılmadı.
+- **Açık kalan G37:** 2025/13 özgün HTML ve 11781 PDF'nin SHA bağımsız arşiv kabulü, 11781'in tam tarihsel etkileri, gerçek çiftçi/parsel resmî kayıt kanıtı ve bağımsız hukukî inceleme. G37 `BLOCKED_EXTERNAL`; F14 kapsamlı kabul son aşamada.
