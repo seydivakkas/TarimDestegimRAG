@@ -105,6 +105,65 @@ class ApiClient:
                 "source_titles": [],
             }
 
+    def ask_documents(
+        self, query: str, top_k: int = 4, source_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask only from the indexed, SHA-pinned original document corpus."""
+        try:
+            response = self._request(
+                "POST",
+                "/ask/documents",
+                json={
+                    "question": query,
+                    "top_k": top_k,
+                    "source_id": source_id,
+                },
+            )
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {
+                "question": query,
+                "answer": f"Belge analiz servisine erişilemedi: {exc}",
+                "citations": [],
+                "status": "DOCUMENT_RAG_UNAVAILABLE",
+            }
+
+    def import_document(self, path: str, *, run_ocr: bool = True) -> dict[str, Any]:
+        """Send a local PDF, HTML or TXT to the local-only document library."""
+        import base64
+        from pathlib import Path
+
+        file_path = Path(path)
+        if not file_path.is_file() or file_path.stat().st_size > 25_000_000:
+            return {"import_status": "ERROR", "message": "Dosya yok veya 25 MB üstünde."}
+        try:
+            encoded = base64.b64encode(file_path.read_bytes()).decode("ascii")
+            resp = self._request(
+                "POST", "/documents/import",
+                json={
+                    "filename": file_path.name,
+                    "data_base64": encoded,
+                    "run_ocr": run_ocr,
+                },
+                timeout=600,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            return {"import_status": "ERROR", "message": str(exc)}
+
+
+    def get_document_analysis_status(self) -> dict[str, Any]:
+        """Inspect indexed official originals, missing files and OCR gaps."""
+        try:
+            response = self._request("GET", "/documents/status")
+            response.raise_for_status()
+            return response.json()
+        except Exception as exc:
+            return {"status": "UNAVAILABLE", "message": str(exc)}
+
+
     def get_faqs(self, category: str | None = None, search: str | None = None) -> list[dict[str, Any]]:
         """2026 Resmî Çiftçi Sıkça Sorulan Sorular (SSS) kütüphanesini getirir."""
         try:
@@ -165,6 +224,102 @@ class ApiClient:
             return response.json()
         except Exception as exc:
             return {"status": "ERROR", "message": f"Resmî kaynak taraması başarısız: {exc}"}
+
+
+    def get_exact_rag_source_html(
+        self, *, document_sha: str, chunk_id: str,
+    ) -> str:
+        """Read a single SHA+chunk-pinned proof page from LOCAL backend."""
+        import re
+        if (not re.fullmatch(r"[a-f0-9]{64}", document_sha or "")
+                or not re.fullmatch(r"[a-f0-9]{24}", chunk_id or "")):
+            return "<p>HOLD — Alıntı kimliği geçersiz.</p>"
+        try:
+            resp = self._request(
+                "GET",
+                f"/documents/evidence/{document_sha}/chunk/{chunk_id}",
+                timeout=120,
+            )
+            if resp.status_code != 200:
+                return "<p>HOLD — Özgün kaynak veya konumu doğrulanamadı.</p>"
+            if not resp.headers.get("content-type", "").startswith("text/html"):
+                return "<p>HOLD — Beklenmeyen belge türü.</p>"
+            page = resp.text
+            if len(page) > 25_000_000:
+                return "<p>HOLD — Kanıt görüntüsü güvenli boyut sınırını aşıyor.</p>"
+            # The backend generated the escaped original text and actual
+            # original-page image; select only its HTML body for Gradio.
+            match = re.search(r"<body>(.*)</body>", page, re.DOTALL)
+            return (match.group(1) if match
+                    else "<p>HOLD — Kanıt paneli oluşturulamadı.</p>")
+        except Exception:
+            return "<p>HOLD — Kaynak inceleme servisine erişilemiyor.</p>"
+
+    def refresh_yearly_official_pdf_evidence(
+        self, production_year: int, *, published_from: str | None = None,
+        published_to: str | None = None,
+    ) -> dict[str, Any]:
+        """Scan relevant approved Gazette sources, archive and OCR draft-index PDFs."""
+        admin_key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        if not admin_key:
+            return {"status": "ADMIN_NOT_CONFIGURED"}
+        try:
+            r = self._request(
+                "POST", "/admin/legal-updates/refresh-evidence",
+                params={
+                    "year": int(production_year),
+                    **({"published_from": published_from} if published_from else {}),
+                    **({"published_to": published_to} if published_to else {}),
+                },
+                headers={"X-Admin-Key": admin_key}, timeout=900,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc)}
+
+    def research_yearly_official_pdf(
+        self, *, production_year: int, query: str,
+    ) -> dict[str, Any]:
+        """Return source candidates with actual SHA, source PDF page and HOLD."""
+        admin_key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        if not admin_key:
+            return {"status": "ADMIN_NOT_CONFIGURED", "hits": []}
+        try:
+            r = self._request(
+                "GET", "/admin/legal-updates/research-pdf",
+                params={"year": int(production_year), "query": query},
+                headers={"X-Admin-Key": admin_key}, timeout=60,
+            )
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            return {"status": "ERROR", "message": str(exc), "hits": []}
+
+    def get_yearly_original_pdf_page(
+        self, *, page_key: str, query: str = "",
+    ) -> bytes | None:
+        """Read server rendered genuine page (never an AI-generated page)."""
+        import re
+        if not re.fullmatch(r"[a-f0-9]{64}:[1-9][0-9]{0,3}", page_key or ""):
+            return None
+        admin_key = os.getenv("TARIM_RAG_ADMIN_API_KEY")
+        if not admin_key:
+            return None
+        sha, page = page_key.split(":")
+        try:
+            r = self._request(
+                "GET", f"/admin/legal-updates/research-pdf/{sha}/page/{page}",
+                params={"query": query},
+                headers={"X-Admin-Key": admin_key}, timeout=120,
+            )
+            r.raise_for_status()
+            if r.headers.get("content-type", "").startswith("image/png"):
+                return r.content if len(r.content) <= 20_000_000 else None
+        except Exception:
+            pass
+        return None
+
 
     def get_grounding_evidence(self, sentence_id: int, year: int) -> dict[str, Any]:
         """Read authenticated-by-source, but unapproved, exact PDF citation details."""

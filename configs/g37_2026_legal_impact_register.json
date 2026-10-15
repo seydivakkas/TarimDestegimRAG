@@ -1,0 +1,192 @@
+{
+  "schema_version": 1,
+  "description": "G37 original source/year/version research ledger. Not a rate database and never a legal eligibility/payment activation.",
+  "research_checked_on": "2026-10-15",
+  "primary_original_bytes_fully_archived_in_current_session": false,
+  "common_approval": {
+    "official_original_sha_verified_for_all": false,
+    "complete_amendment_coverage_verified": false,
+    "independent_legal_review": false,
+    "independent_farmer_parcel_review": false,
+    "legal_status": "HOLD",
+    "payment_status": "HOLD"
+  },
+  "changes": [
+    {
+      "id": "2025_13_M1",
+      "law": "2025/13",
+      "gazette_date": "2025-08-05",
+      "publication_issue": "32977",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2025/08/20250805-4.htm",
+      "source_format": "html",
+      "source_sha256": null,
+      "article": "MADDE 1",
+      "target": "2024/39 MADDE 5(3)",
+      "operation": "APPENDS_EXCEPTION",
+      "effective_rule": "Applies from 2025-01-01 per 2025/13 MADDE 4",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "affects_2026_basic_support": true,
+      "affects_cks_oks_kobuks_registration_phrase": false,
+      "exception": "Second-crop soybean extra basic support; factual second crop not verified",
+      "status": "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD"
+    },
+    {
+      "id": "2025_13_M4",
+      "law": "2025/13",
+      "gazette_date": "2025-08-05",
+      "publication_issue": "32977",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2025/08/20250805-4.htm",
+      "source_format": "html",
+      "source_sha256": null,
+      "article": "MADDE 4",
+      "target": "Effective date",
+      "operation": "EFFECTIVE_DATE",
+      "effective_rule": "Published 2025-08-05, effective retroactively from 2025-01-01",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "affects_2026_basic_support": true,
+      "affects_cks_oks_kobuks_registration_phrase": false,
+      "status": "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD"
+    },
+    {
+      "id": "2025_42_M3",
+      "law": "2025/42",
+      "gazette_date": "2025-12-30",
+      "publication_issue": "33123",
+      "source_url": "https://resmigazete.gov.tr/eskiler/2025/12/20251230-9.htm",
+      "source_format": "html",
+      "source_sha256": "74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269",
+      "article": "MADDE 3",
+      "target": "2024/39 MADDE 5(1)",
+      "operation": "REPLACES_REGISTER_PHRASE",
+      "old_phrase": "ÇKS’ye",
+      "new_phrase": "ÇKS/ÖKS/KOBÜKS’e",
+      "effective_rule": "2026-01-01 per 2025/42 MADDE 16",
+      "production_years": [
+        2026,
+        2027
+      ],
+      "affects_2026_basic_support": true,
+      "affects_cks_oks_kobuks_registration_phrase": true,
+      "status": "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD"
+    },
+    {
+      "id": "11781_M1A",
+      "law": "11781",
+      "gazette_date": "2026-09-08",
+      "publication_issue": "33364",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+      "source_format": "pdf",
+      "source_sha256": null,
+      "article": "MADDE 1(a)",
+      "target": "8859 MADDE 2(4)(a)",
+      "operation": "REPLACES_COEFFICIENT_VALUE",
+      "effective_rule": "Published 2026-09-08, effective retroactively from 2026-01-01 per 11781 MADDE 6(a)",
+      "production_years": [
+        2026,
+        2027
+      ],
+      "coefficients": [
+        {
+          "year": 2026,
+          "value_tl_per_decare": 367
+        },
+        {
+          "year": 2027,
+          "value_tl_per_decare": 442
+        }
+      ],
+      "amount_semantics": "COEFFICIENT_BASE_VALUE_NOT_ACTUAL_PAYMENT",
+      "affects_2026_basic_support": true,
+      "affects_cks_oks_kobuks_registration_phrase": false,
+      "status": "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD"
+    },
+    {
+      "id": "11781_M1_OTHER",
+      "law": "11781",
+      "gazette_date": "2026-09-08",
+      "publication_issue": "33364",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+      "source_format": "pdf",
+      "source_sha256": null,
+      "article": "MADDE 1(b,c,d)",
+      "target": "8859 MADDE 2(6),(7),(8)",
+      "operation": "ADDS_OR_MODIFIES_FUTURE_COEFFICIENTS",
+      "effective_rule": "2027-01-01 per 11781 MADDE 6(c), except 1(ç)",
+      "production_years": [
+        2027
+      ],
+      "affects_2026_basic_support": false,
+      "affects_cks_oks_kobuks_registration_phrase": false,
+      "status": "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD"
+    },
+    {
+      "id": "11781_M4",
+      "law": "11781",
+      "gazette_date": "2026-09-08",
+      "publication_issue": "33364",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+      "source_format": "pdf",
+      "source_sha256": null,
+      "article": "MADDE 4",
+      "target": "8859 MADDE 6(4),(9)",
+      "operation": "MODIFIES_EXCLUSIONS_AND_FALSE_CROP_DECLARATIONS",
+      "effective_rule": "Published 2026-09-08, effective retroactively from 2025-01-01 per 11781 MADDE 6(b)",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "affects_2026_basic_support": true,
+      "affects_cks_oks_kobuks_registration_phrase": false,
+      "status": "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD"
+    },
+    {
+      "id": "11781_M3",
+      "law": "11781",
+      "gazette_date": "2026-09-08",
+      "publication_issue": "33364",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+      "source_format": "pdf",
+      "source_sha256": null,
+      "article": "MADDE 3",
+      "target": "8859 MADDE 5(3)",
+      "operation": "MODIFIES_BUDGET_FINANCING",
+      "effective_rule": "2027-01-01 per 11781 MADDE 6(c)",
+      "production_years": [
+        2027
+      ],
+      "affects_2026_basic_support": false,
+      "affects_cks_oks_kobuks_registration_phrase": false,
+      "status": "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD"
+    },
+    {
+      "id": "11781_M6",
+      "law": "11781",
+      "gazette_date": "2026-09-08",
+      "publication_issue": "33364",
+      "source_url": "https://www.resmigazete.gov.tr/eskiler/2026/09/20260908-7.pdf",
+      "source_format": "pdf",
+      "source_sha256": null,
+      "article": "MADDE 6",
+      "target": "Commencement",
+      "operation": "SPLIT_EFFECTIVE_DATES",
+      "effective_rule": "1(a) and 1(ç): 2026-01-01 retrospective; MADDE 4: 2025-01-01 retrospective; others: 2027-01-01",
+      "production_years": [
+        2025,
+        2026,
+        2027
+      ],
+      "affects_2026_basic_support": true,
+      "affects_cks_oks_kobuks_registration_phrase": false,
+      "status": "OFFICIAL_WEB_TEXT_RESEARCHED_ORIGINAL_SHA_PENDING_HOLD"
+    }
+  ]
+}

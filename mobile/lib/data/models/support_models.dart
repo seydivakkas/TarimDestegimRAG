@@ -141,7 +141,7 @@ class FullEvaluationResponse {
   final List<RuleResult> rules;
   final List<CalculationResult> calculations;
   final List<ExplanationResult> explanations;
-  final double totalEstimatedAmount;
+  final double? totalEstimatedAmount;
 
   FullEvaluationResponse({
     required this.farmer,
@@ -165,7 +165,8 @@ class FullEvaluationResponse {
             .map((e) => ExplanationResult.fromJson(e as Map<String, dynamic>))
             .toList(),
         totalEstimatedAmount:
-            double.tryParse(json['total_estimated_amount']?.toString() ?? '0.0') ?? 0.0,
+            json['total_estimated_amount'] == null ? null
+                : double.tryParse(json['total_estimated_amount'].toString()),
       );
 }
 

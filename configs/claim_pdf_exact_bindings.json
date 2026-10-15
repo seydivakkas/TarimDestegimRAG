@@ -1,0 +1,7 @@
+{
+  "schema_version": 1,
+  "description": "Explicit curator-reviewed exact claim -> original native PDF text source. Empty until true source/year/paragraph and original pixel location are independently checked. Cannot grant legal/payment PASS.",
+  "legal_approval": false,
+  "payment_approval": false,
+  "bindings": []
+}

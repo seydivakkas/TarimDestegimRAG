@@ -15,7 +15,6 @@ from tarim_destek_rag.citations.document_links import (
     format_clickable_action,
     format_clickable_check,
     format_highlighted_citation_card,
-    resolve_check_link,
 )
 
 logger = logging.getLogger("frontend_pc.formatters")
@@ -119,7 +118,7 @@ def render_inline_summary_html(
     rules = resp.get("rules", [])
     calculations = resp.get("calculations", [])
     calc_map = {c.get("support_id"): c for c in calculations}
-    total_payout = resp.get("total_estimated_amount", 0.0)
+    total_payout = resp.get("total_estimated_amount")
 
     effective_statuses = [
         calc_map.get(r.get("support_id"), {}).get("status", r.get("status"))
@@ -199,7 +198,7 @@ def render_kpi_html(resp: dict[str, Any] | None) -> str:
     rules = resp.get("rules", [])
     calculations = resp.get("calculations", [])
     calc_map = {c.get("support_id"): c for c in calculations}
-    total_payout = resp.get("total_estimated_amount", 0.0)
+    total_payout = resp.get("total_estimated_amount")
 
     effective_statuses = [
         calc_map.get(r.get("support_id"), {}).get("status", r.get("status"))
@@ -330,25 +329,16 @@ def render_details_dataframe(
         else:
             status_text = "UYGUN DEĞİL"
 
-        LEGAL_BASIS_MAP = {
-            "BASIC_SUPPORT_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 1",
-            "PLANNED_PRODUCTION_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 2",
-            "CERTIFIED_SEED_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 3",
-            "WATER_RESTRICTION_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 4",
-            "CERTIFIED_SAPLING_2026": "Resmî Gazete Sayı: 32647, Karar 8859 Md. 6",
-        }
-        legal_basis = LEGAL_BASIS_MAP.get(sid, "Resmî Gazete Karar 8859 & 11781")
-        app_period = "1 Eylül 2026 - 31 Aralık 2026 (ÇKS ve Destek Takvimi)"
+        # Support-level labels are not proof of a particular rule condition.
+        # Evidence is shown separately via exact claim_id -> SHA -> passage.
+        legal_basis = "Tekil mevzuat kanıtı: HOLD"
+        app_period = "Başvuru süresi: resmî güncel kaynak kontrolü gerekli"
 
         table_rows.append(
             {
                 "Destek Programı": sname,
                 "Durum": status_text,
-                "Birim Fiyat (TL/da)": (
-                    f"{float(unit_amt):.2f} ₺"
-                    if unit_amt is not None and float(unit_amt) > 0
-                    else "0.00 ₺"
-                ),
+                "Birim Fiyat (TL/da)": format_currency(unit_amt),
                 "Alan (da)": f"{area_da:.1f}",
                 "Tahmini Tutar": format_currency(total_amt),
                 "Hesaplama Formülü": formula,
@@ -445,7 +435,7 @@ def generate_report_markdown(
     parcel_data: dict[str, Any],
 ) -> str:
     """Bağımsız yazılımın resmî olmayan ön değerlendirme raporu metnini oluşturur."""
-    total_payout = resp.get("total_estimated_amount", 0.0)
+    total_payout = resp.get("total_estimated_amount")
     rules = resp.get("rules", [])
     calculations = resp.get("calculations", [])
     explanations = resp.get("explanations", [])
@@ -540,11 +530,11 @@ def generate_report_markdown(
         sname = r.get("support_name", sid)
         st = r.get("status", "NOT_ELIGIBLE")
         c = calc_map.get(sid, {})
-        amt = c.get("estimated_amount", 0.0)
-        uamt = c.get("unit_amount", 0.0)
+        amt = c.get("estimated_amount")
+        uamt = c.get("unit_amount")
         st_tr = "✅ UYGUN" if st == "ELIGIBLE" else ("⚠️ İNCELEME" if st == "REVIEW" else "❌ UYGUN DEĞİL")
         report_lines.append(
-            f"| {sname} | {st_tr} | {format_currency(uamt)}/da | {area_da:.1f} da | {format_currency(amt)} | 2026 Resmî Gazete |"
+            f"| {sname} | {st_tr} | {format_currency(uamt)}/da | {area_da:.1f} da | {format_currency(amt)} | Tekil kaynak HOLD |"
         )
 
     report_lines.extend([
@@ -563,31 +553,120 @@ def generate_report_markdown(
         report_lines.append(f"- **Gerekçe:** {reason}")
         if exp.get("passed_checks"):
             p_items = [
-                f"[{p} ↗]({resolve_check_link(p, sid)['url']})"
+                f"{p} (kaynak kontrolü HOLD)"
                 for p in exp.get("passed_checks")
             ]
             report_lines.append(f"- **Sağlanan Şartlar:** {' · '.join(p_items)}")
         if exp.get("failed_checks"):
             f_items = [
-                f"[{f} ↗]({resolve_check_link(f, sid)['url']})"
+                f"{f} (kaynak kontrolü HOLD)"
                 for f in exp.get("failed_checks")
             ]
             report_lines.append(f"- **Sağlanamayan Şartlar:** {' · '.join(f_items)}")
         if exp.get("missing_fields"):
             m_items = [
-                f"[{m} ↗]({resolve_check_link(m, sid)['url']})"
+                f"{m} (kaynak kontrolü HOLD)"
                 for m in exp.get("missing_fields")
             ]
             report_lines.append(f"- **Eksik Bilgi/Belgeler:** {', '.join(m_items)}")
         if exp.get("citations"):
             for cit in exp.get("citations", []):
-                cit_url = cit.get("url") or resolve_check_link(cit.get("section", ""), sid)["url"]
-                report_lines.append(f"- **Yasal Dayanak:** [{cit.get('title')} ({cit.get('section', '')}) ↗]({cit_url})")
+                report_lines.append(
+                    f"- **Kaynak adayı (tekil pasaj/yürürlük doğrulanmamış):** "
+                    f"{cit.get('title')} ({cit.get('section', '')}) — HOLD"
+                )
+        report_lines.append("")
+
+    # One source of truth: same exact per-claim identity in exported report & UI.
+    from tarim_destek_rag.citations.claim_evidence_workbench import claim_choices
+    from tarim_destek_rag.citations.central_evidence_engine import central_evidence_engine
+
+    report_lines.extend([
+        "---",
+        "### 🔎 4. Tekil Gerekçe → Resmî Hüküm İzleme",
+        "",
+        "Kaynak konumu bulunması; hükmün yıl açısından uygulanabilirliği, "
+        "çiftçi kaydı veya ödeme onayı anlamına gelmez.",
+        "",
+    ])
+    for label, claim_id in claim_choices(resp):
+        matched = central_evidence_engine.for_claim(resp, claim_id)
+        source = matched.get("source")
+        quote = source.get("exact_quote") if isinstance(source, dict) else None
+        report_lines.append(f"#### {label}")
+        report_lines.append(f"- **Kanıt kimliği:** `{claim_id}`")
+        report_lines.append(
+            f"- **Sabit kontrol kimliği:** `{matched.get('check_id') or 'LEGACY_HOLD'}`"
+        )
+        report_lines.append(
+            f"- **Kimlik olgunluğu:** {matched.get('identity_status', 'HOLD')}"
+        )
+        if matched.get("evidence_id"):
+            report_lines.append(
+                f"- **Kaynak-konum kanıt ID:** `{matched['evidence_id']}`"
+            )
+        pilot_chain = matched.get("pilot_source_chain")
+        if isinstance(pilot_chain, dict):
+            report_lines.append(
+                "- **2026 Temel Destek kayıt değişiklik zinciri:** "
+                "2024/39 MADDE 4(1), MADDE 5(1); "
+                "2025/42 MADDE 3 (ÇKS/ÖKS/KOBÜKS), "
+                "MADDE 16 (1 Ocak 2026) — bağımsız hukukî onay HOLD."
+            )
+            for item in pilot_chain.get("sources", []):
+                if not isinstance(item, dict):
+                    continue
+                sid = str(item.get("span_id") or "UNKNOWN")
+                status = ("Özgün SHA ve madde konumu doğrulandı"
+                          if item.get("verified_original") is True
+                          else "Kaynak özgün bayt/konum doğrulaması HOLD")
+                report_lines.append(f"  - {sid}: {status}")
+            report_lines.append(
+                "- **2025/13 ve 11781 etkisi:** Madde kapsamı/üretim yılı "
+                "bağımsız hukukî incelemesi tamamlanmadı: HOLD."
+            )
+        report_lines.append(
+            "- **Mevzuat değişiklik / üretim yılı:** HOLD — " 
+            "yıllara göre değişiklik zinciri bağımsız kapanmadı."
+        )
+        if isinstance(quote, str):
+            report_lines.append(
+                f"- **Özgün kaynak konumu:** {source['document_id']} · "
+                f"{source['article']} · {source['target_provision']}"
+            )
+            report_lines.append(f"- **Birebir normatif pasaj:** {quote}")
+            if source.get("format") == "pdf" and type(source.get("pdf_page")) is int:
+                page = source["pdf_page"]
+                report_lines.extend([
+                    f"- **Kaynak biçimi:** Özgün PDF (birebir native metin konumu)",
+                    f"- **Gerçek PDF sayfası:** {page}",
+                    f"- **Gerçek 180 DPI metin kutuları:** `{source.get('pixel_boxes_180dpi') or []}`",
+                    f"- **Özgün PDF'yi doğrudan ilgili sayfada aç:** "
+                    f"{source['original_url']}#page={page}",
+                    "- **Görsel statü:** Native metin adayı, bağımsız hücre onayı yok; "
+                    "PDF içinde turuncu konum gösterimi.",
+                ])
+            elif source.get("format") == "html":
+                report_lines.extend([
+                    "- **Kaynak biçimi:** Özgün HTML",
+                    f"- **Özgün HTML adresi:** {source['original_url']}",
+                ])
+            else:
+                report_lines.append("- **Kaynak biçimi:** HOLD — tanımsız.")
+            report_lines.append(f"- **SHA-256:** `{source['source_sha256']}`")
+            report_lines.append(
+                "- **Durum:** Kaynak pasajı bulundu. Yürürlük, olgular "
+                "ve ödeme hâlâ HOLD."
+            )
+        else:
+            report_lines.append(
+                "- **Durum:** HOLD — Birebir resmî pasaj konumu doğrulanmadı."
+            )
         report_lines.append("")
 
     report_lines.extend([
         "---",
-        "### ⚖️ 4. Yasal Uyarı ve Sorumluluk Reddi",
+        "### ⚖️ 5. Yasal Uyarı ve Sorumluluk Reddi",
         "Bu rapor, Tarım ve Orman Bakanlığı tarafından Resmî Gazete'de yayımlanan 2026 yılı bitkisel üretim",
         "destekleme mevzuatına dayalı bir **tahmini ön değerlendirme çıktısıdır**.",
         "Kesin hak sahipliği, askı icmalleri ve ödeme takvimi İl/İlçe Tarım ve Orman Müdürlüklerinin yetkisindedir.",

@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import '../../core/constants/api_constants.dart';
 import '../models/farmer_parcel_models.dart';
 import '../models/support_models.dart';
+import '../models/canonical_evidence_models.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -130,4 +131,41 @@ class TarimDestekApiService {
       throw ApiException("Mevzuat arama hatası: $e");
     }
   }
+
+  /// Re-run the same evaluation through the privacy-minimal canonical evidence
+  /// endpoint. This never returns farm identity, payment approval or legal PASS.
+  Future<CanonicalEvidenceIndex> getEvaluationEvidence(
+      FarmerProfile farmer, Parcel parcel) async {
+    try {
+      final response = await _client
+          .post(
+            _uri('/api/v1/evidence/evaluation'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'farmer': farmer.toJson(),
+              'parcel': parcel.toJson(),
+            }),
+          )
+          .timeout(timeout);
+      if (response.statusCode != 200) {
+        throw ApiException(
+            'Tekil kanıt zinciri doğrulanamadı (HOLD)', response.statusCode);
+      }
+      final payload = jsonDecode(utf8.decode(response.bodyBytes));
+      if (payload is! Map<String, dynamic>) {
+        throw const FormatException('Unexpected evidence response');
+      }
+      return CanonicalEvidenceIndex.fromJson(payload);
+    } on SocketException {
+      throw ApiException('Kanıt sunucusu erişilemez: HOLD');
+    } on TimeoutException {
+      throw ApiException('Kanıt isteği zaman aşımı: HOLD');
+    } on FormatException {
+      throw ApiException('Kanıt şeması geçersiz: HOLD');
+    } catch (error) {
+      if (error is ApiException) rethrow;
+      throw ApiException('Kanıt zinciri alınamadı: HOLD');
+    }
+  }
+
 }

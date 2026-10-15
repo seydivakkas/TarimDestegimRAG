@@ -42,9 +42,13 @@ def build_farmer_and_parcel_dicts(
     closed_orchard: str | bool | None,
     farmer_id: str = "FARMER-DEMO-001",
     parcel_id: str = "PARCEL-DEMO-001",
+    oks_status: str | bool | None = None,
+    kobuks_status: str | bool | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Girdileri FastAPI Pydantic şemasına uygun sözlüklere dönüştürür."""
     parsed_cks = parse_tri_state(cks_status)
+    parsed_oks = parse_tri_state(oks_status)
+    parsed_kobuks = parse_tri_state(kobuks_status)
     parsed_seed = parse_tri_state(seed_cert)
     parsed_sapling = parse_tri_state(sapling_cert)
     parsed_orchard = parse_tri_state(closed_orchard)
@@ -54,6 +58,8 @@ def build_farmer_and_parcel_dicts(
         "province": province.strip().upper(),
         "district": district.strip().upper(),
         "cks_status": parsed_cks,
+        "oks_status": parsed_oks,
+        "kobuks_status": parsed_kobuks,
         "age_group": "<41" if "Genç" in age_group else "STANDARD",
         "gender": "KADIN" if "Kadın" in gender else "ERKEK",
     }
@@ -87,6 +93,8 @@ def evaluate_farmer_parcel(
     closed_orchard: str | bool | None,
     client: ApiClient | None = None,
     state_mgr: EvaluationStateManager | None = None,
+    oks_status: str | bool | None = None,
+    kobuks_status: str | bool | None = None,
 ) -> tuple[str, str, pd.DataFrame, str, str, str]:
     """Geriye dönük uyumlu değerlendirme fonksiyonu.
 
@@ -107,6 +115,8 @@ def evaluate_farmer_parcel(
         seed_cert=seed_cert,
         sapling_cert=sapling_cert,
         closed_orchard=closed_orchard,
+        oks_status=oks_status,
+        kobuks_status=kobuks_status,
     )
 
     resp, _ = mgr.get_or_evaluate(farmer_data, parcel_data, active_client)
@@ -141,6 +151,8 @@ def evaluate_for_ui(
     closed_orchard: str | bool | None,
     client: ApiClient | None = None,
     state_mgr: EvaluationStateManager | None = None,
+    oks_status: str | bool | None = None,
+    kobuks_status: str | bool | None = None,
 ) -> tuple[dict[str, Any], str, str, str, pd.DataFrame, str, str]:
     """Gradio UI için evaluation state nesnesini de içeren 7'li tuple döner.
 
@@ -162,6 +174,8 @@ def evaluate_for_ui(
         seed_cert=seed_cert,
         sapling_cert=sapling_cert,
         closed_orchard=closed_orchard,
+        oks_status=oks_status,
+        kobuks_status=kobuks_status,
     )
 
     resp, _ = mgr.get_or_evaluate(farmer_data, parcel_data, active_client)
@@ -197,6 +211,8 @@ def generate_evaluation_report(
     client: ApiClient | None = None,
     cached_resp: dict[str, Any] | None = None,
     state_mgr: EvaluationStateManager | None = None,
+    oks_status: str | bool | None = None,
+    kobuks_status: str | bool | None = None,
 ) -> dict:
     """Bağımsız yazılımın resmî olmayan ön değerlendirme raporunu hazırlar.
 
@@ -214,6 +230,8 @@ def generate_evaluation_report(
         seed_cert=seed_cert,
         sapling_cert=sapling_cert,
         closed_orchard=closed_orchard,
+        oks_status=oks_status,
+        kobuks_status=kobuks_status,
         farmer_id="FARMER-REPORT-001",
         parcel_id="PARCEL-REPORT-001",
     )

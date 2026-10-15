@@ -118,7 +118,7 @@ logger = logging.getLogger("frontend_pc")
 api_client = ApiClient()
 
 
-def build_ui() -> gr.Blocks:
+def build_legacy_ui() -> gr.Blocks:
     """5 Kullanıcı Görevine İndirgenmiş Modern Gradio Arayüzünü İnşa Eder."""
     with gr.Blocks(title="TarımDestekRAG 2026") as app:
         # Üst Hero Header
@@ -170,6 +170,8 @@ def build_ui() -> gr.Blocks:
             p1["in_seed_cert"],
             p1["in_sapling_cert"],
             p1["in_orchard"],
+            p1["in_oks"],
+            p1["in_kobuks"],
         ]
 
         calc_outputs = [
@@ -195,8 +197,197 @@ def build_ui() -> gr.Blocks:
                 seed_cert=args[8],
                 sapling_cert=args[9],
                 closed_orchard=args[10],
+                oks_status=args[11],
+                kobuks_status=args[12],
                 client=api_client,
             )
+
+        # A common, explicit per-claim source navigator. Never bind proof by
+        # guessed article name, overall support ID, or keyword similarity.
+        from tarim_destek_rag.citations.claim_evidence_workbench import claim_choices
+        from tarim_destek_rag.citations.central_evidence_engine import (
+            central_evidence_engine,
+        )
+
+        render_claim_evidence = central_evidence_engine.render_claim
+        render_claim_coverage_html = central_evidence_engine.render_coverage
+        p2["btn_cks_pilot"].click(
+            central_evidence_engine.render_2026_cks_pilot,
+            inputs=[eval_state],
+            outputs=[p2["cks_pilot_display"]],
+        )
+        eval_state.change(
+            lambda: "<p>Değerlendirme değişti; ÇKS kanıt zincirini yeniden "
+                    "inceleyin. HOLD.</p>",
+            inputs=[],
+            outputs=[p2["cks_pilot_display"]],
+        )
+
+
+        def update_claim_selector(response):
+            return gr.update(choices=claim_choices(response), value=None)
+
+        eval_state.change(
+            update_claim_selector,
+            inputs=[eval_state],
+            outputs=[p2["claim_selector"]],
+        )
+        p2["btn_claim_show"].click(
+            render_claim_evidence,
+            inputs=[eval_state, p2["claim_selector"]],
+            outputs=[p2["claim_display"]],
+        )
+        p2["claim_selector"].change(
+            render_claim_evidence,
+            inputs=[eval_state, p2["claim_selector"]],
+            outputs=[p2["claim_display"]],
+        )
+        # Scoped source research is distinct from a verified normative link.
+        # A RAG hit is a human review CANDIDATE only; never claim/legal PASS.
+        from tarim_destek_rag.citations.claim_source_discovery import (
+            candidate_choices,
+            candidate_original_html,
+        )
+
+        def on_claim_source_research(evaluation, claim_id):
+            status, choices, allowed = candidate_choices(evaluation, claim_id)
+            return (
+                status,
+                gr.update(choices=choices, value=None),
+                allowed,
+                "<p>Kaynak seçimi yenilendi. Belgeyi incelemek için "
+                "özgün kaynak adayını seçin. Hukukî dayanak hâlâ HOLD.</p>",
+            )
+
+        p2["btn_claim_source_search"].click(
+            on_claim_source_research,
+            inputs=[eval_state, p2["claim_selector"]],
+            outputs=[
+                p2["claim_candidate_status"],
+                p2["claim_candidate_selector"],
+                p2["claim_candidate_state"],
+                p2["claim_candidate_display"],
+            ],
+        )
+        p2["claim_candidate_selector"].change(
+            candidate_original_html,
+            inputs=[
+                eval_state, p2["claim_selector"],
+                p2["claim_candidate_selector"], p2["claim_candidate_state"],
+            ],
+            outputs=[p2["claim_candidate_display"]],
+        )
+
+        def clear_unverified_claim_sources():
+            return (
+                "Seçim/değerlendirme değişti; kaynak adayları "
+                "bu gerekçeyle tekrar araştırılmalı. HOLD.",
+                gr.update(choices=[], value=None),
+                {"claim_id": None, "candidates": []},
+                "<p>HOLD — Önce yeni gerekçe için araştırma başlatın.</p>",
+            )
+
+        p2["claim_selector"].change(
+            clear_unverified_claim_sources,
+            inputs=[],
+            outputs=[
+                p2["claim_candidate_status"],
+                p2["claim_candidate_selector"],
+                p2["claim_candidate_state"],
+                p2["claim_candidate_display"],
+            ],
+        )
+        eval_state.change(
+            clear_unverified_claim_sources,
+            inputs=[],
+            outputs=[
+                p2["claim_candidate_status"],
+                p2["claim_candidate_selector"],
+                p2["claim_candidate_state"],
+                p2["claim_candidate_display"],
+            ],
+        )
+        p2["btn_claim_coverage"].click(
+            render_claim_coverage_html,
+            inputs=[eval_state],
+            outputs=[p2["claim_coverage_display"]],
+        )
+        eval_state.change(
+            lambda: "<p>Değerlendirme yenilendi; kanıt kapsamını yeniden isteyin.</p>",
+            inputs=[],
+            outputs=[p2["claim_coverage_display"]],
+        )
+        # FAQ is a different retrieval channel, but an explicitly selected
+        # evaluation claim displays the identical source/evidence ID contract.
+        eval_state.change(
+            update_claim_selector,
+            inputs=[eval_state],
+            outputs=[p3["faq_claim_selector"]],
+        )
+        p3["faq_claim_selector"].change(
+            central_evidence_engine.render_claim,
+            inputs=[eval_state, p3["faq_claim_selector"]],
+            outputs=[p3["faq_claim_display"]],
+        )
+
+        from tarim_destek_rag.citations.ek20_review_workbench import (
+            render_ek20_candidate,
+        )
+        p2["ek20_selector"].change(
+            render_ek20_candidate,
+            inputs=[p2["ek20_selector"], eval_state],
+            outputs=[p2["ek20_display"]],
+        )
+        from tarim_destek_rag.citations.ek20_raster_alignment import (
+            align_measured_cell_for_review,
+        )
+        p2["btn_ek20_align"].click(
+            align_measured_cell_for_review,
+            inputs=[
+                p2["ek20_selector"],
+                p2["ek20_grid_selector"],
+                eval_state,
+            ],
+            outputs=[
+                p2["roi_x0"], p2["roi_y0"],
+                p2["roi_x1"], p2["roi_y1"],
+                p2["roi_preview_display"],
+            ],
+        )
+        from tarim_destek_rag.citations.unlimited_ocr_review import (
+            render_unlimited_ocr_ek20,
+        )
+        p2["btn_unlimited_ek20"].click(
+            render_unlimited_ocr_ek20,
+            inputs=[
+                p2["ek20_selector"],
+                p2["roi_x0"], p2["roi_y0"], p2["roi_x1"], p2["roi_y1"],
+                eval_state,
+            ],
+            outputs=[p2["unlimited_ek20_display"]],
+        )
+        eval_state.change(
+            lambda: "<p>Değerlendirme değişti: OCR önizlemesi geçersiz. HOLD.</p>",
+            inputs=[],
+            outputs=[p2["unlimited_ek20_display"]],
+        )
+
+        # Never reuse a previous year's OCR/grid cell proposal after a new
+        # evaluation, even if the dropdown holds the same apparent row name.
+        eval_state.change(
+            lambda: (
+                gr.update(value=None),
+                None, None, None, None,
+                "<p>HOLD — Yeni değerlendirme için ROI önerisini yeniden açın.</p>",
+            ),
+            inputs=[],
+            outputs=[
+                p2["ek20_grid_selector"],
+                p2["roi_x0"], p2["roi_y0"],
+                p2["roi_x1"], p2["roi_y1"],
+                p2["roi_preview_display"],
+            ],
+        )
 
         # Değerlendirme Butonu Bağlantısı
         p1["btn_calculate"].click(
@@ -210,6 +401,7 @@ def build_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "✅ Evet (ÇKS Kaydım Aktif)", "Genç Çiftçi (< 41 Yaş)", "Erkek",
                 "BUĞDAY", 25.0, "Kuru Tarım", "✅ Evet (Faturalı / Sertifikalı)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -218,6 +410,7 @@ def build_ui() -> gr.Blocks:
             lambda: (
                 "SAMSUN", "ÇARŞAMBA", "✅ Evet (ÇKS Kaydım Aktif)", "Standart (41+ Yaş)", "Kadın Çiftçi",
                 "FINDIK", 15.0, "Kuru Tarım", "❌ Hayır (Sertifikasız Tohum)", "✅ Evet (Faturalı / Sertifikalı)", "Evet (Kapama Bahçe)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -226,6 +419,7 @@ def build_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "✅ Evet (ÇKS Kaydım Aktif)", "Standart (41+ Yaş)", "Erkek",
                 "ARPA", 30.0, "Kuru Tarım", "✅ Evet (Faturalı / Sertifikalı)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -234,6 +428,7 @@ def build_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "✅ Evet (ÇKS Kaydım Aktif)", "Genç Çiftçi (< 41 Yaş)", "Erkek",
                 "MERCİMEK", 20.0, "Kuru Tarım", "❌ Hayır (Sertifikasız Tohum)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -242,6 +437,7 @@ def build_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "❌ Hayır (ÇKS Kaydım Yok)", "Standart (41+ Yaş)", "Erkek",
                 "BUĞDAY", 10.0, "Kuru Tarım", "❌ Hayır (Sertifikasız Tohum)", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -250,6 +446,7 @@ def build_ui() -> gr.Blocks:
             lambda: (
                 "KONYA", "KARATAY", "❓ Bilmiyorum / Emin Değilim", "Standart (41+ Yaş)", "Erkek",
                 "BUĞDAY", 20.0, "Kuru Tarım", "❓ Bilmiyorum / Emin Değilim", "❌ Hayır (Standart / Sertifikasız)", "Hayır (Münferit / Tarla)",
+                "❓ Bilmiyorum / Emin Değilim", "❓ Bilmiyorum / Emin Değilim",
             ),
             outputs=inputs_list,
         ).then(on_calculate_click, inputs=inputs_list, outputs=calc_outputs)
@@ -268,6 +465,8 @@ def build_ui() -> gr.Blocks:
                 seed_cert=args[8],
                 sapling_cert=args[9],
                 closed_orchard=args[10],
+                oks_status=args[11],
+                kobuks_status=args[12],
                 client=api_client,
                 cached_resp=state_val,
             )
@@ -278,6 +477,26 @@ def build_ui() -> gr.Blocks:
             outputs=[p2["file_report"]],
         )
 
+    return app
+
+
+def build_ui() -> gr.Blocks:
+    """Default user experience: document analysis and original-page RAG.
+
+    The older eligibility/evaluation tabs stay available only with
+    TARIM_RAG_UI_MODE=legacy, rather than appearing in the core document app.
+    """
+    if os.getenv("TARIM_RAG_UI_MODE", "document_rag") == "legacy":
+        return build_legacy_ui()
+    with gr.Blocks(title="TarımDestekRAG — Belge Analiz Asistanı") as app:
+        gr.Markdown(
+            "# Belge Analiz Asistanı\n"
+            "PDF / HTML / TXT içeriğinde arama, Türkçe OCR, "
+            "kaynaklı pasajlar ve gerçek sayfa görüntüleri. "
+            "Sistemin amacı belgelerdeki bilgileri açıklamaya yardımcı olmaktır."
+        )
+        with gr.Tabs():
+            render_legal_assistant_tab()
     return app
 
 

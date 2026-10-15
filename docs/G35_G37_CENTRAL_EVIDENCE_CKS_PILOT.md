@@ -1,0 +1,95 @@
+# G35–G37 — Merkezi Kanıt Motoru, Sabit check_id ve 2026 ÇKS Pilotu
+
+## Tek mimari kural
+
+**Yalnız backend, tek bir CentralEvidenceEngine üzerinden normatif bir kanıt kaydı üretir.** Masaüstü (Neden?), SSS, rapor ve mobil o kaydı kullanır. Arayüzler kendi başlarına OCR metnini resmî hüküm ilan edemez; URL, piksel koordinatı veya mevzuat yılını tahmin edemez. İç kaynak doğrulayıcılar (orijinal HTML, PDF, SHA, EK-20 imzaları) merkeze bağlanabilir, fakat karar sonuca tek noktadan çıkar.
+
+İşlevsel zincir:
+
+```text
+RuleCheckEvent(check_id, field, display_text)
+  → check_identity.extracted_checks
+  → CentralEvidenceEngine.for_check / for_claim / for_evaluation
+  → canonical_evidence_contract (SHA, URL, madde, gerçek sayfa/HTML pasajı)
+  → {check_id, claim_id, evidence_id, production_year, source, statuses}
+  → PC Neden? / SSS / rapor / /api/v1/evidence/evaluation / Flutter
+```
+
+## Sabit kimlik kuralları
+
+- `check_id` kural kodunda tanımlanan semantik kontrol kimliğidir; üretilen cümleye, ürüne, alana, olgusal koşulun geçip geçmemesine veya OCR sonucuna bağlı değildir.
+- `claim_id = SHA256(["TRAG_CHECK_V2", rule_id, support_id, check_id])[:24]`. Aynı kuralın olumlu/olumsuz/eksik çıktıları tek bir claim_id taşır.
+- `evidence_id` aynı claim_id'nin ilgili `production_year` ve özgün `source_sha256`/span veya PDF sayfasına bağlanmış ayrı kaydıdır; üretim yılı değişirse kanıt kimliği aynı tutulmaz.
+- `field` yalnız sonucun `passed_checks/failed_checks/missing_fields` durumudur. `display_text` yalnız kullanıcıya gösterilen cümledir; ikisi kimliği belirlemez.
+- Eski kural çıktısında `check_events` yoksa görüntüleme kaybolmaz; buna rağmen field+ordinal geçici anahtar `LEGACY_NO_SEMANTIC_CHECK_ID_HOLD` taşır. Bu eski geçici kimlikler normatif kaynak kabul kapısını geçemez ve bütün kurallara check_id eklenene kadar G36 açık kalır.
+
+## İlk gerçek pilot: 2026 Temel Destek / ÇKS kayıt şartı
+
+| Aşama | Sabit değer / durum |
+|---|---|
+| Kural kimliği | `RULE_BASIC_SUPPORT_2026` |
+| Destek kimliği | `BASIC_SUPPORT_2026` |
+| Sabit kontrol | `BASIC_CKS_REGISTRATION` |
+| ÇKS aktif | `passed_checks` ve değişken gösterim metni; aynı check_id |
+| ÇKS pasif | `failed_checks` ve değişken gösterim metni; aynı check_id |
+| ÇKS bilgisi eksik | `missing_fields`, aynı check_id |
+| Kuratör kaynak kaydı | `BASE_2024_39_ART4_P1` / Resmî Gazete 2024/39 MADDE 4(1) |
+| Özgün belge SHA | `efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530` (manifestte kayıtlı, bu tur fiilen indirilip incelenmedi) |
+| Kaynak türü | HTML asıl hüküm; arşivde gerçek dosya doğrulanmazsa `HOLD` |
+| Üretim yılı yürürlük/istisna zinciri | 2025/13, 2025/42, 11781 kapsamı doğrulanmadan `HOLD` |
+| Çiftçinin gerçek uygunluğu | Bağımsız denetlenmedi, `HOLD` |
+| Ödeme | `HOLD` |
+
+### PC'de kullanım
+
+2026 parselini hesapla → Destek Analizi → Neden? → **Pilot — 2026 Temel Destek / ÇKS** → *2026 ÇKS kanıt zincirini kontrol et*. ÇKS kayıt durumu değişse de aynı `check_id` görünür. Özgün Resmî Gazete HTML dosyası yerel SHA envanterinde gerçekten bulunuyorsa ilgili maddenin birebir metni turuncu işaretli görünür; kaynağa ulaşılamıyorsa `HOLD`. Turuncu kaynak metni, hükmün ilgili yıl geçerliliğini kanıtlamaz.
+
+### Tekil merkezi API
+
+- `POST /api/v1/evidence/evaluation` — mevcut değerlendirmedeki bütün sabit/geçici kontrol kayıtlarını, çiftçi kimlik bilgisi döndürmeden verir.
+- `POST /api/v1/evidence/check/RULE_BASIC_SUPPORT_2026/BASIC_CKS_REGISTRATION` — mevcut değerlendirmeyi yeniden hesaplayıp yalnız söz konusu sabit check_id için tek merkez kaydını döndürür. İstek gövdesi mevcut değerlendirme isteğidir.
+- Mobil: `CanonicalClaimEvidence.checkId`, `identityStatus`, `claimId`, `evidenceId`, `source`, `sourceLocationStatus` ve ayrı `temporalLegalStatus/paymentStatus` alanlarını okur; hukuken PASS üretmez.
+- PC Neden, SSS ve rapor `CentralEvidenceEngine` üzerinden aynı kaydı okur. RAG arama adayları hukuki kaynak kaydına terfi ettirilmez.
+
+## Sarı / turuncu ayrımı
+
+**Turuncu:** SHA ile bulunan gerçek, birebir kaynağın inceleme adayı; HTML paragrafı veya native PDF metin konumu. **Sarı:** yalnız gerekli bağımsız görsel inceleme imzaları doğrulanmış birebir bölge; bu da yürürlük, ödeme veya hak ediş izni değildir. Pilot HTML pasajı için imzasız sarı kullanılmaz.
+
+## Kapanış ölçütleri
+
+- G35: bütün PC/mobil/SSS/rapor ekranlarının kaynakla ilgili durumlarını sadece merkezi servis API sözleşmesinden edinmesi; eski ayrı doğrulama yollarının kontrollü kaldırılması.
+- G36: bütün mevcut ve yeni kuralların her semantik şart için doğrudan `check_events` üretmesi; legacy geçici kimlik kalmaması ve kimlik tekrarlarının fail-closed olması.
+- G37: 2026 ÇKS şartı kaynak HTML'de birebir doğrulanmış, değişiklik ve yürürlük zinciri bağımsız incelenmiş, PC–mobil–SSS–rapor aynı check_id/evidence_id durumunu göstermiş olmalı. Henüz gerçek kaynak arşivi ve bağımsız inceleme tamamlanmadığından bu pilot **tamamlandı denemez**.
+- G33: bütün destek gerekçeleri doğrudan gerçek kaynak konumuna gidene ve eksik kalanlar açıkça HOLD raporlanana kadar açık.
+
+Özellik geliştirme ve arayüz bütünleşmesi bitince F14'te toplu test, Windows/Flutter gerçek kabul ve bağımsız hukukî doğrulama yapılır. PR #41 DRAFT, main değiştirilmez.
+## G37 düzeltmesi: 2025/42 MADDE 3, ÇKS-only kararı geçersiz kılıyor
+
+14 Ekim 2026 resmî Bakanlık metin incelemesinde 2025/42 MADDE 3'ün 2024/39 MADDE 5(1)'deki **“ÇKS’ye”** ifadesini **“ÇKS/ÖKS/KOBÜKS’e”** çevirdiği ve MADDE 16'nın **1 Ocak 2026** yürürlüğünü düzenlediği bulundu. 2024/39 MADDE 4(1) genel Bakanlık kayıt şartıdır; MADDE 5(1) temel destek arazi şartıdır. Dolayısıyla ÇKS kaydı yokken ÖKS/KOBÜKS bilinmiyorsa otomatik ret YANLIŞ olabilir.
+
+`BASIC_CKS_REGISTRATION` sabit kontrol kimliği değiştirilmedi. `FarmerProfile` üç ayrı tri-state kayıt alanı taşır; Temel Destek artık bilinmeyen alternatifi otomatik ret saymaz ve resmî **2026 parsel kayıt doğrulaması bulunmadıkça REVIEW** korur. Masaüstü UI, altı örnek senaryo ve rapor ayrı kayıt alanlarını kullanır.
+
+Kaynaktaki asıl normatif bağ **MADDE 5(1)** olarak düzeltildi; ayrıca **MADDE 4(1)**, **2025/42 MADDE 3** ve **MADDE 16** için dört ayrı SHA-pinned original-span kaydı tutuluyor. `cks_2026_source_chain.py` her birini gerçek arşiv baytına göre inceler ve doğrulanamayan özgün kaynak konumunu HOLD bırakır. Merkezi DTO `pilot_source_chain` alanını mobil ve rapora verir. 2025/13 ve 11781 ayrı etki/istisna araştırma yükümlülükleridir.
+
+**Güncelleme:** Resmî sunucuya doğrudan bağlantı kurulamadı, ancak önceden GitHub Actions'ta saklanmış gerçek 2024/39 ve 2025/42 HTML orijinalleri arşivden geri alınarak SHA ve dört doğru hüküm konumu fiilen doğrulandı; 2025/13 ve 11781 ayrı HOLD. Yürürlük zinciri ve parsel kaydı için bağımsız inceleme eksik olduğundan G37 BLOCKED_EXTERNAL; F14 ve main politikası değişmedi.
+
+Ayrıntı: [G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md](G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md).
+
+### 2026 ÇKS pilotunun 2025/13 ve 11781 maddeleriyle tamamlayıcı değişiklik haritası
+
+- G37 kapsamında MADDE bazlı `configs/g37_2026_legal_impact_register.json` eklendi; 2025/13 5(3) soya ilavesi ve 11781'in farklı yürürlük tarihlerini ayırır. `11781 MADDE 1(a)` 2026 katsayı 367 TL/da/2027 442 TL/da, ödenen dekarlık tutar değil; `MADDE 4` 2025'e dönük, bazı diğer hükümler 2027'den itibaren geçerlidir.
+- `cks_2026_source_chain.py` merkezi kanıt kaydında bu etki maddelerini `research_impact_changes` olarak gösterir. Kanıt durumu SOURCE_RESEARCH_ONLY_LEGAL_HOLD; kaynak SHA ve hukukî onay olmadan mevzuat kayıt düzenini, üretici hak edişini veya ödeme katsayısı tablosunu otomatik değiştirmez.
+- `scripts/acquire_g37_official_sources.py`: Pinned 2024/39 ve 2025/42 için SSL resmî HTTP özgün baytları SHA/byte-length kontrolüyle arşivleme; önceden pinlenmemiş 2025/13 ve 11781 için yalnız karantina. Çevrimiçi operasyon operatör ortamında çalıştırılmalı; henüz burada fiilen indirme yapılamadı.
+- G37 açık engelleri: kurumsal ağda özgün orijinal edinim/konumları; 11781 tam metin/ek hükümleri; 2025/13 yıllık istisna; resmî parsel kaydı ve bağımsız hukuki kabul. G36 genelleme bundan sonra.
+
+## 15 Ekim 2026 — KAYNAK ARŞİVİ GERİ KAZANILDI: 2 SHA-doğrulanmış HTML, 4 gerçek pasaj
+
+**Önceki 'bu oturumda özgün baytlar indirilemedi' notları, doğrudan resmigazete.gov.tr HTTP bağlantısının DNS sorununu anlatıyordu. Sonrasında önceki GitHub Actions arşivi keşfedilerek kaynaklar gerçekten geri alındı ve yeniden doğrulandı. Bu bölüm, önceki erişim engelinin son durumunu düzeltir.**
+
+- GitHub Actions run `37906860240`, artifact `11604488899` / `p0-10-3-original-official-bytes` (9 Ekim 2026 kaynak toplama çalışması) geri alındı. İkinci çalışmada aynı artifact adıyla `37906865615` kaydı da mevcut.
+- İçindeki `RG_COMMUNIQUE_2024_39` özgün HTML: **236810 bayt**, SHA-256 `efb1ebea650cf836155728b6bd3599b76a0fbee70d1a8e5c85f2af4792734530`; GitHub manifest ile tam eşleşti.
+- İçindeki `RG_AMENDMENT_2025_42` özgün HTML: **45886 bayt**, SHA-256 `74a91122f52190cc4dd4322c1d7b6036466d5432f8f11577230151dba0119269`; GitHub manifest ile tam eşleşti.
+- Gerçek özgün HTML düğümleri, alıntı içindeki satır sonlarına tolerans gösteren birebir regex ve belge içinde aktif MADDE takibiyle doğrulandı: `BASE_2024_39_ART4_P1`/MADDE 4, `BASE_2024_39_ART5_P1`/MADDE 5, `AMEND_2025_42_ART3_BASE_ART5_P1`/MADDE 3 ve `AMEND_2025_42_ART16_EFFECTIVE_2026`/MADDE 16. **Dördü de doğru madde altında tam tekil konumda bulundu.**
+- Kanıt: `configs/g37_2026_original_sha_location_audit.json` (kriptografik bayt kimliği + tekil metin konumu incelemesi). Bu, bağımsız hukukî imza veya 2026 geçerlilik hükmü PASS değildir.
+- Gerçek baytları kullanıcının Windows kopyasına taşımak için iki HTML + inceleme raporu içeren `g37_pinned_original_html_evidence.zip` paketi oluşturuldu; proje kökünde `python scripts/import_g37_verified_archive.py C:\PATH\g37_pinned_original_html_evidence.zip` çağrısı yerel `data/legal_update_archive/originals` arşivini, URL/manifest SHA/uzunluk kontrolünden geçirerek doldurur. Kullanıcının bilgisayarında komut henüz çalıştırılmadı.
+- **Açık kalan G37:** 2025/13 özgün HTML ve 11781 PDF'nin SHA bağımsız arşiv kabulü, 11781'in tam tarihsel etkileri, gerçek çiftçi/parsel resmî kayıt kanıtı ve bağımsız hukukî inceleme. G37 `BLOCKED_EXTERNAL`; F14 kapsamlı kabul son aşamada.

@@ -12,7 +12,7 @@ from tarim_destek_rag.database.repository import (
 )
 from tarim_destek_rag.models.farmer_parcel import FarmerProfile, IrrigationStatusEnum, Parcel
 from tarim_destek_rag.normalization.normalizer import EligibilityStatusEnum
-from tarim_destek_rag.rules.base import BaseRule, RuleResult
+from tarim_destek_rag.rules.base import BaseRule, RuleResult, RuleCheckEvent
 
 
 def _enforce_2026_water_crop_exclusion(
@@ -73,6 +73,7 @@ class BasicSupportRule(BaseRule):
 
         _enforce_2026_water_crop_exclusion(farmer, parcel, session, failed, missing, trace)
 
+        check_events: list[RuleCheckEvent] = []
         trace.append("Temel destek değerlendirmesi başlatıldı.")
 
         # 1. Üretim Yılı Kontrolü
@@ -81,14 +82,54 @@ class BasicSupportRule(BaseRule):
         else:
             failed.append(f"Üretim yılı 2026 değil ({parcel.production_year}).")
 
-        # 2. ÇKS Durumu Kontrolü
-        if farmer.cks_status is None:
-            missing.append("cks_status")
-            trace.append("ÇKS kayıt bilgisi eksik (REVIEW).")
-        elif farmer.cks_status is True:
-            passed.append("Çiftçi Kayıt Sistemi (ÇKS) kaydı aktif.")
+        # 2. 2025/42 MADDE 3: effective 01.01.2026, the registration
+        # referenced in Basic Support 2024/39 MADDE 5(1) is no longer
+        # CKS-only; it reads CKS/ÖKS/KOBÜKS. Unknown alternatives CANNOT
+        # turn a missing CKS record into a definitive rejection.
+        # Maintain historical check_id for source continuity; display text
+        # and field are deliberately variable and do not control identity.
+        cks_check_id = "BASIC_CKS_REGISTRATION"
+        registry = {
+            "ÇKS": farmer.cks_status,
+            "ÖKS": farmer.oks_status,
+            "KOBÜKS": farmer.kobuks_status,
+        }
+        registered = [name for name, state in registry.items() if state is True]
+        if registered:
+            passed.append(
+                "İlgili Bakanlık kayıt sistemi beyanı var: "
+                + "/".join(registered) + " (resmî kayıt ayrıca doğrulanmalı)."
+            )
+            check_events.append(RuleCheckEvent(
+                check_id=cks_check_id, field="passed_checks",
+                display_text=passed[-1],
+            ))
+            # A person's registry declaration does not verify that THIS
+            # production-year PARCEL is legally registered. Preserve REVIEW.
+            missing.append("verified_2026_registered_parcel")
+            trace.append(
+                "Beyan edilen Bakanlık kaydı, bu parselin 2026 için "
+                "resmî kayıt kanıtı değildir; hak ediş incelemesi gerekiyor."
+            )
+        elif all(state is False for state in registry.values()):
+            failed.append(
+                "Beyan edilen ÇKS, ÖKS ve KOBÜKS kayıtlarının tamamı pasif; "
+                "bağımsız resmî kayıt teyidi gerekli."
+            )
+            check_events.append(RuleCheckEvent(
+                check_id=cks_check_id, field="failed_checks",
+                display_text=failed[-1],
+            ))
         else:
-            failed.append("Çiftçi Kayıt Sistemi (ÇKS) kaydı bulunmuyor.")
+            missing.append("verified_ministry_registration")
+            check_events.append(RuleCheckEvent(
+                check_id=cks_check_id, field="missing_fields",
+                display_text=missing[-1],
+            ))
+            trace.append(
+                "2026 Temel Destekte ÇKS/ÖKS/KOBÜKS kayıt seçeneklerinden "
+                "en az biri bilinmiyor; ÇKS yokluğu tek başına ret değildir."
+            )
 
         # 3. Parsel Alanı
         if parcel.area_da > 0:
@@ -124,6 +165,7 @@ class BasicSupportRule(BaseRule):
             passed_checks=passed,
             failed_checks=failed,
             missing_fields=missing,
+            check_events=check_events,
             source_ids=([amount_record.source_version.source_id] if amount_record else []),
             trace=trace,
             metadata={

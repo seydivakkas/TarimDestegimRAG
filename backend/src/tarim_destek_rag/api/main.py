@@ -9,7 +9,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -17,6 +17,8 @@ from tarim_destek_rag.api.schemas import (
     ApiErrorResponse,
     AskQuestionRequest,
     AskQuestionResponse,
+    DocumentAskRequest,
+    DocumentUploadRequest,
     FullEvaluationRequest,
     FullEvaluationResponse,
     HarvestLiveRequest,
@@ -41,7 +43,6 @@ from tarim_destek_rag.explainer.template_explainer import (
 from tarim_destek_rag.logging.logger import logger
 from tarim_destek_rag.models.source import SourceDefinition
 from tarim_destek_rag.normalization.seed_data import seed_2026_support_data
-from tarim_destek_rag.retrieval.assistant import assistant_engine
 from tarim_destek_rag.retrieval.hybrid import hybrid_retriever
 from tarim_destek_rag.retrieval.knowledge_base import (
     FARMER_FAQ_LIST,
@@ -73,24 +74,26 @@ def seed_vector_store_data() -> None:
 async def lifespan(app: FastAPI):
     """Uygulama açılışında veritabanını ve vektör indeksini hazırlar."""
     logger.info("TarımDestekRAG FastAPI servisi başlatılıyor...")
-    init_db()
+    if os.getenv("TARIM_RAG_SERVER_MODE", "documents") == "legacy":
+        # Historical support/payment simulator is separate from document RAG.
+        init_db()
+        try:
+            loaded_reg = SourceRegistry.load_from_yaml("configs/sources.yaml")
+            for source in loaded_reg.list_all():
+                if source.id not in source_registry._sources:
+                    source_registry.register(source)
+        except Exception as error:
+            logger.warning("Eski kaynak kayıt defteri uyarısı: %s", error)
+        with SessionLocal() as session:
+            seed_2026_support_data(session)
 
-    try:
-        loaded_reg = SourceRegistry.load_from_yaml("configs/sources.yaml")
-        for s in loaded_reg.list_all():
-            if s.id not in source_registry._sources:
-                source_registry.register(s)
-    except Exception as e:
-        logger.warning("Kaynak kayıt defteri yükleme uyarısı: %s", e)
-
-    with SessionLocal() as session:
-        seed_2026_support_data(session)
-
-    try:
-        seed_vector_store_data()
-    except Exception as e:
-        logger.warning("Vektör mağazası tohumlanırken uyarı: %s", e)
-
+    if os.getenv("TARIM_RAG_SERVER_MODE", "documents") == "legacy":
+        try:
+            seed_vector_store_data()
+        except Exception as e:
+            logger.warning("Eski vektör deposu uyarı: %s", e)
+    # Document RAG uses only local verified originals and installed
+    # embedding models; never silently downloads a model at startup.
     yield
     logger.info("TarımDestekRAG FastAPI servisi kapatılıyor.")
 
@@ -98,7 +101,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="TarımDestekRAG API",
     version="1.0.0",
-    description="Türkiye 2026 Bitkisel Üretim Destekleri Deterministik Karar ve Açıklama API'si",
+    description="Offline-first kaynaklı PDF/HTML/TXT belge analizi ve hibrit RAG API'si",
     lifespan=lifespan,
 )
 
@@ -261,24 +264,288 @@ def evaluate_all(
     )
 
 
+
+@app.post(
+    "/api/v1/evidence/check/{rule_id}/{check_id}",
+    tags=["Tekil Kanıt Kontratı"],
+)
+def resolve_one_stable_evidence_check(
+    rule_id: str, check_id: str, payload: FullEvaluationRequest,
+    session: Session = Depends(get_db_session),
+) -> dict:
+    """PC/mobile/report/FAQ share ONE proof record for the emitted check.
+
+    Current evaluation is recomputed; no caller-controlled source URL,
+    year applicability approval or pixel bbox is accepted.
+    """
+    from tarim_destek_rag.citations.central_evidence_engine import (
+        central_evidence_engine,
+    )
+    evaluated = evaluate_all(payload, session)
+    contract = evaluated.model_dump(mode="json")
+    # The support ID must be resolved from the current rule output, not
+    # accepted as a forged client-side claim.
+    candidates = [row for row in contract.get("rules", [])
+                  if row.get("rule_id") == rule_id]
+    if len(candidates) != 1:
+        return central_evidence_engine.for_claim(contract, None)
+    return central_evidence_engine.for_check(
+        contract, rule_id=rule_id,
+        support_id=candidates[0]["support_id"], check_id=check_id,
+    )
+
+
+@app.post("/api/v1/evidence/evaluation", tags=["Tekil Kanıt Kontratı"])
+def evaluate_evidence_index(
+    payload: FullEvaluationRequest, session: Session = Depends(get_db_session),
+) -> dict:
+    """Return privacy-minimal claim IDs and SOURCE-LOCATION-only proof statuses.
+
+    Uses the same evaluation request but never exports farmer identifiers or
+    implicitly grants payment/legal activation. All unmatched claims HOLD.
+    """
+    from tarim_destek_rag.citations.central_evidence_engine import (
+        central_evidence_engine,
+    )
+    evaluated = evaluate_all(payload, session)
+    return central_evidence_engine.for_evaluation(
+        evaluated.model_dump(mode="json")
+    )
+
+
+def _require_local_document_access(request: Request) -> None:
+    """Uploaded content is private to the local desktop backend."""
+    host = request.client.host if request.client else ""
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise HTTPException(
+            status_code=403,
+            detail="Yüklenen belgeler yalnız yerel bilgisayardan erişilebilir.",
+        )
+
+
+@app.post("/documents/import", tags=["Belge Analizi / RAG"])
+def import_local_document(
+    payload: DocumentUploadRequest, request: Request,
+) -> dict[str, Any]:
+    """Import PDF, HTML or TXT into user-owned local content-addressed store."""
+    import base64
+    import binascii
+
+    from tarim_destek_rag.retrieval.document_rag import get_document_rag
+    from tarim_destek_rag.retrieval.user_documents import import_user_document
+
+    _require_local_document_access(request)
+    try:
+        original = base64.b64decode(payload.data_base64, validate=True)
+        item = import_user_document(
+            payload.filename, original, run_ocr=payload.run_ocr,
+        )
+        status = get_document_rag(refresh=True).status()
+        return {
+            "document": item,
+            "corpus_status": status,
+            "import_status": "INDEXED",
+        }
+    except (ValueError, OSError, binascii.Error) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@app.get("/documents/original-page/{sha}/page/{page}", tags=["Belge Analizi / RAG"])
+def render_official_original_pdf_page(
+    sha: str, page: int,
+) -> Response:
+    """Create a real PNG screenshot directly from an authenticated source PDF."""
+    import re
+    import pymupdf
+
+    from tarim_destek_rag.retrieval.document_rag import _read_original
+
+    if (not re.fullmatch(r"[0-9a-f]{64}", sha)
+            or not 1 <= page <= 1000):
+        raise HTTPException(status_code=404, detail="Geçersiz belge veya sayfa")
+    manifest = Path(os.getenv(
+        "TARIM_RAG_ORIGINAL_SOURCE_MANIFEST",
+        "configs/p0_10_3_original_source_manifest.json",
+    ))
+    root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    try:
+        sources = json.loads(manifest.read_text(encoding="utf-8"))["sources"]
+        matched = [row for row in sources
+                   if row.get("original_sha256") == sha
+                   and row.get("format") == "pdf"]
+        if len(matched) != 1:
+            raise ValueError("Official source not uniquely pinned")
+        raw = _read_original(root, matched[0])
+        with pymupdf.open(stream=raw, filetype="pdf") as doc:
+            if page > len(doc):
+                raise ValueError("Page not present in official original")
+            png = doc[page - 1].get_pixmap(
+                dpi=160, alpha=False,
+            ).tobytes("png")
+        return Response(
+            content=png, media_type="image/png",
+            headers={"Cache-Control": "no-store"},
+        )
+    except (OSError, ValueError, TypeError, KeyError, RuntimeError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/documents/view/{sha}/page/{page}", tags=["Belge Analizi / RAG"])
+def view_uploaded_pdf_page(
+    sha: str, page: int, request: Request,
+) -> Response:
+    """Render the selected real page from uploaded original bytes, not an AI image."""
+    from tarim_destek_rag.retrieval.user_documents import load_user_original
+
+    _require_local_document_access(request)
+    if not 1 <= page <= 1000:
+        raise HTTPException(status_code=404, detail="Sayfa bulunamadı")
+    try:
+        import pymupdf
+
+        meta, original = load_user_original(sha)
+        if meta["format"] != "pdf":
+            raise ValueError("This document is not a PDF")
+        with pymupdf.open(stream=original, filetype="pdf") as doc:
+            if page > len(doc):
+                raise ValueError("Original page number does not exist")
+            png = doc[page - 1].get_pixmap(
+                dpi=160, alpha=False,
+            ).tobytes("png")
+        return Response(
+            content=png, media_type="image/png",
+            headers={"Cache-Control": "no-store"},
+        )
+    except (ValueError, OSError, RuntimeError, ImportError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/documents/view/{sha}/text", tags=["Belge Analizi / RAG"])
+def view_uploaded_text(
+    sha: str, request: Request,
+) -> PlainTextResponse:
+    """Render uploaded HTML/TXT as plain UTF-8 text, not executable HTML."""
+    from tarim_destek_rag.retrieval.user_documents import load_user_original
+
+    _require_local_document_access(request)
+    try:
+        meta, original = load_user_original(sha)
+        if meta["format"] not in ("txt", "html"):
+            raise ValueError("This document is not HTML or TXT")
+        text = original.decode("utf-8", "replace")
+        if meta["format"] == "html":
+            from bs4 import BeautifulSoup
+
+            text = BeautifulSoup(text, "html.parser").get_text("\n", strip=True)
+        return PlainTextResponse(
+            text, headers={"Cache-Control": "no-store"},
+        )
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@app.get("/documents/annual-original-page/{sha}/page/{page}",
+         tags=["Belge Analizi / RAG"])
+def view_discovered_annual_source_page(
+    sha: str, page: int, request: Request,
+) -> Response:
+    """Read-only real scanned Gazette PDF PNG, local session only.
+
+    No administrative credential is put in a clickable browser URL.
+    Every request rechecks the discovered original PDF's SHA/inventory.
+    """
+    _require_local_document_access(request)
+    from tarim_destek_rag.updates.annual_pdf_pipeline import (
+        render_yearly_pdf_page,
+    )
+    try:
+        png, _ = render_yearly_pdf_page(
+            page_key=f"{sha}:{page}", query="",
+            root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE",
+                                "data/legal_update_archive")),
+        )
+    except (OSError, ValueError, KeyError, TypeError, ImportError,
+            RuntimeError, AttributeError) as exc:
+        raise HTTPException(
+            status_code=404, detail="SHA-doğrulanmış gerçek PDF sayfası yok"
+        ) from exc
+    return Response(
+        content=png, media_type="image/png",
+        headers={"Cache-Control": "no-store", "X-Evidence-Status": "OCR-OR-NATIVE-DRAFT-HOLD"},
+    )
+
+
+@app.get("/documents/evidence/{sha}/chunk/{chunk_id}",
+         tags=["Belge Analizi / RAG"], response_class=HTMLResponse)
+def view_rag_original_quote_location(
+    sha: str, chunk_id: str, request: Request,
+) -> HTMLResponse:
+    """One-click local original source/page/exact token navigator.
+
+    The dynamic URL contains no path or filename and has no guessed bbox.
+    Local source SHA is rechecked at every invocation.
+    """
+    _require_local_document_access(request)
+    from tarim_destek_rag.citations.rag_exact_location import (
+        render_rag_citation_proof,
+    )
+    try:
+        html = render_rag_citation_proof(sha, chunk_id)
+    except (OSError, ValueError, KeyError, TypeError, RuntimeError,
+            ImportError, AttributeError) as exc:
+        raise HTTPException(
+            status_code=404, detail="Özgün SHA-bağlı alıntı veya sayfa konumu HOLD"
+        ) from exc
+    return HTMLResponse(
+        content=html, headers={
+            "Cache-Control": "no-store",
+            "X-Evidence-Status": "ORIGINAL_LOCATION_ONLY_LEGAL_HOLD",
+            "Content-Security-Policy": (
+                "default-src 'none'; img-src data:; style-src 'unsafe-inline'; "
+                "base-uri 'none'; form-action 'none'"
+            ),
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@app.get("/documents/status", tags=["Belge Analizi / RAG"])
+def document_rag_status(request: Request) -> dict[str, Any]:
+    """Private status includes names of user-uploaded local documents."""
+    _require_local_document_access(request)
+    from tarim_destek_rag.retrieval.document_rag import get_document_rag
+
+    return get_document_rag().status()
+
+
+@app.post("/ask/documents", tags=["Belge Analizi / RAG"])
+def ask_original_documents(
+    payload: DocumentAskRequest, request: Request,
+) -> dict[str, Any]:
+    """Private source-first answer from original PDF/HTML/OCR passages."""
+    _require_local_document_access(request)
+    from tarim_destek_rag.retrieval.document_rag import get_document_rag
+
+    return get_document_rag().answer(
+        payload.question, top_k=payload.top_k,
+        source_id=payload.source_id,
+    )
+
+
 @app.post("/ask", response_model=AskQuestionResponse, tags=["Chatbot / Semantik Arama"])
 def ask_question(payload: AskQuestionRequest) -> AskQuestionResponse:
-    """Kullanıcı sorusuna hibrit arama ve deterministik mevzuat senteziyle yanıt döner."""
-    try:
-        summary_text, matched_chunks, source_titles = assistant_engine.answer_question(
-            payload.question, top_k=payload.top_k
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Semantik arama hatası: {e}",
-        ) from e
+    """Compatibility route: one original-document source for ALL RAG questions."""
+    from tarim_destek_rag.retrieval.document_rag import get_document_rag
 
+    result = get_document_rag().answer(payload.question, top_k=payload.top_k)
+    citations = result["citations"]
     return AskQuestionResponse(
         question=payload.question,
-        summary_answer_tr=summary_text,
-        matched_chunks=matched_chunks,
-        source_titles=source_titles,
+        summary_answer_tr=result["answer"],
+        matched_chunks=citations,
+        source_titles=list(dict.fromkeys(
+            str(item["title"]) for item in citations
+        )),
     )
 
 
@@ -518,6 +785,112 @@ def scan_future_legal_changes(
         output=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
     )
     return result
+
+
+
+@app.post("/admin/legal-updates/refresh-evidence",
+          tags=["Yıllık Resmî PDF Güncelleme ve Kanıt İndeksi"])
+def refresh_annual_evidence(
+    year: int, published_from: str | None = None,
+    published_to: str | None = None,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    """User-triggered official discovery → verified PDF bytes → page OCR draft.
+
+    This is only a bounded allowlisted portal *discovery* pass, NOT a complete
+    Resmi Gazete official search over an entire year. OCR and changes DO NOT
+    publish effective rates, year validity or entitlement.
+    """
+    from tarim_destek_rag.updates.discovery import read_portals, scan_official_sources
+    from tarim_destek_rag.updates.annual_pdf_pipeline import update_yearly_pdf_index
+    from tarim_destek_rag.updates.gazette_date_pages import publication_window
+
+    if not 2020 <= year <= 2100:
+        raise HTTPException(status_code=422, detail="Geçersiz üretim yılı")
+    try:
+        date_portals, date_coverage = publication_window(
+            published_from, published_to,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    discovery = scan_official_sources(
+        production_year=year,
+        portals=read_portals(Path("configs/official_update_portals.json")) + date_portals,
+        output=root,
+    )
+    research = update_yearly_pdf_index(
+        production_year=year, discovery_batch=discovery, root=root,
+    )
+    # Explicitly refresh the local document-first RAG corpus after each
+    # operator-triggered update. If it fails, published rules are unchanged.
+    try:
+        from tarim_destek_rag.retrieval.document_rag import get_document_rag
+        corpus = get_document_rag(refresh=True).status()
+        rag_state = "LOCAL_RAG_REFRESHED_DRAFT"
+    except (OSError, ValueError, RuntimeError, ImportError, KeyError, TypeError):
+        corpus = None
+        rag_state = "LOCAL_RAG_REFRESH_HOLD"
+    return {
+        "schema_version": 1,
+        "production_year_selected_for_research": year,
+        "publication_window": date_coverage,
+        "discovery": {
+            "mode": discovery["discovery_mode"],
+            "new_or_changed": discovery["new_or_changed"],
+            "scanned_document_count": len(discovery["documents"]),
+            "errors": discovery["errors"],
+        },
+        "research": research,
+        "rag_refresh_status": rag_state,
+        "rag_corpus": corpus,
+        "complete_year_coverage": False,
+        "annual_applicability_verified": False,
+        "rules_activated": False,
+        "payment_approved": False,
+        "status": "DISCOVERY_AND_OCR_DRAFT_HOLD",
+    }
+
+
+@app.get("/admin/legal-updates/research-pdf",
+         tags=["Yıllık Resmî PDF Güncelleme ve Kanıt İndeksi"])
+def research_annually_archived_pdf(
+    query: str, year: int,
+    _admin: None = Depends(require_admin_key),
+) -> dict[str, Any]:
+    from tarim_destek_rag.updates.annual_pdf_pipeline import search_yearly_pdf
+    root = Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive"))
+    hits = search_yearly_pdf(query=query, year=year, root=root)
+    return {
+        "production_year_selected_for_scan": year,
+        "query": query, "hits": hits,
+        "year_is_legal_applicability": False,
+        "original_page_required": True,
+        "legal_status": "HOLD",
+        "payment_status": "HOLD",
+    }
+
+
+@app.get("/admin/legal-updates/research-pdf/{sha256}/page/{page}",
+         tags=["Yıllık Resmî PDF Güncelleme ve Kanıt İndeksi"])
+def view_annually_archived_original_pdf(
+    sha256: str, page: int, query: str = "",
+    _admin: None = Depends(require_admin_key),
+) -> Response:
+    from tarim_destek_rag.updates.annual_pdf_pipeline import render_yearly_pdf_page
+    try:
+        png, _ = render_yearly_pdf_page(
+            page_key=f"{sha256}:{page}", query=query,
+            root=Path(os.getenv("TARIM_RAG_UPDATE_ARCHIVE", "data/legal_update_archive")),
+        )
+    except (OSError, ValueError, KeyError, RuntimeError, ImportError, TypeError):
+        raise HTTPException(
+            status_code=404, detail="Özgün SHA-doğrulanmış sayfa bulunamadı"
+        )
+    return Response(
+        content=png, media_type="image/png",
+        headers={"Cache-Control": "no-store", "X-Evidence-Status": "UNREVIEWED-HOLD"},
+    )
 
 
 class AnalyzeRawLegislationRequest(BaseModel):

@@ -15,7 +15,8 @@ import 'support_detail_screen.dart';
 class MySupportsScreen extends StatelessWidget {
   const MySupportsScreen({super.key});
 
-  String _formatCurrency(double amount) {
+  String _formatCurrency(double? amount) {
+    if (amount == null) return "Hesaplanmadı";
     final fmt = NumberFormat("#,##0.00", "tr_TR");
     return "${fmt.format(amount)} TL";
   }
@@ -188,7 +189,7 @@ class MySupportsScreen extends StatelessWidget {
                           Text(
                             calc.estimatedAmount != null
                                 ? _formatCurrency(calc.estimatedAmount!)
-                                : "0.00 TL",
+                                : "Hesaplanmadı",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
