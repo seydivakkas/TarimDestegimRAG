@@ -74,3 +74,10 @@ Kaynaktaki asıl normatif bağ **MADDE 5(1)** olarak düzeltildi; ayrıca **MADD
 **Bu turda resmî HTML/PDF baytlarını fiilen SHA doğrulamasıyla çekme mümkün olmadı.** Yürürlük zinciri ve parsel kaydı için bağımsız inceleme eksik olduğundan G37 BLOCKED_EXTERNAL; F14 ve main politikası değişmedi.
 
 Ayrıntı: [G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md](G37_2026_CKS_ORIGINAL_AMENDMENT_REVIEW.md).
+
+### 2026 ÇKS pilotunun 2025/13 ve 11781 maddeleriyle tamamlayıcı değişiklik haritası
+
+- G37 kapsamında MADDE bazlı `configs/g37_2026_legal_impact_register.json` eklendi; 2025/13 5(3) soya ilavesi ve 11781'in farklı yürürlük tarihlerini ayırır. `11781 MADDE 1(a)` 2026 katsayı 367 TL/da/2027 442 TL/da, ödenen dekarlık tutar değil; `MADDE 4` 2025'e dönük, bazı diğer hükümler 2027'den itibaren geçerlidir.
+- `cks_2026_source_chain.py` merkezi kanıt kaydında bu etki maddelerini `research_impact_changes` olarak gösterir. Kanıt durumu SOURCE_RESEARCH_ONLY_LEGAL_HOLD; kaynak SHA ve hukukî onay olmadan mevzuat kayıt düzenini, üretici hak edişini veya ödeme katsayısı tablosunu otomatik değiştirmez.
+- `scripts/acquire_g37_official_sources.py`: Pinned 2024/39 ve 2025/42 için SSL resmî HTTP özgün baytları SHA/byte-length kontrolüyle arşivleme; önceden pinlenmemiş 2025/13 ve 11781 için yalnız karantina. Çevrimiçi operasyon operatör ortamında çalıştırılmalı; henüz burada fiilen indirme yapılamadı.
+- G37 açık engelleri: kurumsal ağda özgün orijinal edinim/konumları; 11781 tam metin/ek hükümleri; 2025/13 yıllık istisna; resmî parsel kaydı ve bağımsız hukuki kabul. G36 genelleme bundan sonra.
